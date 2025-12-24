@@ -1,135 +1,185 @@
 <template>
-  <div class="order-view">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <h2>订单管理 / Order Management</h2>
+  <q-page class="q-pa-md">
+    <div class="order-management">
+      <!-- Page Header -->
+      <div class="row items-center justify-between q-mb-md">
+        <div>
+          <div class="text-h5 text-weight-bold">订单管理</div>
+          <div class="text-caption text-grey-7">管理订单状态和发货信息</div>
         </div>
-      </template>
+      </div>
 
-      <el-table :data="orders" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="orderNumber" label="订单号" width="180" />
-        <el-table-column prop="customerName" label="客户" width="150" />
-        <el-table-column prop="totalAmount" label="总金额" width="120">
-          <template #default="scope">
-            ${{ scope.row.totalAmount.toFixed(2) }}
+      <!-- Orders Table -->
+      <q-card>
+        <q-table
+          :rows="orders"
+          :columns="columns"
+          row-key="id"
+          :loading="loading"
+          :pagination="pagination"
+          flat
+        >
+          <template v-slot:body-cell-orderNumber="props">
+            <q-td :props="props">
+              <span class="text-weight-bold">{{ props.row.orderNumber }}</span>
+            </q-td>
           </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="120">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row.status)">
-              {{ getStatusText(scope.row.status) }}
-            </el-tag>
+
+          <template v-slot:body-cell-totalAmount="props">
+            <q-td :props="props">
+              <span class="text-weight-bold text-primary">¥{{ props.row.totalAmount.toFixed(2) }}</span>
+            </q-td>
           </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="250">
-          <template #default="scope">
-            <el-dropdown @command="(cmd: string) => handleStatusChange(scope.row.id, cmd as Order['status'])">
-              <el-button size="small">
-                更新状态 <el-icon class="el-icon--right"><arrow-down /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="PROCESSING">处理中</el-dropdown-item>
-                  <el-dropdown-item command="SHIPPED">已发货</el-dropdown-item>
-                  <el-dropdown-item command="DELIVERED">已送达</el-dropdown-item>
-                  <el-dropdown-item command="CANCELLED">已取消</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-button size="small" @click="handleViewDetails(scope.row)">详情</el-button>
+
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+            </q-td>
           </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-  </div>
+
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn-dropdown flat dense color="primary" label="更新状态" size="sm">
+                <q-list>
+                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'PROCESSING')">
+                    <q-item-section>
+                      <q-item-label>处理中</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'SHIPPED')">
+                    <q-item-section>
+                      <q-item-label>已发货</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'DELIVERED')">
+                    <q-item-section>
+                      <q-item-label>已送达</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'CANCELLED')">
+                    <q-item-section>
+                      <q-item-label class="text-negative">已取消</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-btn-dropdown>
+              
+              <q-btn flat dense round icon="visibility" color="primary" size="sm">
+                <q-tooltip>查看详情</q-tooltip>
+              </q-btn>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card>
+    </div>
+  </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { useQuasar } from 'quasar'
 import { orderApi, type Order } from '@/api'
+
+const $q = useQuasar()
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
+
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10
+})
+
+const columns = [
+  { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
+  { name: 'orderNumber', label: '订单号', align: 'left' as const, field: 'orderNumber' },
+  { name: 'customerName', label: '客户', align: 'left' as const, field: 'customerName' },
+  { name: 'totalAmount', label: '总金额', align: 'left' as const, field: 'totalAmount', sortable: true },
+  { name: 'status', label: '状态', align: 'center' as const, field: 'status' },
+  { name: 'createdAt', label: '创建时间', align: 'left' as const, field: 'createdAt' },
+  { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
+]
 
 const loadOrders = async () => {
   loading.value = true
   try {
     const response = await orderApi.getOrders()
-
-    // 修正點：Spring Boot Page 物件的資料在 response.data.content
-    if (response.data && response.data.content) {
-      orders.value = response.data.content
+    if (response.data && Array.isArray((response.data as any).content)) {
+      orders.value = (response.data as any).content
+    } else if (Array.isArray(response.data)) {
+      orders.value = response.data
     } else {
-      // 預防萬一 API 直接回傳陣列
-      orders.value = Array.isArray(response.data) ? response.data : []
+      orders.value = []
     }
   } catch (error) {
-    ElMessage.error('加载订单列表失败')
+    $q.notify({
+      type: 'negative',
+      message: '加载订单列表失败',
+      position: 'top'
+    })
     console.error(error)
   } finally {
     loading.value = false
   }
 }
 
-const getStatusType = (status: Order['status']) => {
-  const typeMap = {
-    PENDING: 'info',
+const getStatusColor = (status: Order['status']) => {
+  const colorMap = {
+    PENDING: 'grey',
     PROCESSING: 'warning',
-    SHIPPED: 'primary',
-    DELIVERED: 'success',
-    CANCELLED: 'danger'
+    SHIPPED: 'info',
+    DELIVERED: 'positive',
+    CANCELLED: 'negative'
   }
-  return typeMap[status] || 'info'
+  return colorMap[status] || 'grey'
 }
 
-const getStatusText = (status: Order['status']) => {
-  const textMap = {
+const getStatusLabel = (status: Order['status']) => {
+  const labelMap = {
     PENDING: '待处理',
     PROCESSING: '处理中',
     SHIPPED: '已发货',
     DELIVERED: '已送达',
     CANCELLED: '已取消'
   }
-  return textMap[status] || status
+  return labelMap[status] || status
 }
 
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
-
+  
   // 对于取消状态，需要确认
   if (status === 'CANCELLED') {
-    try {
-      await ElMessageBox.confirm(
-        '确定要取消此订单吗？此操作不可恢复。',
-        '警告',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        }
-      )
-    } catch {
-      return // 用户取消了操作
-    }
-  }
-
-  try {
-    await orderApi.updateOrderStatus(id, status)
-    ElMessage.success('状态更新成功')
-    loadOrders()
-  } catch (error) {
-    ElMessage.error('状态更新失败')
+    $q.dialog({
+      title: '警告',
+      message: '确定要取消此订单吗？此操作不可恢复。',
+      cancel: true,
+      persistent: true
+    }).onOk(async () => {
+      await updateStatus(id, status)
+    })
+  } else {
+    await updateStatus(id, status)
   }
 }
 
-const handleViewDetails = (order: Order) => {
-  ElMessage.info(`查看订单 ${order.orderNumber} 的详情`)
-  // 可以导航到详情页面或打开对话框
+const updateStatus = async (id: number, status: Order['status']) => {
+  try {
+    await orderApi.updateOrderStatus(id, status)
+    $q.notify({
+      type: 'positive',
+      message: '状态更新成功',
+      position: 'top'
+    })
+    loadOrders()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '状态更新失败',
+      position: 'top'
+    })
+  }
 }
 
 onMounted(() => {
@@ -138,17 +188,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.order-view {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-header h2 {
-  margin: 0;
+.order-management {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 </style>

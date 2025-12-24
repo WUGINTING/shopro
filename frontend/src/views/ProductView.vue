@@ -1,88 +1,295 @@
 <template>
-  <div class="product-view">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <h2>商品管理 / Product Management</h2>
-          <el-button type="primary" @click="dialogVisible = true">新增商品</el-button>
+  <q-page class="q-pa-md">
+    <div class="product-management">
+      <!-- Page Header -->
+      <div class="row items-center justify-between q-mb-md">
+        <div>
+          <div class="text-h5 text-weight-bold">商品管理</div>
+          <div class="text-caption text-grey-7">管理商品信息、上架状态和库存</div>
         </div>
-      </template>
+        <q-btn
+          color="primary"
+          icon="add"
+          label="新增商品"
+          unelevated
+          @click="showDialog = true; form = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', categoryId: null }"
+        />
+      </div>
 
-      <el-table :data="products" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="商品名称" width="200" />
-        <el-table-column prop="description" label="描述" />
-        <el-table-column prop="price" label="价格" width="120">
-          <template #default="scope">
-            ${{ scope.row.price.toFixed(2) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="stock" label="库存" width="100" />
-        <el-table-column label="操作" width="200">
-          <template #default="scope">
-            <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(scope.row.id)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <!-- Search and Filter Bar -->
+      <q-card class="q-mb-md">
+        <q-card-section>
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6 col-md-4">
+              <q-input
+                v-model="searchQuery"
+                outlined
+                dense
+                placeholder="搜索商品名称"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+              <q-select
+                v-model="statusFilter"
+                outlined
+                dense
+                :options="statusOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                clearable
+                placeholder="商品状态"
+              />
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+              <q-select
+                v-model="categoryFilter"
+                outlined
+                dense
+                :options="categoryOptions"
+                clearable
+                placeholder="商品分类"
+              />
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+              <q-btn color="primary" unelevated class="full-width" label="搜索" icon="search" />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
 
-    <el-dialog v-model="dialogVisible" title="商品信息" width="500px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="商品名称">
-          <el-input v-model="form.name" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" />
-        </el-form-item>
-        <el-form-item label="价格">
-          <el-input-number v-model="form.price" :min="0" :precision="2" />
-        </el-form-item>
-        <el-form-item label="库存">
-          <el-input-number v-model="form.stock" :min="0" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
-  </div>
+      <!-- Products Table -->
+      <q-card>
+        <q-table
+          :rows="products"
+          :columns="columns"
+          row-key="id"
+          :loading="loading"
+          :pagination="pagination"
+          flat
+        >
+          <template v-slot:body-cell-image="props">
+            <q-td :props="props">
+              <q-avatar rounded size="50px" color="grey-3">
+                <q-icon name="image" />
+              </q-avatar>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-price="props">
+            <q-td :props="props">
+              <span class="text-weight-bold text-primary">¥{{ props.row.price.toFixed(2) }}</span>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-stock="props">
+            <q-td :props="props">
+              <q-badge
+                :color="props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                :label="props.row.stock"
+              />
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
+                <q-tooltip>编辑</q-tooltip>
+              </q-btn>
+              
+              <q-btn
+                flat
+                dense
+                round
+                :icon="props.row.status === 'PUBLISHED' ? 'visibility_off' : 'visibility'"
+                :color="props.row.status === 'PUBLISHED' ? 'warning' : 'positive'"
+                size="sm"
+                @click="handlePublishToggle(props.row)"
+              >
+                <q-tooltip>{{ props.row.status === 'PUBLISHED' ? '下架' : '上架' }}</q-tooltip>
+              </q-btn>
+              
+              <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
+                <q-tooltip>删除</q-tooltip>
+              </q-btn>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card>
+
+      <!-- Add/Edit Dialog -->
+      <q-dialog v-model="showDialog" persistent>
+        <q-card style="min-width: 600px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">{{ form.id ? '编辑商品' : '新增商品' }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <q-form>
+              <q-input
+                v-model="form.name"
+                label="商品名称 *"
+                outlined
+                class="q-mb-md"
+                :rules="[val => !!val || '请输入商品名称']"
+              />
+
+              <q-input
+                v-model="form.description"
+                label="商品描述"
+                outlined
+                type="textarea"
+                rows="3"
+                class="q-mb-md"
+              />
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-6">
+                  <q-input
+                    v-model.number="form.price"
+                    label="价格 *"
+                    outlined
+                    type="number"
+                    prefix="¥"
+                    :rules="[val => val >= 0 || '价格不能为负数']"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input
+                    v-model.number="form.stock"
+                    label="库存 *"
+                    outlined
+                    type="number"
+                    :rules="[val => val >= 0 || '库存不能为负数']"
+                  />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-6">
+                  <q-select
+                    v-model="form.status"
+                    label="商品状态 *"
+                    outlined
+                    :options="statusOptions"
+                    option-value="value"
+                    option-label="label"
+                    emit-value
+                    map-options
+                  />
+                </div>
+                <div class="col-6">
+                  <q-select
+                    v-model="form.categoryId"
+                    label="商品分类"
+                    outlined
+                    :options="categoryOptions"
+                  />
+                </div>
+              </div>
+
+              <q-file
+                v-model="productImage"
+                label="商品图片"
+                outlined
+                accept="image/*"
+                class="q-mb-md"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="image" />
+                </template>
+              </q-file>
+            </q-form>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </div>
+  </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useQuasar } from 'quasar'
 import { productApi, type Product } from '@/api'
+
+const $q = useQuasar()
 
 const products = ref<Product[]>([])
 const loading = ref(false)
-const dialogVisible = ref(false)
+const showDialog = ref(false)
+const searchQuery = ref('')
+const statusFilter = ref(null)
+const categoryFilter = ref(null)
+const productImage = ref(null)
+
 const form = ref<Product>({
   name: '',
   description: '',
   price: 0,
-  stock: 0
+  stock: 0,
+  status: 'DRAFT',
+  categoryId: null
 })
+
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10
+})
+
+const columns = [
+  { name: 'image', label: '图片', align: 'left' as const, field: 'image' },
+  { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
+  { name: 'name', label: '商品名称', align: 'left' as const, field: 'name', sortable: true },
+  { name: 'price', label: '价格', align: 'left' as const, field: 'price', sortable: true },
+  { name: 'stock', label: '库存', align: 'center' as const, field: 'stock', sortable: true },
+  { name: 'status', label: '状态', align: 'center' as const, field: 'status' },
+  { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
+]
+
+const statusOptions = [
+  { label: '草稿', value: 'DRAFT' },
+  { label: '已上架', value: 'PUBLISHED' },
+  { label: '已下架', value: 'UNPUBLISHED' }
+]
+
+const categoryOptions = ['电子产品', '服装', '食品', '图书', '家居']
+
 const loadProducts = async () => {
   loading.value = true
   try {
     const response = await productApi.getProducts()
-
-    // 關鍵修正點：
-    // Spring Boot Page 物件的資料在 .content 屬性中
-    // response.data 是 axios 回傳的 body，裡面的 .content 才是陣列
-    if (response.data && Array.isArray(response.data.content)) {
-      products.value = response.data.content
+    if (response.data && Array.isArray((response.data as any).content)) {
+      products.value = (response.data as any).content
     } else if (Array.isArray(response.data)) {
-      // 萬一後端改回傳純陣列時的相容處理
       products.value = response.data
     } else {
       products.value = []
     }
-
   } catch (error) {
-    ElMessage.error('加载商品列表失败')
+    $q.notify({
+      type: 'negative',
+      message: '加载商品列表失败',
+      position: 'top'
+    })
     console.error('API Error:', error)
   } finally {
     loading.value = false
@@ -91,34 +298,99 @@ const loadProducts = async () => {
 
 const handleEdit = (product: Product) => {
   form.value = { ...product }
-  dialogVisible.value = true
+  showDialog.value = true
 }
 
-const handleDelete = async (id?: number) => {
-  if (!id) return
+const handlePublishToggle = async (product: Product) => {
+  const newStatus = product.status === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED'
   try {
-    await productApi.deleteProduct(id)
-    ElMessage.success('删除成功')
+    await productApi.updateProduct(product.id!, { ...product, status: newStatus })
+    $q.notify({
+      type: 'positive',
+      message: newStatus === 'PUBLISHED' ? '商品已上架' : '商品已下架',
+      position: 'top'
+    })
     loadProducts()
   } catch (error) {
-    ElMessage.error('删除失败')
+    $q.notify({
+      type: 'negative',
+      message: '操作失败',
+      position: 'top'
+    })
   }
+}
+
+const handleDelete = (id?: number) => {
+  if (!id) return
+  
+  $q.dialog({
+    title: '确认删除',
+    message: '确定要删除这个商品吗？此操作不可恢复。',
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await productApi.deleteProduct(id)
+      $q.notify({
+        type: 'positive',
+        message: '删除成功',
+        position: 'top'
+      })
+      loadProducts()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: '删除失败',
+        position: 'top'
+      })
+    }
+  })
 }
 
 const handleSubmit = async () => {
   try {
     if (form.value.id) {
       await productApi.updateProduct(form.value.id, form.value)
-      ElMessage.success('更新成功')
+      $q.notify({
+        type: 'positive',
+        message: '更新成功',
+        position: 'top'
+      })
     } else {
       await productApi.createProduct(form.value)
-      ElMessage.success('创建成功')
+      $q.notify({
+        type: 'positive',
+        message: '创建成功',
+        position: 'top'
+      })
     }
-    dialogVisible.value = false
-    form.value = { name: '', description: '', price: 0, stock: 0 }
+    showDialog.value = false
+    form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', categoryId: null }
     loadProducts()
   } catch (error) {
-    ElMessage.error('操作失败')
+    $q.notify({
+      type: 'negative',
+      message: '操作失败',
+      position: 'top'
+    })
+  }
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'PUBLISHED': return 'positive'
+    case 'UNPUBLISHED': return 'warning'
+    case 'DRAFT': return 'grey'
+    default: return 'grey'
+  }
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'PUBLISHED': return '已上架'
+    case 'UNPUBLISHED': return '已下架'
+    case 'DRAFT': return '草稿'
+    default: return status
   }
 }
 
@@ -128,17 +400,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.product-view {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-header h2 {
-  margin: 0;
+.product-management {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 </style>

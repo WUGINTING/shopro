@@ -15,7 +15,8 @@ export interface Product {
   description: string
   price: number
   stock: number
-  categoryId?: number
+  status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+  categoryId?: number | null
   images?: string[]
   specifications?: ProductSpecification[]
 }
