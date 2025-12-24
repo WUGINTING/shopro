@@ -1,11 +1,46 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useQuasar } from 'quasar'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
+}
+
+const username = computed(() => authStore.user?.username || 'User')
+const userRole = computed(() => {
+  const roleMap: Record<string, string> = {
+    'ADMIN': '管理员',
+    'MANAGER': '经理',
+    'STAFF': '员工',
+    'CUSTOMER': '客户'
+  }
+  return authStore.user?.role ? roleMap[authStore.user.role] : ''
+})
+
+const handleLogout = () => {
+  $q.dialog({
+    title: '确认退出',
+    message: '确定要退出登录吗？',
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    authStore.logout()
+    router.push('/login')
+    $q.notify({
+      type: 'positive',
+      message: '已退出登录',
+      position: 'top'
+    })
+  })
 }
 </script>
 
@@ -37,7 +72,16 @@ const toggleLeftDrawer = () => {
           </q-avatar>
           
           <q-menu>
-            <q-list style="min-width: 150px">
+            <q-list style="min-width: 200px">
+              <q-item>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">{{ username }}</q-item-label>
+                  <q-item-label caption>{{ userRole }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              
+              <q-separator />
+              
               <q-item clickable v-close-popup>
                 <q-item-section avatar>
                   <q-icon name="person" />
@@ -54,11 +98,13 @@ const toggleLeftDrawer = () => {
               
               <q-separator />
               
-              <q-item clickable v-close-popup>
+              <q-item clickable v-close-popup @click="handleLogout">
                 <q-item-section avatar>
-                  <q-icon name="logout" />
+                  <q-icon name="logout" color="negative" />
                 </q-item-section>
-                <q-item-section>退出登录</q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-negative">退出登录</q-item-label>
+                </q-item-section>
               </q-item>
             </q-list>
           </q-menu>

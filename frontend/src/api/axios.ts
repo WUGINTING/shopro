@@ -13,7 +13,7 @@ const axiosInstance: AxiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    // 可以在这里添加 token
+    // 从 localStorage 获取 token 并添加到请求头
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -37,7 +37,10 @@ axiosInstance.interceptors.response.use(
         case 401:
           // 未授权，清除 token 并跳转到登录页
           localStorage.removeItem('token')
-          window.location.href = '/login'
+          localStorage.removeItem('user')
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
           break
         case 403:
           console.error('没有权限访问')
