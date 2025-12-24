@@ -64,9 +64,19 @@ export const productApi = {
     return axios.delete<any, ApiResponse<void>>(`/products/${id}`)
   },
   
+  // 上架商品
+  activateProduct: (id: number) => {
+    return axios.put<any, ApiResponse<Product>>(`/products/${id}/activate`)
+  },
+  
+  // 下架商品
+  deactivateProduct: (id: number) => {
+    return axios.put<any, ApiResponse<Product>>(`/products/${id}/deactivate`)
+  },
+  
   // 获取商品分类
   getCategories: () => {
-    return axios.get<any, ApiResponse<ProductCategory[]>>('/products/categories')
+    return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
   }
 }
 

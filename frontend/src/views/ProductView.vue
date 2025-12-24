@@ -328,14 +328,22 @@ const handleEdit = (product: Product) => {
 }
 
 const handlePublishToggle = async (product: Product) => {
-  const newStatus = product.status === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED'
   try {
-    await productApi.updateProduct(product.id!, { ...product, status: newStatus })
-    $q.notify({
-      type: 'positive',
-      message: newStatus === 'PUBLISHED' ? '商品已上架' : '商品已下架',
-      position: 'top'
-    })
+    if (product.status === 'PUBLISHED') {
+      await productApi.deactivateProduct(product.id!)
+      $q.notify({
+        type: 'positive',
+        message: '商品已下架',
+        position: 'top'
+      })
+    } else {
+      await productApi.activateProduct(product.id!)
+      $q.notify({
+        type: 'positive',
+        message: '商品已上架',
+        position: 'top'
+      })
+    }
     loadProducts()
   } catch (error) {
     $q.notify({
