@@ -4,6 +4,7 @@ import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
+import com.info.ecommerce.modules.product.repository.ProductCategoryRepository;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductCategoryRepository productCategoryRepository;
 
     /**
      * 驗證並標準化 SKU
@@ -30,10 +32,22 @@ public class ProductService {
     }
 
     /**
+     * 驗證分類是否存在
+     */
+    private void validateCategory(Long categoryId) {
+        if (categoryId != null && !productCategoryRepository.existsById(categoryId)) {
+            throw new BusinessException("商品分類不存在");
+        }
+    }
+
+    /**
      * 創建商品
      */
     @Transactional
     public ProductDTO createProduct(ProductDTO dto) {
+        // 檢查分類是否存在
+        validateCategory(dto.getCategoryId());
+        
         // 檢查 SKU 是否已存在
         String normalizedSku = validateAndNormalizeSku(dto.getSku());
         if (normalizedSku != null) {
@@ -56,6 +70,9 @@ public class ProductService {
     public ProductDTO updateProduct(Long id, ProductDTO dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
+        
+        // 檢查分類是否存在
+        validateCategory(dto.getCategoryId());
         
         // 檢查 SKU 是否與其他商品重複
         String normalizedSku = validateAndNormalizeSku(dto.getSku());
