@@ -14,6 +14,9 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // 商品 SKU 唯一索引名稱
+    private static final String PRODUCT_SKU_UNIQUE_INDEX = "ukq1mafxn973ldq80m1irp3mpvq";
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         return ResponseEntity
@@ -41,7 +44,7 @@ public class GlobalExceptionHandler {
             String lowerErrorMessage = errorMessage.toLowerCase();
             if (lowerErrorMessage.contains("unique index") || lowerErrorMessage.contains("duplicate key")) {
                 // 檢查是否為 SKU 重複（通過索引名或欄位名）
-                if (lowerErrorMessage.contains("sku") || lowerErrorMessage.contains("ukq1mafxn973ldq80m1irp3mpvq")) {
+                if (lowerErrorMessage.contains("sku") || lowerErrorMessage.contains(PRODUCT_SKU_UNIQUE_INDEX)) {
                     message = "商品編號（SKU）已存在，請使用其他編號";
                 } else {
                     message = "資料重複，請檢查輸入的內容";

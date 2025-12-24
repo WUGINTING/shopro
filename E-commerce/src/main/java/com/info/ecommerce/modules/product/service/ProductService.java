@@ -19,13 +19,24 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     /**
+     * 驗證並標準化 SKU
+     * @return 標準化後的 SKU，如果輸入為 null 或空白則返回 null
+     */
+    private String validateAndNormalizeSku(String sku) {
+        if (sku != null && !sku.trim().isEmpty()) {
+            return sku.trim();
+        }
+        return null;
+    }
+
+    /**
      * 創建商品
      */
     @Transactional
     public ProductDTO createProduct(ProductDTO dto) {
-        // 檢查 SKU 是否已存在（忽略空值和空白）
-        if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
-            String normalizedSku = dto.getSku().trim();
+        // 檢查 SKU 是否已存在
+        String normalizedSku = validateAndNormalizeSku(dto.getSku());
+        if (normalizedSku != null) {
             if (productRepository.existsBySku(normalizedSku)) {
                 throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
             }
@@ -46,9 +57,9 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
         
-        // 檢查 SKU 是否與其他商品重複（忽略空值和空白）
-        if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
-            String normalizedSku = dto.getSku().trim();
+        // 檢查 SKU 是否與其他商品重複
+        String normalizedSku = validateAndNormalizeSku(dto.getSku());
+        if (normalizedSku != null) {
             // 檢查新的 SKU 是否已被其他商品使用（排除當前商品本身）
             if (productRepository.existsBySkuAndIdNot(normalizedSku, id)) {
                 throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
