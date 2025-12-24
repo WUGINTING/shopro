@@ -84,11 +84,15 @@ public class ProductInventory {
         if (availableStock == 0) {
             return AlertLevel.OUT_OF_STOCK;
         }
-        if (safetyStock != null && availableStock <= safetyStock / 2) {
-            return AlertLevel.CRITICAL;
-        }
-        if (safetyStock != null && availableStock <= safetyStock) {
-            return AlertLevel.LOW;
+        if (safetyStock != null) {
+            // 使用雙精度運算避免整數除法精度損失
+            double criticalThreshold = safetyStock * 0.5;
+            if (availableStock <= criticalThreshold) {
+                return AlertLevel.CRITICAL;
+            }
+            if (availableStock <= safetyStock) {
+                return AlertLevel.LOW;
+            }
         }
         return null;
     }

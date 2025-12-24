@@ -113,7 +113,7 @@ public class InventoryManagementService {
                 notificationRepository.findByProductIdAndNotifiedFalse(productId);
         
         for (StockNotification notification : notifications) {
-            // 這裡可以整合郵件或簡訊服務
+            // TODO: 整合郵件或簡訊服務來發送實際通知
             // 暫時只標記為已通知
             notification.setNotified(true);
             notification.setNotifiedAt(LocalDateTime.now());

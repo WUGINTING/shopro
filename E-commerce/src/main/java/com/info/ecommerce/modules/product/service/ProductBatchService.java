@@ -3,6 +3,7 @@ package com.info.ecommerce.modules.product.service;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.product.dto.BatchUpdateProductDTO;
 import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -80,7 +81,7 @@ public class ProductBatchService {
         }
 
         List<Product> products = productRepository.findAllById(productIds);
-        products.forEach(product -> product.setStatus(com.info.ecommerce.modules.product.enums.ProductStatus.ACTIVE));
+        products.forEach(product -> product.setStatus(ProductStatus.ACTIVE));
         productRepository.saveAll(products);
     }
 
@@ -94,7 +95,7 @@ public class ProductBatchService {
         }
 
         List<Product> products = productRepository.findAllById(productIds);
-        products.forEach(product -> product.setStatus(com.info.ecommerce.modules.product.enums.ProductStatus.INACTIVE));
+        products.forEach(product -> product.setStatus(ProductStatus.INACTIVE));
         productRepository.saveAll(products);
     }
 }
