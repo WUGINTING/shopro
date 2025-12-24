@@ -1,3 +1,4 @@
+```
 com.info.ecommerce
 ├── common                 // 通用工具、異常處理、基礎類
 ├── config                 // 配置類 (Swagger, Security, Web)
@@ -10,7 +11,7 @@ com.info.ecommerce
 │   ├── statistics         // 6. 統計資訊 (報表、分析)
 │   └── ads                // 7. 廣告與追蹤 (GA4, FB Pixel)
 └── ShopApplication.java
-
+```
 
 ### 1. 開店支援與設計
 
