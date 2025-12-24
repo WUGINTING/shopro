@@ -47,9 +47,18 @@ export const crmApi = {
     return axios.get<any, ApiResponse<CustomerGroup[]>>('/crm/member-groups')
   },
   
-  // 更新客户积分
-  updateCustomerPoints: (id: number, points: number) => {
-    return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points`, { points })
+  // 增加客户积分
+  addCustomerPoints: (id: number, points: number) => {
+    return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points/add`, null, {
+      params: { points }
+    })
+  },
+  
+  // 扣除客户积分
+  deductCustomerPoints: (id: number, points: number) => {
+    return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points/deduct`, null, {
+      params: { points }
+    })
   }
 }
 

@@ -44,7 +44,9 @@ export const orderApi = {
   
   // 更新订单状态
   updateOrderStatus: (id: number, status: Order['status']) => {
-    return axios.put<any, ApiResponse<Order>>(`/orders/${id}/status`, { status })
+    return axios.patch<any, ApiResponse<Order>>(`/orders/${id}/status`, null, {
+      params: { status }
+    })
   },
   
   // 取消订单

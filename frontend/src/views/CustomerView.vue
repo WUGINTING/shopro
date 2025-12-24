@@ -188,7 +188,14 @@ const loadCustomers = async () => {
   loading.value = true
   try {
     const response = await crmApi.getCustomers()
-    customers.value = response.data || []
+    // Backend returns Page<MemberDTO> with content array
+    if (response.data && Array.isArray((response.data as any).content)) {
+      customers.value = (response.data as any).content
+    } else if (Array.isArray(response.data)) {
+      customers.value = response.data
+    } else {
+      customers.value = []
+    }
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -252,7 +259,7 @@ const handleSubmit = async () => {
 
 const handlePointsSubmit = async () => {
   try {
-    await crmApi.updateCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
+    await crmApi.addCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
     $q.notify({
       type: 'positive',
       message: '积分添加成功',
