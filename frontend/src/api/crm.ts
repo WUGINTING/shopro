@@ -1,5 +1,5 @@
 import axios from './axios'
-import type { ApiResponse } from './product'
+import type { ApiResponse } from './types'
 
 // CRM 顾客相关接口
 export interface Customer {

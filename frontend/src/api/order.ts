@@ -1,5 +1,5 @@
 import axios from './axios'
-import type { ApiResponse } from './product'
+import type { ApiResponse } from './types'
 
 // 订单相关接口
 export interface Order {

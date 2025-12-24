@@ -296,9 +296,10 @@ const handlePointsSubmit = async () => {
     pointsForm.value = { customerId: 0, points: 0, operation: 'add' }
     loadCustomers()
   } catch (error) {
+    const operationText = pointsForm.value.operation === 'add' ? '添加' : '扣除'
     $q.notify({
       type: 'negative',
-      message: '积分操作失败',
+      message: `积分${operationText}失败`,
       position: 'top'
     })
   }

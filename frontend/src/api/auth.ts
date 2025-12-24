@@ -1,5 +1,5 @@
 import axios from './axios'
-import type { ApiResponse } from './product'
+import type { ApiResponse } from './types'
 
 // 认证相关接口
 export interface LoginRequest {
