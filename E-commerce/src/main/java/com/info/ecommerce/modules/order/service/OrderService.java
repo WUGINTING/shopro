@@ -60,12 +60,12 @@ public class OrderService {
         BigDecimal subtotal = items.stream()
             .map(OrderItem::getSubtotalAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         order.setSubtotalAmount(subtotal);
-        
+
         BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
         BigDecimal shipping = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
-        
+
         // 總金額 = 小計 - 訂單折扣 + 運費
         order.setTotalAmount(subtotal.subtract(discount).add(shipping));
     }
@@ -85,11 +85,11 @@ public class OrderService {
     private OrderDTO convertToDTO(Order order) {
         OrderDTO dto = new OrderDTO();
         BeanUtils.copyProperties(order, dto);
-        
+
         // 加載訂單項目
         List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
         dto.setItems(items.stream().map(this::convertItemToDTO).collect(Collectors.toList()));
-        
+
         return dto;
     }
 
@@ -109,15 +109,15 @@ public class OrderService {
         OrderItem item = new OrderItem();
         BeanUtils.copyProperties(dto, item);
         item.setOrderId(orderId);
-        
+        item.setId(null);
         // 計算小計
         BigDecimal subtotal = dto.getUnitPrice().multiply(new BigDecimal(dto.getQuantity()));
         item.setSubtotalAmount(subtotal);
-        
+
         // 計算實際金額（小計 - 折扣）
         BigDecimal discount = dto.getDiscountAmount() != null ? dto.getDiscountAmount() : BigDecimal.ZERO;
         item.setActualAmount(subtotal.subtract(discount));
-        
+
         return item;
     }
 
@@ -128,41 +128,42 @@ public class OrderService {
     public OrderDTO createOrder(OrderDTO dto) {
         // 檢查黑名單
         checkCustomerBlacklist(dto.getCustomerId());
-        
+
         // 生成訂單編號
         String orderNumber = generateOrderNumber();
         while (orderRepository.existsByOrderNumber(orderNumber)) {
             orderNumber = generateOrderNumber();
         }
-        
+
         // 創建訂單
         Order order = convertToEntity(dto);
+        order.setId(null);
         order.setOrderNumber(orderNumber);
         order.setStatus(dto.getStatus() != null ? dto.getStatus() : OrderStatus.PENDING_PAYMENT);
         order.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
-        
+
         // 保存訂單項目
-        List<OrderItem> items = dto.getItems() != null ? 
+        List<OrderItem> items = dto.getItems() != null ?
             dto.getItems().stream()
                 .map(itemDto -> convertItemToEntity(itemDto, null))
-                .collect(Collectors.toList()) : 
+                .collect(Collectors.toList()) :
             List.of();
-        
+
         // 計算訂單金額
         calculateOrderAmounts(order, items);
-        
+
         // 保存訂單
         order = orderRepository.save(order);
-        
+
         // 保存訂單項目
         final Long orderId = order.getId();
         items.forEach(item -> item.setOrderId(orderId));
         orderItemRepository.saveAll(items);
-        
+
         // 記錄歷史
-        orderHistoryService.recordHistory(orderId, "CREATE", "訂單已建立", null, 
+        orderHistoryService.recordHistory(orderId, "CREATE", "訂單已建立", null,
             order.getStatus().name(), null, null);
-        
+
         return convertToDTO(order);
     }
 
@@ -173,9 +174,9 @@ public class OrderService {
     public OrderDTO updateOrder(Long id, OrderDTO dto) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
-        
+
         OrderStatus oldStatus = order.getStatus();
-        
+
         // 更新訂單基本資料
         order.setCustomerName(dto.getCustomerName());
         order.setCustomerPhone(dto.getCustomerPhone());
@@ -187,11 +188,11 @@ public class OrderService {
         order.setNotes(dto.getNotes());
         order.setDiscountAmount(dto.getDiscountAmount());
         order.setShippingFee(dto.getShippingFee());
-        
+
         if (dto.getStatus() == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
             order.setCompletedAt(LocalDateTime.now());
         }
-        
+
         // 更新訂單項目（如果有提供）
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             orderItemRepository.deleteByOrderId(id);
@@ -199,22 +200,22 @@ public class OrderService {
                 .map(itemDto -> convertItemToEntity(itemDto, id))
                 .collect(Collectors.toList());
             orderItemRepository.saveAll(items);
-            
+
             // 重新計算金額
             calculateOrderAmounts(order, items);
         }
-        
+
         order = orderRepository.save(order);
-        
+
         // 記錄歷史
         if (oldStatus != dto.getStatus()) {
-            orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新", 
+            orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
                 oldStatus.name(), dto.getStatus().name(), null, null);
         } else {
-            orderHistoryService.recordHistory(id, "UPDATE", "訂單已更新", 
+            orderHistoryService.recordHistory(id, "UPDATE", "訂單已更新",
                 null, null, null, null);
         }
-        
+
         return convertToDTO(order);
     }
 
@@ -235,15 +236,15 @@ public class OrderService {
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
-        
+
         // 刪除訂單項目
         orderItemRepository.deleteByOrderId(id);
-        
+
         // 刪除訂單
         orderRepository.delete(order);
-        
+
         // 記錄歷史
-        orderHistoryService.recordHistory(id, "DELETE", "訂單已刪除", 
+        orderHistoryService.recordHistory(id, "DELETE", "訂單已刪除",
             order.getStatus().name(), null, null, null);
     }
 
@@ -294,20 +295,20 @@ public class OrderService {
     public OrderDTO updateOrderStatus(Long id, OrderStatus newStatus, Long operatorId, String operatorName) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
-        
+
         OrderStatus oldStatus = order.getStatus();
         order.setStatus(newStatus);
-        
+
         if (newStatus == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
             order.setCompletedAt(LocalDateTime.now());
         }
-        
+
         order = orderRepository.save(order);
-        
+
         // 記錄歷史
-        orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新", 
+        orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
             oldStatus.name(), newStatus.name(), operatorId, operatorName);
-        
+
         return convertToDTO(order);
     }
 }

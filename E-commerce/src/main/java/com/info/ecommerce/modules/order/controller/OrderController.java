@@ -56,13 +56,13 @@ public class OrderController {
         return ApiResponse.success("訂單已刪除", null);
     }
 
-    @DeleteMapping("/batch")
-    @Operation(summary = "批量刪除訂單", description = "一次刪除多筆訂單")
-    public ApiResponse<Void> batchDeleteOrders(
-            @Parameter(description = "訂單 ID 列表") @RequestBody List<Long> ids) {
-        orderService.deleteOrders(ids);
-        return ApiResponse.success("訂單已批量刪除", null);
-    }
+//    @DeleteMapping("/batch")
+//    @Operation(summary = "批量刪除訂單", description = "一次刪除多筆訂單")
+//    public ApiResponse<Void> batchDeleteOrders(
+//            @Parameter(description = "訂單 ID 列表") @RequestBody List<Long> ids) {
+//        orderService.deleteOrders(ids);
+//        return ApiResponse.success("訂單已批量刪除", null);
+//    }
 
     @GetMapping
     @Operation(summary = "分頁查詢訂單", description = "查詢所有訂單（分頁）")
@@ -110,7 +110,7 @@ public class OrderController {
             @Parameter(description = "新狀態") @RequestParam OrderStatus status,
             @Parameter(description = "操作者 ID") @RequestParam(required = false) Long operatorId,
             @Parameter(description = "操作者名稱") @RequestParam(required = false) String operatorName) {
-        return ApiResponse.success("訂單狀態已更新", 
+        return ApiResponse.success("訂單狀態已更新",
             orderService.updateOrderStatus(id, status, operatorId, operatorName));
     }
 }
