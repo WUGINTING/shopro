@@ -23,9 +23,13 @@ public class ProductService {
      */
     @Transactional
     public ProductDTO createProduct(ProductDTO dto) {
-        // 檢查 SKU 是否已存在
-        if (dto.getSku() != null && productRepository.existsBySku(dto.getSku())) {
-            throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+        // 檢查 SKU 是否已存在（忽略空值和空白）
+        if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
+            String normalizedSku = dto.getSku().trim();
+            if (productRepository.existsBySku(normalizedSku)) {
+                throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+            }
+            dto.setSku(normalizedSku);
         }
         
         Product product = new Product();
@@ -42,11 +46,16 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
         
-        // 檢查 SKU 是否與其他商品重複
-        if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
-            if (productRepository.existsBySku(dto.getSku())) {
-                throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+        // 檢查 SKU 是否與其他商品重複（忽略空值和空白）
+        if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
+            String normalizedSku = dto.getSku().trim();
+            String currentSku = product.getSku() != null ? product.getSku().trim() : "";
+            if (!normalizedSku.equals(currentSku)) {
+                if (productRepository.existsBySku(normalizedSku)) {
+                    throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+                }
             }
+            dto.setSku(normalizedSku);
         }
         
         BeanUtils.copyProperties(dto, product, "id", "createdAt", "updatedAt");

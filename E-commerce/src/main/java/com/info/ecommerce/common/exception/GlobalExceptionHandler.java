@@ -38,15 +38,17 @@ public class GlobalExceptionHandler {
         // 解析錯誤訊息，提供更友善的錯誤提示
         String errorMessage = e.getMessage();
         if (errorMessage != null) {
-            if (errorMessage.contains("unique index") || errorMessage.contains("duplicate key")) {
-                if (errorMessage.contains("sku") || errorMessage.contains("UKq1mafxn973ldq80m1irp3mpvq")) {
+            String lowerErrorMessage = errorMessage.toLowerCase();
+            if (lowerErrorMessage.contains("unique index") || lowerErrorMessage.contains("duplicate key")) {
+                // 檢查是否為 SKU 重複（通過索引名或欄位名）
+                if (lowerErrorMessage.contains("sku") || lowerErrorMessage.contains("ukq1mafxn973ldq80m1irp3mpvq")) {
                     message = "商品編號（SKU）已存在，請使用其他編號";
                 } else {
                     message = "資料重複，請檢查輸入的內容";
                 }
-            } else if (errorMessage.contains("foreign key")) {
+            } else if (lowerErrorMessage.contains("foreign key")) {
                 message = "資料關聯錯誤，請確認相關資料是否存在";
-            } else if (errorMessage.contains("not null")) {
+            } else if (lowerErrorMessage.contains("not null")) {
                 message = "必填欄位不能為空";
             }
         }
