@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,12 +30,14 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "創建訂單", description = "手動建立新訂單，包含選擇客戶、商品、金額")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<OrderDTO> createOrder(@Valid @RequestBody OrderDTO dto) {
         return ApiResponse.success("訂單已建立", orderService.createOrder(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新訂單", description = "更新訂單資料")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<OrderDTO> updateOrder(
             @Parameter(description = "訂單 ID") @PathVariable Long id,
             @Valid @RequestBody OrderDTO dto) {
@@ -43,6 +46,7 @@ public class OrderController {
 
     @GetMapping("/{id}")
     @Operation(summary = "取得訂單詳情", description = "根據訂單 ID 查詢訂單詳細資料")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<OrderDTO> getOrder(
             @Parameter(description = "訂單 ID") @PathVariable Long id) {
         return ApiResponse.success(orderService.getOrder(id));
