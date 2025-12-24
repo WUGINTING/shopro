@@ -90,7 +90,9 @@
 
           <template v-slot:body-cell-price="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ props.row.price.toFixed(2) }}</span>
+    <span class="text-weight-bold text-primary">
+      ¥{{ (props.row.price || 0).toFixed(2) }}
+    </span>
             </q-td>
           </template>
 
@@ -108,7 +110,7 @@
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
                 <q-tooltip>编辑</q-tooltip>
               </q-btn>
-              
+
               <q-btn
                 flat
                 dense
@@ -120,7 +122,7 @@
               >
                 <q-tooltip>{{ props.row.status === 'PUBLISHED' ? '下架' : '上架' }}</q-tooltip>
               </q-btn>
-              
+
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
                 <q-tooltip>删除</q-tooltip>
               </q-btn>
@@ -322,7 +324,7 @@ const handlePublishToggle = async (product: Product) => {
 
 const handleDelete = (id?: number) => {
   if (!id) return
-  
+
   $q.dialog({
     title: '确认删除',
     message: '确定要删除这个商品吗？此操作不可恢复。',
