@@ -246,7 +246,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { productApi, type Product } from '@/api'
+import { productApi, type Product, type PageResponse } from '@/api'
 
 const $q = useQuasar()
 
@@ -303,10 +303,11 @@ const loadProducts = async () => {
   loading.value = true
   try {
     const response = await productApi.getProducts()
-    if (response.data && Array.isArray((response.data as any).content)) {
-      products.value = (response.data as any).content
-    } else if (Array.isArray(response.data)) {
-      products.value = response.data
+    const data = response.data as PageResponse<Product> | Product[]
+    if (Array.isArray(data)) {
+      products.value = data
+    } else if (data && 'content' in data) {
+      products.value = data.content
     } else {
       products.value = []
     }

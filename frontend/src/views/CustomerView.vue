@@ -117,12 +117,27 @@
       <q-dialog v-model="pointsDialogVisible" persistent>
         <q-card style="min-width: 400px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">增加积分</div>
+            <div class="text-h6">积分操作</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
           <q-card-section>
+            <q-select
+              v-model="pointsForm.operation"
+              label="操作类型"
+              outlined
+              :options="[
+                { label: '增加积分', value: 'add' },
+                { label: '扣除积分', value: 'deduct' }
+              ]"
+              option-value="value"
+              option-label="label"
+              emit-value
+              map-options
+              class="q-mb-md"
+            />
+            
             <q-input
               v-model.number="pointsForm.points"
               label="积分数量"
@@ -145,7 +160,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { crmApi, type Customer } from '@/api'
+import { crmApi, type Customer, type PageResponse } from '@/api'
 
 const $q = useQuasar()
 
@@ -163,7 +178,8 @@ const form = ref<Customer>({
 
 const pointsForm = ref({
   customerId: 0,
-  points: 0
+  points: 0,
+  operation: 'add' as 'add' | 'deduct'
 })
 
 const pagination = ref({
@@ -189,10 +205,11 @@ const loadCustomers = async () => {
   try {
     const response = await crmApi.getCustomers()
     // Backend returns Page<MemberDTO> with content array
-    if (response.data && Array.isArray((response.data as any).content)) {
-      customers.value = (response.data as any).content
-    } else if (Array.isArray(response.data)) {
-      customers.value = response.data
+    const data = response.data as PageResponse<Customer> | Customer[]
+    if (Array.isArray(data)) {
+      customers.value = data
+    } else if (data && 'content' in data) {
+      customers.value = data.content
     } else {
       customers.value = []
     }
@@ -226,6 +243,7 @@ const handleEdit = (customer: Customer) => {
 const handleAddPoints = (customer: Customer) => {
   pointsForm.value.customerId = customer.id || 0
   pointsForm.value.points = 0
+  pointsForm.value.operation = 'add'
   pointsDialogVisible.value = true
 }
 
@@ -259,19 +277,28 @@ const handleSubmit = async () => {
 
 const handlePointsSubmit = async () => {
   try {
-    await crmApi.addCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
-    $q.notify({
-      type: 'positive',
-      message: '积分添加成功',
-      position: 'top'
-    })
+    if (pointsForm.value.operation === 'add') {
+      await crmApi.addCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
+      $q.notify({
+        type: 'positive',
+        message: '积分添加成功',
+        position: 'top'
+      })
+    } else {
+      await crmApi.deductCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
+      $q.notify({
+        type: 'positive',
+        message: '积分扣除成功',
+        position: 'top'
+      })
+    }
     pointsDialogVisible.value = false
-    pointsForm.value = { customerId: 0, points: 0 }
+    pointsForm.value = { customerId: 0, points: 0, operation: 'add' }
     loadCustomers()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '积分添加失败',
+      message: '积分操作失败',
       position: 'top'
     })
   }

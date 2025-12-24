@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { orderApi, type Order } from '@/api'
+import { orderApi, type Order, type PageResponse } from '@/api'
 
 const $q = useQuasar()
 
@@ -105,10 +105,11 @@ const loadOrders = async () => {
   loading.value = true
   try {
     const response = await orderApi.getOrders()
-    if (response.data && Array.isArray((response.data as any).content)) {
-      orders.value = (response.data as any).content
-    } else if (Array.isArray(response.data)) {
-      orders.value = response.data
+    const data = response.data as PageResponse<Order> | Order[]
+    if (Array.isArray(data)) {
+      orders.value = data
+    } else if (data && 'content' in data) {
+      orders.value = data.content
     } else {
       orders.value = []
     }

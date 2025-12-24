@@ -8,6 +8,20 @@ export interface ApiResponse<T = any> {
   timestamp: string
 }
 
+// 分页响应接口
+export interface PageResponse<T> {
+  content: T[]
+  pageable: {
+    pageNumber: number
+    pageSize: number
+  }
+  totalElements: number
+  totalPages: number
+  last: boolean
+  first: boolean
+  empty: boolean
+}
+
 // 商品相关接口
 export interface Product {
   id?: number
