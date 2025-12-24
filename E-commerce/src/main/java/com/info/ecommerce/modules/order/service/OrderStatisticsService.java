@@ -76,22 +76,25 @@ public class OrderStatisticsService {
             ));
         statistics.setStatusDistribution(statusDistribution);
         
-        // 金額分布（按區間）
+        // 金額分布（按區間）- 優化為單次迭代
         Map<String, Long> amountDistribution = new HashMap<>();
-        amountDistribution.put("0-1000", orders.stream()
-            .filter(o -> o.getTotalAmount().compareTo(new BigDecimal("1000")) < 0)
-            .count());
-        amountDistribution.put("1000-5000", orders.stream()
-            .filter(o -> o.getTotalAmount().compareTo(new BigDecimal("1000")) >= 0 &&
-                         o.getTotalAmount().compareTo(new BigDecimal("5000")) < 0)
-            .count());
-        amountDistribution.put("5000-10000", orders.stream()
-            .filter(o -> o.getTotalAmount().compareTo(new BigDecimal("5000")) >= 0 &&
-                         o.getTotalAmount().compareTo(new BigDecimal("10000")) < 0)
-            .count());
-        amountDistribution.put("10000+", orders.stream()
-            .filter(o -> o.getTotalAmount().compareTo(new BigDecimal("10000")) >= 0)
-            .count());
+        amountDistribution.put("0-1000", 0L);
+        amountDistribution.put("1000-5000", 0L);
+        amountDistribution.put("5000-10000", 0L);
+        amountDistribution.put("10000+", 0L);
+        
+        for (Order order : orders) {
+            BigDecimal amount = order.getTotalAmount();
+            if (amount.compareTo(new BigDecimal("1000")) < 0) {
+                amountDistribution.merge("0-1000", 1L, Long::sum);
+            } else if (amount.compareTo(new BigDecimal("5000")) < 0) {
+                amountDistribution.merge("1000-5000", 1L, Long::sum);
+            } else if (amount.compareTo(new BigDecimal("10000")) < 0) {
+                amountDistribution.merge("5000-10000", 1L, Long::sum);
+            } else {
+                amountDistribution.merge("10000+", 1L, Long::sum);
+            }
+        }
         statistics.setAmountDistribution(amountDistribution);
         
         return statistics;

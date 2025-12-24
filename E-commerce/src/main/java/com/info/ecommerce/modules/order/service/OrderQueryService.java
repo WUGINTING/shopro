@@ -44,7 +44,9 @@ public class OrderQueryService {
             // 根據訂單編號查詢
             Order order = orderRepository.findByOrderNumber(queryDTO.getOrderNumber())
                 .orElseThrow(() -> new BusinessException("訂單不存在"));
-            return Page.empty(pageable);
+            OrderDTO dto = convertToDTO(order);
+            return new org.springframework.data.domain.PageImpl<>(
+                List.of(dto), pageable, 1);
         } else {
             // 多條件查詢
             orders = orderRepository.findByMultipleCriteria(
@@ -75,14 +77,18 @@ public class OrderQueryService {
 
     /**
      * 根據客戶姓名模糊查詢
+     * 注意：為避免性能問題，此方法應該在 Repository 層實作
+     * 這裡提供簡化實作，實際應用應使用 JPQL 或 Specification
      */
     @Transactional(readOnly = true)
     public List<OrderDTO> searchByCustomerName(String customerName) {
-        // 注意：這需要在 OrderRepository 中添加相應的查詢方法
-        // 這裡簡化處理，實際應該使用 JPQL 或 Specification
+        // TODO: 應該在 OrderRepository 中實作專用的查詢方法
+        // 例如: Page<Order> findByCustomerNameContaining(String name, Pageable pageable)
+        // 當前實作僅適用於小規模資料集
         return orderRepository.findAll().stream()
             .filter(order -> order.getCustomerName() != null && 
                            order.getCustomerName().contains(customerName))
+            .limit(100)  // 限制結果數量避免記憶體問題
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }

@@ -56,8 +56,9 @@ public class OrderService {
      * 計算訂單金額
      */
     private void calculateOrderAmounts(Order order, List<OrderItem> items) {
+        // 使用項目的小計計算訂單小計（避免重複套用折扣）
         BigDecimal subtotal = items.stream()
-            .map(OrderItem::getActualAmount)
+            .map(OrderItem::getSubtotalAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         order.setSubtotalAmount(subtotal);
@@ -65,6 +66,7 @@ public class OrderService {
         BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
         BigDecimal shipping = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
         
+        // 總金額 = 小計 - 訂單折扣 + 運費
         order.setTotalAmount(subtotal.subtract(discount).add(shipping));
     }
 
