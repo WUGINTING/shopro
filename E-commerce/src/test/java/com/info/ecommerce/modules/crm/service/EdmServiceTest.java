@@ -12,6 +12,8 @@ import com.info.ecommerce.modules.crm.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -183,24 +185,11 @@ class EdmServiceTest {
         verify(edmCampaignRepository, times(1)).deleteById(1L);
     }
 
-    @Test
-    void should_ThrowBusinessException_When_DeleteSentCampaign() {
+    @ParameterizedTest
+    @EnumSource(value = EdmStatus.class, names = {"SENT", "SENDING"})
+    void should_ThrowBusinessException_When_DeleteCampaignInNonDeletableStatus(EdmStatus status) {
         // given
-        edmCampaign.setStatus(EdmStatus.SENT);
-        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-
-        // when & then
-        assertThatThrownBy(() -> edmService.deleteEdmCampaign(1L))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("已發送或發送中的 EDM 活動無法刪除");
-        verify(edmCampaignRepository, times(1)).findById(1L);
-        verify(edmCampaignRepository, never()).deleteById(anyLong());
-    }
-
-    @Test
-    void should_ThrowBusinessException_When_DeleteSendingCampaign() {
-        // given
-        edmCampaign.setStatus(EdmStatus.SENDING);
+        edmCampaign.setStatus(status);
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
 
         // when & then

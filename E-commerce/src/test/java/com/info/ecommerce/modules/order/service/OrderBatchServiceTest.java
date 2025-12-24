@@ -9,6 +9,7 @@ import com.info.ecommerce.modules.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -124,18 +125,17 @@ class OrderBatchServiceTest {
                 .notes("Test completion")
                 .build();
         
+        ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order1));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order order = invocation.getArgument(0);
-            assertThat(order.getCompletedAt()).isNotNull();
-            return order;
-        });
+        when(orderRepository.save(orderCaptor.capture())).thenReturn(order1);
 
         // when
         List<Long> result = orderBatchService.batchUpdateStatus(singleUpdateDTO);
 
         // then
         assertThat(result).hasSize(1);
+        Order savedOrder = orderCaptor.getValue();
+        assertThat(savedOrder.getCompletedAt()).isNotNull();
         verify(orderRepository, times(1)).save(any(Order.class));
     }
 
