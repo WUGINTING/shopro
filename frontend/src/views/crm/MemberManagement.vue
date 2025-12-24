@@ -128,6 +128,7 @@
 import { ref, onMounted } from 'vue'
 import { useCrmStore } from '@/stores/modules/crm'
 import type { Member } from '@/api'
+import { showSuccess, showError, showConfirm } from '@/utils/notification'
 
 const crmStore = useCrmStore()
 const showCreateDialog = ref(false)
@@ -162,24 +163,24 @@ async function saveMember() {
   try {
     if (editingMember.value && editingMember.value.id) {
       await crmStore.updateMember(editingMember.value.id, memberForm.value)
-      alert('會員更新成功')
+      showSuccess('會員更新成功')
     } else {
       await crmStore.createMember(memberForm.value)
-      alert('會員新增成功')
+      showSuccess('會員新增成功')
     }
     closeDialog()
   } catch (error) {
-    alert('操作失敗，請稍後再試')
+    showError('操作失敗，請稍後再試')
   }
 }
 
 async function confirmDelete(id: number) {
-  if (confirm('確定要刪除此會員嗎？')) {
+  if (showConfirm('確定要刪除此會員嗎？')) {
     try {
       await crmStore.deleteMember(id)
-      alert('會員刪除成功')
+      showSuccess('會員刪除成功')
     } catch (error) {
-      alert('刪除失敗，請稍後再試')
+      showError('刪除失敗，請稍後再試')
     }
   }
 }
@@ -192,7 +193,7 @@ async function searchByEmail() {
         crmStore.members = [crmStore.currentMember]
       }
     } catch (error) {
-      alert('查詢失敗，請確認電子郵件是否正確')
+      showError('查詢失敗，請確認電子郵件是否正確')
     }
   } else {
     crmStore.fetchMembers()

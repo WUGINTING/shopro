@@ -17,41 +17,41 @@ import type {
 export const memberApi = {
   // 創建會員
   create: (data: Member) => {
-    return apiClient.post<ApiResponse<Member>>('/api/crm/members', data)
+    return apiClient.post<ApiResponse<Member>>('/api/crm/members', data).then(res => res.data)
   },
 
   // 更新會員
   update: (id: number, data: Member) => {
-    return apiClient.put<ApiResponse<Member>>(`/api/crm/members/${id}`, data)
+    return apiClient.put<ApiResponse<Member>>(`/api/crm/members/${id}`, data).then(res => res.data)
   },
 
   // 取得會員詳情
   get: (id: number) => {
-    return apiClient.get<ApiResponse<Member>>(`/api/crm/members/${id}`)
+    return apiClient.get<ApiResponse<Member>>(`/api/crm/members/${id}`).then(res => res.data)
   },
 
   // 依電子郵件取得會員
   getByEmail: (email: string) => {
-    return apiClient.get<ApiResponse<Member>>(`/api/crm/members/email/${email}`)
+    return apiClient.get<ApiResponse<Member>>(`/api/crm/members/email/${email}`).then(res => res.data)
   },
 
   // 刪除會員
   delete: (id: number) => {
-    return apiClient.delete<ApiResponse<void>>(`/api/crm/members/${id}`)
+    return apiClient.delete<ApiResponse<void>>(`/api/crm/members/${id}`).then(res => res.data)
   },
 
   // 分頁查詢會員
   list: (page: number = 0, size: number = 20) => {
     return apiClient.get<ApiResponse<PageResponse<Member>>>('/api/crm/members', {
       params: { page, size }
-    })
+    }).then(res => res.data)
   },
 
   // 依狀態查詢會員
   listByStatus: (status: string, page: number = 0, size: number = 20) => {
     return apiClient.get<ApiResponse<PageResponse<Member>>>(`/api/crm/members/status/${status}`, {
       params: { page, size }
-    })
+    }).then(res => res.data)
   },
 
   // 依等級查詢會員
@@ -61,7 +61,7 @@ export const memberApi = {
       {
         params: { page, size }
       }
-    )
+    ).then(res => res.data)
   }
 }
 

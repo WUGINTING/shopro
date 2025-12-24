@@ -30,8 +30,8 @@ apiClient.interceptors.request.use(
 // 回應攔截器
 apiClient.interceptors.response.use(
   (response) => {
-    // 統一處理 API 回應格式
-    return response.data
+    // 返回完整的 response，保持類型安全
+    return response
   },
   (error: AxiosError) => {
     // 統一錯誤處理

@@ -25,7 +25,7 @@ export const useCrmStore = defineStore('crm', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await memberApi.list(page, size) as any
+      const response = await memberApi.list(page, size)
       if (response.success && response.data) {
         members.value = response.data.content
         pagination.value = {
@@ -47,7 +47,7 @@ export const useCrmStore = defineStore('crm', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await memberApi.create(memberData) as any
+      const response = await memberApi.create(memberData)
       if (response.success && response.data) {
         members.value.unshift(response.data)
         return response.data
@@ -65,7 +65,7 @@ export const useCrmStore = defineStore('crm', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await memberApi.update(id, memberData) as any
+      const response = await memberApi.update(id, memberData)
       if (response.success && response.data) {
         const index = members.value.findIndex((m) => m.id === id)
         if (index !== -1) {
