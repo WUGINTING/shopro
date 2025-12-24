@@ -239,7 +239,7 @@ const quickActions = [
 }
 
 .welcome-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
   color: white;
 }
 
@@ -254,7 +254,7 @@ const quickActions = [
 }
 
 .stat-card-1 {
-  border-top: 4px solid #667eea;
+  border-top: 4px solid #1976D2;
 }
 
 .stat-card-2 {
@@ -262,10 +262,10 @@ const quickActions = [
 }
 
 .stat-card-3 {
-  border-top: 4px solid #009688;
+  border-top: 4px solid #26A69A;
 }
 
 .stat-card-4 {
-  border-top: 4px solid #4caf50;
+  border-top: 4px solid #21BA45;
 }
 </style>

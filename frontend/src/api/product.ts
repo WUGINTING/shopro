@@ -16,6 +16,7 @@ export interface Product {
   price: number
   stock: number
   status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+  salesMode?: 'NORMAL' | 'PRE_ORDER' | 'TICKET' | 'SUBSCRIPTION' | 'STORE_ONLY'
   categoryId?: number | null
   images?: string[]
   specifications?: ProductSpecification[]

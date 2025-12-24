@@ -173,11 +173,11 @@ const toggleLeftDrawer = () => {
 
 <style scoped>
 .bg-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
 }
 
 .active-item {
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #1976D2 0%, #1565C0 100%);
   color: white;
   border-radius: 8px;
 }
@@ -189,5 +189,36 @@ const toggleLeftDrawer = () => {
 .q-item {
   border-radius: 8px;
   margin: 4px 8px;
+}
+
+/* Improve text contrast globally */
+.q-field__label,
+.q-field__native,
+.text-caption,
+.text-grey-7 {
+  color: #616161 !important;
+}
+
+.text-grey-6 {
+  color: #757575 !important;
+}
+
+.text-dark {
+  color: #212121 !important;
+}
+
+/* Card text contrast */
+.q-card__section {
+  color: #212121;
+}
+
+/* Table text contrast */
+.q-table tbody td {
+  color: #212121;
+}
+
+.q-table thead th {
+  color: #424242;
+  font-weight: 600;
 }
 </style>

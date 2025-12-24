@@ -12,7 +12,7 @@
           icon="add"
           label="新增商品"
           unelevated
-          @click="showDialog = true; form = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', categoryId: null }"
+          @click="showDialog = true; form = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }"
         />
       </div>
 
@@ -196,6 +196,21 @@
                 </div>
                 <div class="col-6">
                   <q-select
+                    v-model="form.salesMode"
+                    label="销售模式 *"
+                    outlined
+                    :options="salesModeOptions"
+                    option-value="value"
+                    option-label="label"
+                    emit-value
+                    map-options
+                  />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12">
+                  <q-select
                     v-model="form.categoryId"
                     label="商品分类"
                     outlined
@@ -249,6 +264,7 @@ const form = ref<Product>({
   price: 0,
   stock: 0,
   status: 'DRAFT',
+  salesMode: 'NORMAL',
   categoryId: null
 })
 
@@ -271,6 +287,14 @@ const statusOptions = [
   { label: '草稿', value: 'DRAFT' },
   { label: '已上架', value: 'PUBLISHED' },
   { label: '已下架', value: 'UNPUBLISHED' }
+]
+
+const salesModeOptions = [
+  { label: '正常销售', value: 'NORMAL' },
+  { label: '预购商品', value: 'PRE_ORDER' },
+  { label: '票券商品', value: 'TICKET' },
+  { label: '订阅商品', value: 'SUBSCRIPTION' },
+  { label: '门市限定', value: 'STORE_ONLY' }
 ]
 
 const categoryOptions = ['电子产品', '服装', '食品', '图书', '家居']
@@ -367,7 +391,7 @@ const handleSubmit = async () => {
       })
     }
     showDialog.value = false
-    form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', categoryId: null }
+    form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
     loadProducts()
   } catch (error) {
     $q.notify({
