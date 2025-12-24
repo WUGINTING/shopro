@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { orderApi, type Order } from '@/api'
 
@@ -93,6 +93,24 @@ const getStatusText = (status: Order['status']) => {
 
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
+  
+  // 对于取消状态，需要确认
+  if (status === 'CANCELLED') {
+    try {
+      await ElMessageBox.confirm(
+        '确定要取消此订单吗？此操作不可恢复。',
+        '警告',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      )
+    } catch {
+      return // 用户取消了操作
+    }
+  }
+  
   try {
     await orderApi.updateOrderStatus(id, status)
     ElMessage.success('状态更新成功')

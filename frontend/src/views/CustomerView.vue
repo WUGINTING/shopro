@@ -150,6 +150,7 @@ const handlePointsSubmit = async () => {
     await crmApi.updateCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
     ElMessage.success('积分添加成功')
     pointsDialogVisible.value = false
+    pointsForm.value = { customerId: 0, points: 0 }
     loadCustomers()
   } catch (error) {
     ElMessage.error('积分添加失败')

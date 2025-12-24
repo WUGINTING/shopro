@@ -104,6 +104,7 @@ const handleSubmit = async () => {
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
+    form.value = { name: '', description: '', price: 0, stock: 0 }
     loadProducts()
   } catch (error) {
     ElMessage.error('操作失败')
