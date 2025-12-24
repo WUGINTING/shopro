@@ -49,11 +49,9 @@ public class ProductService {
         // 檢查 SKU 是否與其他商品重複（忽略空值和空白）
         if (dto.getSku() != null && !dto.getSku().trim().isEmpty()) {
             String normalizedSku = dto.getSku().trim();
-            String currentSku = product.getSku() != null ? product.getSku().trim() : "";
-            if (!normalizedSku.equals(currentSku)) {
-                if (productRepository.existsBySku(normalizedSku)) {
-                    throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
-                }
+            // 檢查新的 SKU 是否已被其他商品使用（排除當前商品本身）
+            if (productRepository.existsBySkuAndIdNot(normalizedSku, id)) {
+                throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
             }
             dto.setSku(normalizedSku);
         }
