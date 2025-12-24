@@ -9,7 +9,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const $q = useQuasar()
 
-const leftDrawerOpen = ref(false)
+const leftDrawerOpen = ref(true) // Open by default for desktop view
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
@@ -48,26 +48,27 @@ const handleLogout = () => {
   <q-layout view="hHh lpR fFf">
     <!-- Header -->
     <q-header elevated class="bg-gradient">
-      <q-toolbar>
+      <q-toolbar class="text-white">
         <q-btn
           flat
           dense
           round
           icon="menu"
+          aria-label="Toggle menu"
           @click="toggleLeftDrawer"
         />
 
         <q-toolbar-title>
           <div class="row items-center no-wrap">
             <q-icon name="shopping_cart" size="32px" class="q-mr-sm" />
-            <span class="text-weight-bold">Shopro</span>
+            <span class="text-weight-bold">Shopro 电商管理系统</span>
           </div>
         </q-toolbar-title>
 
-        <q-btn flat round dense icon="notifications" />
+        <q-btn flat round dense icon="notifications" aria-label="Notifications" />
         
         <q-btn flat round dense>
-          <q-avatar size="32px" color="grey-4" text-color="primary">
+          <q-avatar size="32px" color="white" text-color="primary">
             <q-icon name="person" />
           </q-avatar>
           
@@ -116,6 +117,8 @@ const handleLogout = () => {
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
+      :width="260"
+      :breakpoint="1024"
       bordered
       class="bg-grey-2"
     >
@@ -222,6 +225,20 @@ const handleLogout = () => {
   background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
 }
 
+/* Toolbar text should be white for contrast */
+.q-toolbar {
+  color: white;
+}
+
+.q-toolbar .q-btn {
+  color: white;
+}
+
+.q-toolbar-title {
+  color: white;
+  font-size: 1.1rem;
+}
+
 .active-item {
   background: linear-gradient(90deg, #1976D2 0%, #1565C0 100%);
   color: white;
@@ -235,6 +252,12 @@ const handleLogout = () => {
 .q-item {
   border-radius: 8px;
   margin: 4px 8px;
+  font-size: 0.95rem;
+}
+
+.q-item-label {
+  font-weight: 500;
+  color: #424242;
 }
 
 /* Improve text contrast globally */
@@ -261,10 +284,12 @@ const handleLogout = () => {
 /* Table text contrast */
 .q-table tbody td {
   color: #212121;
+  font-size: 0.9rem;
 }
 
 .q-table thead th {
   color: #424242;
   font-weight: 600;
+  font-size: 0.95rem;
 }
 </style>
