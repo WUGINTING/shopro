@@ -24,32 +24,32 @@ export interface CustomerGroup {
 export const crmApi = {
   // 获取客户列表
   getCustomers: (params?: any) => {
-    return axios.get<any, ApiResponse<Customer[]>>('/customers', { params })
+    return axios.get<any, ApiResponse<Customer[]>>('/crm/members', { params })
   },
   
   // 获取客户详情
   getCustomer: (id: number) => {
-    return axios.get<any, ApiResponse<Customer>>(`/customers/${id}`)
+    return axios.get<any, ApiResponse<Customer>>(`/crm/members/${id}`)
   },
   
   // 创建客户
   createCustomer: (data: Customer) => {
-    return axios.post<any, ApiResponse<Customer>>('/customers', data)
+    return axios.post<any, ApiResponse<Customer>>('/crm/members', data)
   },
   
   // 更新客户
   updateCustomer: (id: number, data: Customer) => {
-    return axios.put<any, ApiResponse<Customer>>(`/customers/${id}`, data)
+    return axios.put<any, ApiResponse<Customer>>(`/crm/members/${id}`, data)
   },
   
   // 获取客户分组
   getCustomerGroups: () => {
-    return axios.get<any, ApiResponse<CustomerGroup[]>>('/customers/groups')
+    return axios.get<any, ApiResponse<CustomerGroup[]>>('/crm/member-groups')
   },
   
   // 更新客户积分
   updateCustomerPoints: (id: number, points: number) => {
-    return axios.post<any, ApiResponse<Customer>>(`/customers/${id}/points`, { points })
+    return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points`, { points })
   }
 }
 
