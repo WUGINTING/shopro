@@ -287,12 +287,22 @@ Add these properties to `application.properties`:
 
 ```properties
 # JWT Configuration
-jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+# IMPORTANT: Generate a unique, random secret key for production
+# You can generate one using: openssl rand -base64 64
+# Never commit the actual secret to version control!
+jwt.secret=YOUR-UNIQUE-SECRET-KEY-HERE-CHANGE-THIS-IN-PRODUCTION
 jwt.expiration=86400000
 
 # Security logging (optional)
 logging.level.org.springframework.security=DEBUG
 ```
+
+**Security Warning**: The `jwt.secret` must be:
+- At least 256 bits (32 characters) long
+- Unique for each environment
+- Kept secret and never committed to version control
+- Generated using a cryptographically secure random generator
+
 
 ## Error Handling
 
