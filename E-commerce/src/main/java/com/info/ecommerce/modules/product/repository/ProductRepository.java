@@ -22,4 +22,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findBySkuIn(List<String> skus);
     
     Page<Product> findByNameContaining(String name, Pageable pageable);
+    
+    boolean existsBySku(String sku);
+    
+    java.util.Optional<Product> findBySku(String sku);
 }

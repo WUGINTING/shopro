@@ -23,6 +23,11 @@ public class ProductService {
      */
     @Transactional
     public ProductDTO createProduct(ProductDTO dto) {
+        // 檢查 SKU 是否已存在
+        if (dto.getSku() != null && productRepository.existsBySku(dto.getSku())) {
+            throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+        }
+        
         Product product = new Product();
         BeanUtils.copyProperties(dto, product, "id");
         product = productRepository.save(product);
@@ -36,6 +41,13 @@ public class ProductService {
     public ProductDTO updateProduct(Long id, ProductDTO dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
+        
+        // 檢查 SKU 是否與其他商品重複
+        if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
+            if (productRepository.existsBySku(dto.getSku())) {
+                throw new BusinessException("商品編號（SKU）已存在，請使用其他編號");
+            }
+        }
         
         BeanUtils.copyProperties(dto, product, "id", "createdAt", "updatedAt");
         product = productRepository.save(product);
