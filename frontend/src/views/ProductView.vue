@@ -64,15 +64,26 @@ const form = ref<Product>({
   price: 0,
   stock: 0
 })
-
 const loadProducts = async () => {
   loading.value = true
   try {
     const response = await productApi.getProducts()
-    products.value = response.data || []
+
+    // 關鍵修正點：
+    // Spring Boot Page 物件的資料在 .content 屬性中
+    // response.data 是 axios 回傳的 body，裡面的 .content 才是陣列
+    if (response.data && Array.isArray(response.data.content)) {
+      products.value = response.data.content
+    } else if (Array.isArray(response.data)) {
+      // 萬一後端改回傳純陣列時的相容處理
+      products.value = response.data
+    } else {
+      products.value = []
+    }
+
   } catch (error) {
     ElMessage.error('加载商品列表失败')
-    console.error(error)
+    console.error('API Error:', error)
   } finally {
     loading.value = false
   }

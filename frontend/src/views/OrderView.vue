@@ -60,7 +60,14 @@ const loadOrders = async () => {
   loading.value = true
   try {
     const response = await orderApi.getOrders()
-    orders.value = response.data || []
+
+    // 修正點：Spring Boot Page 物件的資料在 response.data.content
+    if (response.data && response.data.content) {
+      orders.value = response.data.content
+    } else {
+      // 預防萬一 API 直接回傳陣列
+      orders.value = Array.isArray(response.data) ? response.data : []
+    }
   } catch (error) {
     ElMessage.error('加载订单列表失败')
     console.error(error)
@@ -93,7 +100,7 @@ const getStatusText = (status: Order['status']) => {
 
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
-  
+
   // 对于取消状态，需要确认
   if (status === 'CANCELLED') {
     try {
@@ -110,7 +117,7 @@ const handleStatusChange = async (id?: number, status?: Order['status']) => {
       return // 用户取消了操作
     }
   }
-  
+
   try {
     await orderApi.updateOrderStatus(id, status)
     ElMessage.success('状态更新成功')
