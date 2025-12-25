@@ -7,9 +7,10 @@ Vue 3 + TypeScript + Vite 前端應用
 - **Vue 3** - 漸進式 JavaScript 框架
 - **TypeScript** - 類型安全的 JavaScript
 - **Vite** - 快速的前端建構工具
+- **Quasar Framework** - Vue 3 UI 組件庫
 - **Vue Router** - Vue.js 官方路由管理器
 - **Pinia** - Vue 3 狀態管理
-- **Element Plus** - Vue 3 UI 組件庫
+- **Chart.js** - 資料視覺化圖表庫
 - **Axios** - HTTP 客戶端
 
 ## 專案結構
@@ -60,13 +61,26 @@ frontend/
 - 積分管理
 - 消費記錄追蹤
 
+### 4. 支付管理 (Payment Management) ✨ NEW
+- **金流儀表板** - 今日/本月交易統計、成功率、支付管道佔比圖表
+- **金流交易紀錄** - 交易搜尋、狀態同步、詳情查看
+- **支付參數設定** - 支付閘道啟用/停用、維護模式、抽成比率設定
+- 支援 LINE PAY、綠界 ECPay 等台灣支付閘道
+
 ## 開發指南
 
-### 安裝依賴
+### ⚠️ 重要：首次安裝依賴
+
+**在啟動開發模式之前，務必先安裝依賴！**
 
 ```sh
 npm install
 ```
+
+這會安裝所有必要的套件，包括：
+- Chart.js (用於支付儀表板的圖表顯示)
+- Quasar Framework
+- Vue Router, Pinia 等核心套件
 
 ### 開發模式
 
@@ -137,6 +151,9 @@ await productApi.updateProduct(id, productData)
 - `/products` - 商品管理
 - `/orders` - 訂單管理
 - `/customers` - 顧客管理 (CRM)
+- `/payment-dashboard` - 金流儀表板 ✨ NEW
+- `/payment-transactions` - 金流交易紀錄 ✨ NEW
+- `/payment-settings` - 支付參數設定 ✨ NEW
 - `/about` - 關於頁面
 
 ## 狀態管理
@@ -145,17 +162,34 @@ await productApi.updateProduct(id, productData)
 
 ## 組件使用指南
 
-### Element Plus 組件
+### Quasar 組件
 
-項目使用 Element Plus 作為 UI 組件庫，已全局引入：
+項目使用 Quasar Framework 作為 UI 組件庫：
 
 ```vue
 <template>
-  <el-button type="primary">主要按鈕</el-button>
-  <el-table :data="tableData">
-    <el-table-column prop="name" label="名稱" />
-  </el-table>
+  <q-btn color="primary" label="主要按鈕" />
+  <q-table :rows="rows" :columns="columns" />
+  <q-card>
+    <q-card-section>內容</q-card-section>
+  </q-card>
 </template>
+```
+
+### Chart.js 圖表
+
+支付儀表板使用 Chart.js 進行資料視覺化：
+
+```vue
+<script setup>
+import Chart from 'chart.js/auto'
+
+const chartInstance = new Chart(canvas.value, {
+  type: 'pie',
+  data: { ... },
+  options: { ... }
+})
+</script>
 ```
 
 ## 連接後端
@@ -179,7 +213,31 @@ TypeScript cannot handle type information for `.vue` imports by default, so we r
 
 - [Vue 3 文檔](https://vuejs.org/)
 - [Vite 文檔](https://vitejs.dev/)
-- [Element Plus 文檔](https://element-plus.org/)
+- [Quasar Framework 文檔](https://quasar.dev/)
+- [Chart.js 文檔](https://www.chartjs.org/)
 - [Vue Router 文檔](https://router.vuejs.org/)
 - [Pinia 文檔](https://pinia.vuejs.org/)
+
+## 常見問題
+
+### Q: 為什麼 Chart.js 無法載入？
+
+**錯誤訊息**: `Failed to resolve import "chart.js/auto"`
+
+**解決方案**: 
+```bash
+# 確保已安裝依賴
+npm install
+
+# 如果問題持續，清除並重新安裝
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Q: 開發伺服器無法啟動？
+
+確保：
+1. 已執行 `npm install`
+2. Node.js 版本符合要求（>= 20.19.0）
+3. 後端 Spring Boot 服務運行在 port 8080
 
