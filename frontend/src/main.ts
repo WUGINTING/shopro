@@ -1,5 +1,5 @@
 import './assets/main.css'
-
+import '@/styles/theme-system.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { Quasar, Notify, Dialog, Loading } from 'quasar'
