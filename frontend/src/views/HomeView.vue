@@ -277,7 +277,11 @@ const loadDashboardData = async () => {
     const productsResponse = await dashboardApi.getTopProducts(5)
     topProducts.value = productsResponse.data
   } catch (error) {
-    console.error('Failed to load dashboard data:', error)
+    // Silently log error (visible in browser console for debugging)
+    if (error instanceof Error) {
+      console.warn('Dashboard data load error:', error.message)
+    }
+    
     $q.notify({
       type: 'warning',
       message: '加载仪表板数据失败，显示默认数据',

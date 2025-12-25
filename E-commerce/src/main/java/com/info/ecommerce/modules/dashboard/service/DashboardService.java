@@ -91,8 +91,8 @@ public class DashboardService {
                         .orderNumber(order.getOrderNumber())
                         .status(order.getStatus().name())
                         .totalAmount(order.getTotalAmount())
-                        .customerName(order.getCustomer() != null ? 
-                            order.getCustomer().getName() : "未知客戶")
+                        .customerName(order.getCustomerName() != null ? 
+                            order.getCustomerName() : "未知客戶")
                         .createdAt(order.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
@@ -100,17 +100,17 @@ public class DashboardService {
 
     /**
      * Get top selling products
+     * TODO: Implement proper sales calculation by joining with OrderItem entity
+     * Currently returns recently added products as a placeholder
      */
     public List<TopProductDTO> getTopProducts(int limit) {
-        // For now, return products sorted by some criteria
-        // In a real implementation, you would join with order items and calculate sales
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
         
         return productRepository.findAll(pageable).getContent().stream()
                 .map(product -> TopProductDTO.builder()
                         .id(product.getId())
                         .name(product.getName())
-                        .salesCount(0L) // TODO: Calculate from order items
+                        .salesCount(0L) // TODO: Calculate actual sales from order_items table
                         .price(product.getPrice())
                         .imageUrl(product.getImages() != null && !product.getImages().isEmpty() ? 
                             product.getImages().get(0) : null)
