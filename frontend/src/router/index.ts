@@ -95,6 +95,24 @@ const router = createRouter({
       component: () => import('../views/AlbumDetailView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/payment-dashboard',
+      name: 'paymentDashboard',
+      component: () => import('../views/PaymentDashboardView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/payment-transactions',
+      name: 'paymentTransactions',
+      component: () => import('../views/PaymentTransactionsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/payment-settings',
+      name: 'paymentSettings',
+      component: () => import('../views/PaymentSettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 
