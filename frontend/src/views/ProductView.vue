@@ -275,8 +275,9 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
-            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn flat label="取消" color="grey-7" @click="closeDialog" />
             <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
+            <q-btn v-if="form.id" unelevated label="完成" color="positive" @click="closeDialog" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -536,7 +537,7 @@ const handleSubmit = async () => {
       }
       $q.notify({
         type: 'positive',
-        message: '创建成功',
+        message: '创建成功，現在可以添加相冊圖片',
         position: 'top'
       })
     }
@@ -548,6 +549,13 @@ const handleSubmit = async () => {
       position: 'top'
     })
   }
+}
+
+const closeDialog = () => {
+  showDialog.value = false
+  form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
+  selectedAlbumImages.value = []
+  productImage.value = null
 }
 
 // Album-related functions
@@ -599,8 +607,12 @@ const addSelectedImagesToProduct = async () => {
     const imageIds = tempSelectedImages.value.map(img => img.id).filter((id): id is number => id !== undefined)
     await productApi.addAlbumImages(form.value.id, imageIds)
     
-    // Add to selected images list
-    selectedAlbumImages.value.push(...tempSelectedImages.value)
+    // Add only new images to avoid duplicates
+    tempSelectedImages.value.forEach(img => {
+      if (!selectedAlbumImages.value.some(existing => existing.id === img.id)) {
+        selectedAlbumImages.value.push(img)
+      }
+    })
     
     $q.notify({
       type: 'positive',
@@ -623,6 +635,8 @@ const addSelectedImagesToProduct = async () => {
 }
 
 const removeSelectedImage = (imageId?: number) => {
+  // Note: This only removes from local preview
+  // The image remains on the backend until product is updated
   const index = selectedAlbumImages.value.findIndex(img => img.id === imageId)
   if (index > -1) {
     selectedAlbumImages.value.splice(index, 1)
