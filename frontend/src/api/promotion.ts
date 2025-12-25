@@ -50,84 +50,69 @@ const COUPON_API = '/marketing/coupons'
 export const promotionApi = {
   // 促銷活動 API
   getPromotions: async (page = 0, size = 20) => {
-    const data = await axiosInstance.get<any>(`${PROMOTION_API}`, {
+    return axiosInstance.get<any>(`${PROMOTION_API}`, {
       params: { page, size }
-    })
-    return data.data as PageResponse<Promotion>
+    }) as Promise<PageResponse<Promotion>>
   },
 
   getPromotion: async (id: number) => {
-    const data = await axiosInstance.get<any>(`${PROMOTION_API}/${id}`)
-    return data.data as Promotion
+    return axiosInstance.get<any>(`${PROMOTION_API}/${id}`) as Promise<Promotion>
   },
 
   createPromotion: async (promotion: Promotion) => {
-    const data = await axiosInstance.post<any>(`${PROMOTION_API}`, promotion)
-    return data.data as Promotion
+    return axiosInstance.post<any>(`${PROMOTION_API}`, promotion) as Promise<Promotion>
   },
 
   updatePromotion: async (id: number, promotion: Partial<Promotion>) => {
-    const data = await axiosInstance.put<any>(`${PROMOTION_API}/${id}`, promotion)
-    return data.data as Promotion
+    return axiosInstance.put<any>(`${PROMOTION_API}/${id}`, promotion) as Promise<Promotion>
   },
 
   deletePromotion: async (id: number) => {
-    const data = await axiosInstance.delete<any>(`${PROMOTION_API}/${id}`)
-    return data.success
+    return axiosInstance.delete<any>(`${PROMOTION_API}/${id}`) as Promise<boolean>
   },
 
   enablePromotion: async (id: number) => {
-    const data = await axiosInstance.patch<any>(`${PROMOTION_API}/${id}/enable`)
-    return data.success
+    return axiosInstance.patch<any>(`${PROMOTION_API}/${id}/enable`) as Promise<boolean>
   },
 
   disablePromotion: async (id: number) => {
-    const data = await axiosInstance.patch<any>(`${PROMOTION_API}/${id}/disable`)
-    return data.success
+    return axiosInstance.patch<any>(`${PROMOTION_API}/${id}/disable`) as Promise<boolean>
   }
 }
 
 export const couponApi = {
   // 優惠券 API
   getCoupons: async (page = 0, size = 20) => {
-    const data = await axiosInstance.get<any>(`${COUPON_API}`, {
+    return axiosInstance.get<any>(`${COUPON_API}`, {
       params: { page, size }
-    })
-    return data.data as PageResponse<Coupon>
+    }) as Promise<PageResponse<Coupon>>
   },
 
   getCoupon: async (id: number) => {
-    const data = await axiosInstance.get<any>(`${COUPON_API}/${id}`)
-    return data.data as Coupon
+    return axiosInstance.get<any>(`${COUPON_API}/${id}`) as Promise<Coupon>
   },
 
   createCoupon: async (coupon: Coupon) => {
-    const data = await axiosInstance.post<any>(`${COUPON_API}`, coupon)
-    return data.data as Coupon
+    return axiosInstance.post<any>(`${COUPON_API}`, coupon) as Promise<Coupon>
   },
 
   updateCoupon: async (id: number, coupon: Partial<Coupon>) => {
-    const data = await axiosInstance.put<any>(`${COUPON_API}/${id}`, coupon)
-    return data.data as Coupon
+    return axiosInstance.put<any>(`${COUPON_API}/${id}`, coupon) as Promise<Coupon>
   },
 
   deleteCoupon: async (id: number) => {
-    const data = await axiosInstance.delete<any>(`${COUPON_API}/${id}`)
-    return data.success
+    return axiosInstance.delete<any>(`${COUPON_API}/${id}`) as Promise<boolean>
   },
 
   enableCoupon: async (id: number) => {
-    const data = await axiosInstance.patch<any>(`${COUPON_API}/${id}/enable`)
-    return data.success
+    return axiosInstance.patch<any>(`${COUPON_API}/${id}/enable`) as Promise<boolean>
   },
 
   disableCoupon: async (id: number) => {
-    const data = await axiosInstance.patch<any>(`${COUPON_API}/${id}/disable`)
-    return data.success
+    return axiosInstance.patch<any>(`${COUPON_API}/${id}/disable`) as Promise<boolean>
   },
 
   validateCoupon: async (code: string) => {
-    const data = await axiosInstance.get<any>(`${COUPON_API}/validate/${code}`)
-    return data.data as Coupon
+    return axiosInstance.get<any>(`${COUPON_API}/validate/${code}`) as Promise<Coupon>
   }
 }
