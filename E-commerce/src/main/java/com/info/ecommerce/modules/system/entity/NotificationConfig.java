@@ -61,7 +61,7 @@ public class NotificationConfig {
     @Column(columnDefinition = "NVARCHAR(500)")
     private String smsApiKey;
 
-    @Column(columnDefinition =="NVARCHAR(500)")
+    @Column(columnDefinition = "NVARCHAR(500)")
     private String smsApiSecret;
 
     @Column(columnDefinition = "NVARCHAR(50)")
