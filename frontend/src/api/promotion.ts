@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from './axios'
 
 export interface Promotion {
   id?: number
@@ -44,45 +44,45 @@ export interface PageResponse<T> {
   pageSize: number
 }
 
-const PROMOTION_API = '/api/marketing/promotions'
-const COUPON_API = '/api/marketing/coupons'
+const PROMOTION_API = '/marketing/promotions'
+const COUPON_API = '/marketing/coupons'
 
 export const promotionApi = {
   // 促銷活動 API
   getPromotions: async (page = 0, size = 20) => {
-    const { data } = await axios.get<any>(`${PROMOTION_API}`, {
+    const data = await axiosInstance.get<any>(`${PROMOTION_API}`, {
       params: { page, size }
     })
     return data.data as PageResponse<Promotion>
   },
 
   getPromotion: async (id: number) => {
-    const { data } = await axios.get<any>(`${PROMOTION_API}/${id}`)
+    const data = await axiosInstance.get<any>(`${PROMOTION_API}/${id}`)
     return data.data as Promotion
   },
 
   createPromotion: async (promotion: Promotion) => {
-    const { data } = await axios.post<any>(`${PROMOTION_API}`, promotion)
+    const data = await axiosInstance.post<any>(`${PROMOTION_API}`, promotion)
     return data.data as Promotion
   },
 
   updatePromotion: async (id: number, promotion: Partial<Promotion>) => {
-    const { data } = await axios.put<any>(`${PROMOTION_API}/${id}`, promotion)
+    const data = await axiosInstance.put<any>(`${PROMOTION_API}/${id}`, promotion)
     return data.data as Promotion
   },
 
   deletePromotion: async (id: number) => {
-    const { data } = await axios.delete<any>(`${PROMOTION_API}/${id}`)
+    const data = await axiosInstance.delete<any>(`${PROMOTION_API}/${id}`)
     return data.success
   },
 
   enablePromotion: async (id: number) => {
-    const { data } = await axios.patch<any>(`${PROMOTION_API}/${id}/enable`)
+    const data = await axiosInstance.patch<any>(`${PROMOTION_API}/${id}/enable`)
     return data.success
   },
 
   disablePromotion: async (id: number) => {
-    const { data } = await axios.patch<any>(`${PROMOTION_API}/${id}/disable`)
+    const data = await axiosInstance.patch<any>(`${PROMOTION_API}/${id}/disable`)
     return data.success
   }
 }
@@ -90,44 +90,44 @@ export const promotionApi = {
 export const couponApi = {
   // 優惠券 API
   getCoupons: async (page = 0, size = 20) => {
-    const { data } = await axios.get<any>(`${COUPON_API}`, {
+    const data = await axiosInstance.get<any>(`${COUPON_API}`, {
       params: { page, size }
     })
     return data.data as PageResponse<Coupon>
   },
 
   getCoupon: async (id: number) => {
-    const { data } = await axios.get<any>(`${COUPON_API}/${id}`)
+    const data = await axiosInstance.get<any>(`${COUPON_API}/${id}`)
     return data.data as Coupon
   },
 
   createCoupon: async (coupon: Coupon) => {
-    const { data } = await axios.post<any>(`${COUPON_API}`, coupon)
+    const data = await axiosInstance.post<any>(`${COUPON_API}`, coupon)
     return data.data as Coupon
   },
 
   updateCoupon: async (id: number, coupon: Partial<Coupon>) => {
-    const { data } = await axios.put<any>(`${COUPON_API}/${id}`, coupon)
+    const data = await axiosInstance.put<any>(`${COUPON_API}/${id}`, coupon)
     return data.data as Coupon
   },
 
   deleteCoupon: async (id: number) => {
-    const { data } = await axios.delete<any>(`${COUPON_API}/${id}`)
+    const data = await axiosInstance.delete<any>(`${COUPON_API}/${id}`)
     return data.success
   },
 
   enableCoupon: async (id: number) => {
-    const { data } = await axios.patch<any>(`${COUPON_API}/${id}/enable`)
+    const data = await axiosInstance.patch<any>(`${COUPON_API}/${id}/enable`)
     return data.success
   },
 
   disableCoupon: async (id: number) => {
-    const { data } = await axios.patch<any>(`${COUPON_API}/${id}/disable`)
+    const data = await axiosInstance.patch<any>(`${COUPON_API}/${id}/disable`)
     return data.success
   },
 
   validateCoupon: async (code: string) => {
-    const { data } = await axios.get<any>(`${COUPON_API}/validate/${code}`)
+    const data = await axiosInstance.get<any>(`${COUPON_API}/validate/${code}`)
     return data.data as Coupon
   }
 }
