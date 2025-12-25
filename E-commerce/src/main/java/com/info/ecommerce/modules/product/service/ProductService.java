@@ -90,7 +90,20 @@ public class ProductService {
             dto.setSku(normalizedSku);
         }
         
-        BeanUtils.copyProperties(dto, product, "id", "createdAt", "updatedAt");
+        // Copy properties excluding images field since we'll handle it separately
+        BeanUtils.copyProperties(dto, product, "id", "createdAt", "updatedAt", "images");
+        
+        // Manually handle images field conversion from List<ProductImageDTO> to List<String>
+        if (dto.getImages() != null) {
+            List<String> imageUrls = new ArrayList<>();
+            for (var imageDTO : dto.getImages()) {
+                if (imageDTO.getImageUrl() != null && !imageDTO.getImageUrl().isEmpty()) {
+                    imageUrls.add(imageDTO.getImageUrl());
+                }
+            }
+            product.setImageUrls(imageUrls);
+        }
+        
         product = productRepository.save(product);
         return toDTO(product);
     }

@@ -560,20 +560,24 @@ const handleDelete = (id?: number) => {
 
 const handleSubmit = async () => {
   try {
-    // Sync images array with selected album images
+    // Convert images array to ProductImageDTO format for backend
+    const productData = { ...form.value }
     if (selectedAlbumImages.value.length > 0) {
-      form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
+      productData.images = selectedAlbumImages.value.map(img => ({
+        imageUrl: img.imageUrl || '',
+        albumImageId: img.id
+      }))
     }
     
     if (form.value.id) {
-      await productApi.updateProduct(form.value.id, form.value)
+      await productApi.updateProduct(form.value.id, productData)
       $q.notify({
         type: 'positive',
         message: '更新成功',
         position: 'top'
       })
     } else {
-      const response = await productApi.createProduct(form.value)
+      const response = await productApi.createProduct(productData)
       // Set the new product ID for album image selection
       if (response.data && response.data.id) {
         form.value.id = response.data.id
@@ -598,9 +602,13 @@ const closeDialog = async () => {
   // If there are selected album images and a product ID, save them before closing
   if (form.value.id && selectedAlbumImages.value.length > 0) {
     try {
-      // Sync images array with selected album images
-      form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
-      await productApi.updateProduct(form.value.id, form.value)
+      // Convert images to ProductImageDTO format for backend
+      const productData = { ...form.value }
+      productData.images = selectedAlbumImages.value.map(img => ({
+        imageUrl: img.imageUrl || '',
+        albumImageId: img.id
+      }))
+      await productApi.updateProduct(form.value.id, productData)
       await loadProducts()
     } catch (error) {
       console.error('Failed to save images on close:', error)
@@ -669,9 +677,6 @@ const addSelectedImagesToProduct = async () => {
       }
     })
     
-    // Sync form.images with selected album images
-    form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
-    
     $q.notify({
       type: 'positive',
       message: `已添加 ${tempSelectedImages.value.length} 張圖片`,
@@ -698,9 +703,6 @@ const removeSelectedImage = (imageId?: number) => {
   const index = selectedAlbumImages.value.findIndex(img => img.id === imageId)
   if (index > -1) {
     selectedAlbumImages.value.splice(index, 1)
-    
-    // Immediately sync with form.images for consistency
-    form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
   }
 }
 

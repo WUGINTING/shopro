@@ -11,7 +11,7 @@ export interface Product {
   status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
   salesMode?: 'NORMAL' | 'PRE_ORDER' | 'TICKET' | 'SUBSCRIPTION' | 'STORE_ONLY'
   categoryId?: number | null
-  images?: string[]
+  images?: Array<{ imageUrl: string; albumImageId?: number }> | string[]
   specifications?: ProductSpecification[]
 }
 
