@@ -37,7 +37,7 @@ public class OperationLogService {
      */
     public OperationLogDTO getLog(Long id) {
         OperationLog log = operationLogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("日誌不存在"));
+                .orElseThrow(() -> new com.info.ecommerce.common.exception.BusinessException("日誌不存在"));
         return toDTO(log);
     }
 

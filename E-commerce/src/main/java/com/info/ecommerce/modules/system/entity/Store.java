@@ -63,9 +63,11 @@ public class Store {
     private java.math.BigDecimal longitude;
 
     // 營業時間
+    // Note: Using JSON format for flexibility. Example: {"monday": "09:00-18:00", "tuesday": "09:00-18:00"}
     @Column(columnDefinition = "NVARCHAR(200)")
     private String businessHours; // JSON format: {"monday": "09:00-18:00", ...}
 
+    // Note: Using JSON format for flexibility. Example: ["sunday", "holiday"]
     @Column(columnDefinition = "NVARCHAR(200)")
     private String closedDays; // JSON array: ["sunday", "holiday"]
 

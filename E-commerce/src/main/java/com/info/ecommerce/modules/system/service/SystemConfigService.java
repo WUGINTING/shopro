@@ -17,6 +17,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class SystemConfigService {
 
     private final SystemConfigRepository systemConfigRepository;
+    
+    // Default configuration constants
+    private static final String DEFAULT_SITE_NAME = "Shopro 電商平台";
+    private static final String DEFAULT_CURRENCY = "TWD";
+    private static final java.math.BigDecimal DEFAULT_TAX_RATE = java.math.BigDecimal.valueOf(5.00);
+    private static final Integer DEFAULT_ORDER_CANCEL_MINUTES = 30;
+    private static final String DEFAULT_STOCK_DEDUCTION_TIMING = "PAYMENT_COMPLETED";
+    private static final Boolean DEFAULT_REQUIRE_MEMBER_APPROVAL = false;
+    private static final Integer DEFAULT_POINTS_EXPIRATION_DAYS = 365;
+    private static final Integer DEFAULT_MIN_PASSWORD_LENGTH = 8;
 
     /**
      * 取得系統設定（只有一筆）
@@ -51,14 +61,14 @@ public class SystemConfigService {
      */
     private SystemConfigDTO createDefaultConfig() {
         return SystemConfigDTO.builder()
-                .siteName("Shopro 電商平台")
-                .defaultCurrency("TWD")
-                .taxRate(java.math.BigDecimal.valueOf(5.00))
-                .autoOrderCancelMinutes(30)
-                .stockDeductionTiming("PAYMENT_COMPLETED")
-                .requireMemberApproval(false)
-                .pointsExpirationDays(365)
-                .minPasswordLength(8)
+                .siteName(DEFAULT_SITE_NAME)
+                .defaultCurrency(DEFAULT_CURRENCY)
+                .taxRate(DEFAULT_TAX_RATE)
+                .autoOrderCancelMinutes(DEFAULT_ORDER_CANCEL_MINUTES)
+                .stockDeductionTiming(DEFAULT_STOCK_DEDUCTION_TIMING)
+                .requireMemberApproval(DEFAULT_REQUIRE_MEMBER_APPROVAL)
+                .pointsExpirationDays(DEFAULT_POINTS_EXPIRATION_DAYS)
+                .minPasswordLength(DEFAULT_MIN_PASSWORD_LENGTH)
                 .build();
     }
 

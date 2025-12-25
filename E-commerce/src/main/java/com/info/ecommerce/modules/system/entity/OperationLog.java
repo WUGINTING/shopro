@@ -64,6 +64,7 @@ public class OperationLog {
     @Column(length = 500)
     private String requestUrl;
 
+    // Note: Sensitive data should be sanitized before storing in these fields
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String requestParams;
 

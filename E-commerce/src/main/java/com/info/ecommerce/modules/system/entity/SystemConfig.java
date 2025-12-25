@@ -66,6 +66,8 @@ public class SystemConfig {
     private String defaultCurrency;
 
     @Column(nullable = false, precision = 5, scale = 2)
+    @jakarta.validation.constraints.Min(value = 0, message = "稅率不能小於 0")
+    @jakarta.validation.constraints.Max(value = 100, message = "稅率不能大於 100")
     private BigDecimal taxRate;
 
     // 訂單設定
