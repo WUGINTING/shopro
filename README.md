@@ -201,3 +201,165 @@ MIT License
 - 實現商品、訂單、顧客管理界面
 - 配置前後端 API 連接
 - 使用 Element Plus UI 組件庫
+
+
+
+
+## 系統設置模組規劃
+
+### 一、模組架構總覽
+
+```
+modules/
+└── system/
+    ├── controller/
+    │   ├── SystemConfigController.java      # 系統基本設定
+    │   ├── PaymentConfigController.java     # 金流設定
+    │   ├── ShippingConfigController.java    # 物流設定
+    │   ├── NotificationConfigController.java # 通知設定
+    │   ├── StoreController.java             # 門市管理
+    │   └── OperationLogController.java      # 操作日誌
+    ├── dto/
+    │   ├── SystemConfigDTO.java
+    │   ├── PaymentConfigDTO.java
+    │   ├── ShippingConfigDTO.java
+    │   ├── NotificationConfigDTO.java
+    │   ├── StoreDTO.java
+    │   └── OperationLogDTO.java
+    ├── entity/
+    ├── enums/
+    ├── repository/
+    └── service/
+```
+
+----------
+
+### 二、功能模組詳細設計
+
+#### 1. 系統基本設定 (SystemConfig)
+
+功能
+
+說明
+
+網站基本資訊
+
+網站名稱、Logo、Favicon、聯絡資訊
+
+SEO 全域設定
+
+預設 Meta Title/Description/Keywords
+
+營業時間設定
+
+營業時段、休息日設定
+
+幣別與稅率
+
+預設幣別、稅率計算方式
+
+訂單設定
+
+訂單編號規則、自動取消時間、庫存扣減時機
+
+會員設定
+
+註冊審核、積點有效期、密碼規則
+
+#### 2. 金流設定 (PaymentConfig)
+
+功能
+
+說明
+
+金流商設定
+
+綠界/藍新/LINE Pay 等 API 金鑰設定
+
+付款方式管理
+
+啟用/停用各種付款方式
+
+退款政策設定
+
+自動退款規則、退款審核流程
+
+#### 3. 物流設定 (ShippingConfig)
+
+功能
+
+說明
+
+物流商設定
+
+黑貓/7-11/全家等 API 設定
+
+運費規則
+
+免運門檻、運費計算方式、離島加價
+
+配送區域管理
+
+可配送地區、不可配送地區
+
+#### 4. 通知設定 (NotificationConfig)
+
+功能
+
+說明
+
+Email 設定
+
+SMTP 伺服器、寄件人設定
+
+SMS 設定
+
+簡訊商 API 設定
+
+通知模板管理
+
+訂單確認、出貨通知、密碼重設等模板
+
+通知觸發規則
+
+各事件的通知開關設定
+
+#### 5. 門市管理 (Store) - O2O 支援
+
+功能
+
+說明
+
+門市 CRUD
+
+門市基本資料管理
+
+營業時間
+
+各門市獨立營業時間
+
+庫存綁定
+
+門市與倉庫關聯
+
+取貨設定
+
+門市取貨相關設定
+
+#### 6. 操作日誌 (OperationLog)
+
+功能
+
+說明
+
+系統日誌查詢
+
+記錄後台所有重要操作
+
+登入紀錄
+
+使用者登入/登出記錄
+
+敏感操作追蹤
+
+金額修改、權限變更等重要操作
