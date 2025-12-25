@@ -20,6 +20,15 @@ export interface User {
   email: string
   role: 'ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER'
   enabled?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface UpdateProfileRequest {
+  username?: string
+  email?: string
+  currentPassword?: string
+  newPassword?: string
 }
 
 // 认证 API
@@ -54,6 +63,16 @@ export const authApi = {
   // 检查是否已登录
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('token')
+  },
+
+  // 取得個人資料
+  getProfile: () => {
+    return axios.get<any, ApiResponse<User>>('/auth/profile')
+  },
+
+  // 更新個人資料
+  updateProfile: (data: UpdateProfileRequest) => {
+    return axios.put<any, ApiResponse<User>>('/auth/profile', data)
   }
 }
 

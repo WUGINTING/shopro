@@ -4,11 +4,15 @@ import com.info.ecommerce.common.ApiResponse;
 import com.info.ecommerce.modules.auth.dto.AuthResponse;
 import com.info.ecommerce.modules.auth.dto.LoginRequest;
 import com.info.ecommerce.modules.auth.dto.RegisterRequest;
+import com.info.ecommerce.modules.auth.dto.UpdateProfileRequest;
+import com.info.ecommerce.modules.auth.dto.UserDTO;
 import com.info.ecommerce.modules.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -32,5 +36,23 @@ public class AuthController {
     @Operation(summary = "用戶登錄", description = "驗證憑據並返回JWT令牌")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success("登錄成功", authService.login(request));
+    }
+
+    @GetMapping("/profile")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "取得個人資料", description = "取得當前登入使用者的個人資料")
+    public ApiResponse<UserDTO> getProfile(Authentication authentication) {
+        String username = authentication.getName();
+        return ApiResponse.success("成功取得個人資料", authService.getCurrentUserProfile(username));
+    }
+
+    @PutMapping("/profile")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "更新個人資料", description = "更新當前登入使用者的個人資料")
+    public ApiResponse<UserDTO> updateProfile(
+            Authentication authentication,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        String username = authentication.getName();
+        return ApiResponse.success("個人資料更新成功", authService.updateCurrentUserProfile(username, request));
     }
 }

@@ -4,6 +4,8 @@ import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.auth.dto.AuthResponse;
 import com.info.ecommerce.modules.auth.dto.LoginRequest;
 import com.info.ecommerce.modules.auth.dto.RegisterRequest;
+import com.info.ecommerce.modules.auth.dto.UpdateProfileRequest;
+import com.info.ecommerce.modules.auth.dto.UserDTO;
 import com.info.ecommerce.modules.auth.entity.User;
 import com.info.ecommerce.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -84,6 +86,70 @@ public class AuthService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .build();
+    }
+
+    /**
+     * Get current user profile
+     */
+    public UserDTO getCurrentUserProfile(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException("使用者不存在"));
+        
+        return UserDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .enabled(user.getEnabled())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * Update current user profile
+     */
+    @Transactional
+    public UserDTO updateCurrentUserProfile(String username, UpdateProfileRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException("使用者不存在"));
+
+        // Update username if provided and different
+        if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new BusinessException("使用者名稱已存在：" + request.getUsername());
+            }
+            user.setUsername(request.getUsername());
+        }
+
+        // Update email if provided and different
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new BusinessException("Email 已存在：" + request.getEmail());
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        // Update password if both current and new passwords are provided
+        if (request.getCurrentPassword() != null && request.getNewPassword() != null) {
+            // Verify current password
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new BusinessException("目前密碼不正確");
+            }
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        return UserDTO.builder()
+                .id(updatedUser.getId())
+                .username(updatedUser.getUsername())
+                .email(updatedUser.getEmail())
+                .role(updatedUser.getRole())
+                .enabled(updatedUser.getEnabled())
+                .createdAt(updatedUser.getCreatedAt())
+                .updatedAt(updatedUser.getUpdatedAt())
                 .build();
     }
 }

@@ -83,7 +83,7 @@ const handleLogout = () => {
               
               <q-separator />
               
-              <q-item clickable v-close-popup>
+              <q-item clickable v-close-popup to="/profile">
                 <q-item-section avatar>
                   <q-icon name="person" />
                 </q-item-section>
