@@ -113,6 +113,54 @@ const router = createRouter({
       component: () => import('../views/PaymentSettingsView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/marketing',
+      name: 'marketing',
+      component: () => import('../views/MarketingView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/statistics',
+      name: 'statistics',
+      component: () => import('../views/StatisticsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/system-settings',
+      name: 'systemSettings',
+      component: () => import('../views/SettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/edm',
+      name: 'edm',
+      component: () => import('../views/EdmView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/points',
+      name: 'points',
+      component: () => import('../views/PointView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/promotions',
+      name: 'promotions',
+      component: () => import('../views/PromotionView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/member-groups',
+      name: 'memberGroups',
+      component: () => import('../views/MemberGroupView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/members',
+      name: 'members',
+      component: () => import('../views/MemberView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 

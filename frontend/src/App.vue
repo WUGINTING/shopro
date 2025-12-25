@@ -190,6 +190,7 @@ const handleLogout = () => {
 
           <q-separator spaced />
 
+          <!-- Member Management Section -->
           <!-- Member Levels -->
           <q-item clickable v-ripple to="/member-levels" active-class="active-item">
             <q-item-section avatar>
@@ -200,6 +201,72 @@ const handleLogout = () => {
             </q-item-section>
           </q-item>
 
+          <!-- Member Groups -->
+          <q-item clickable v-ripple to="/member-groups" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="group_work" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>会员分组</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- Members -->
+          <q-item clickable v-ripple to="/members" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="card_membership" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>会员管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- Points -->
+          <q-item clickable v-ripple to="/points" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="loyalty" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>积分管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator spaced />
+
+          <!-- Marketing & Promotions Section -->
+          <!-- Marketing -->
+          <q-item clickable v-ripple to="/marketing" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="campaign" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>营销活动</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- Promotions -->
+          <q-item clickable v-ripple to="/promotions" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="discount" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>促销管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- EDM -->
+          <q-item clickable v-ripple to="/edm" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="email" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>EDM管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator spaced />
+
+          <!-- Content Management Section -->
           <!-- Blog Management -->
           <q-item clickable v-ripple to="/blog" active-class="active-item">
             <q-item-section avatar>
@@ -222,16 +289,7 @@ const handleLogout = () => {
 
           <q-separator spaced />
 
-          <!-- Marketing -->
-          <q-item clickable v-ripple to="/marketing" active-class="active-item">
-            <q-item-section avatar>
-              <q-icon name="campaign" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>营销活动</q-item-label>
-            </q-item-section>
-          </q-item>
-
+          <!-- Analytics Section -->
           <!-- Statistics -->
           <q-item clickable v-ripple to="/statistics" active-class="active-item">
             <q-item-section avatar>
