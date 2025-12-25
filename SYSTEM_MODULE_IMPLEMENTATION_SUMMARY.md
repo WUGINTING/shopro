@@ -84,35 +84,7 @@ December 25, 2025
 - `GET /api/system/notification-config/type/{notificationType}` - List by notification type
 - `GET /api/system/notification-config/event/{eventType}` - List by event type
 
-### 5. Store (門市管理)
-**Purpose**: O2O support - Store management, business hours, inventory binding, pickup settings
-
-**Key Features**:
-- Store CRUD operations
-- Store code (unique identifier)
-- Contact information and address
-- Geographic location (latitude, longitude)
-- Business hours configuration
-- Store status (enabled/disabled)
-- Pickup and payment settings
-- Warehouse binding
-- Manager information
-- Store images and description
-- Pickup preparation time and instructions
-
-**API Endpoints**:
-- `POST /api/system/stores` - Create store (Admin/Manager)
-- `PUT /api/system/stores/{id}` - Update store (Admin/Manager)
-- `GET /api/system/stores/{id}` - Get store details
-- `GET /api/system/stores/code/{storeCode}` - Get store by code
-- `DELETE /api/system/stores/{id}` - Delete store (Admin only)
-- `GET /api/system/stores` - List stores (paginated)
-- `GET /api/system/stores/enabled` - List enabled stores
-- `GET /api/system/stores/city/{city}` - List by city
-- `GET /api/system/stores/pickup` - List pickup stores
-- `GET /api/system/stores/search` - Search stores
-
-### 6. OperationLog (操作日誌)
+### 5. OperationLog (操作日誌)
 **Purpose**: System operation logging, login records, sensitive operation tracking
 
 **Key Features**:
@@ -138,12 +110,6 @@ December 25, 2025
 - `GET /api/system/operation-logs/user/{userId}/module/{module}` - List by user and module (Admin/Manager)
 
 ## Enums
-
-### NotificationType
-- EMAIL - 電子郵件
-- SMS - 簡訊
-- PUSH - 推播通知
-- IN_APP - 站內通知
 
 ### PaymentMethod
 - CREDIT_CARD - 信用卡
@@ -173,6 +139,8 @@ December 25, 2025
 - APPROVE - 審核
 - REJECT - 拒絕
 
+**Note**: The `NotificationType` enum is defined in the `order` module and is reused across the application.
+
 ## Technical Architecture
 
 ### Directory Structure
@@ -183,24 +151,20 @@ E-commerce/src/main/java/com/info/ecommerce/modules/system/
 │   ├── PaymentConfigController.java
 │   ├── ShippingConfigController.java
 │   ├── NotificationConfigController.java
-│   ├── StoreController.java
 │   └── OperationLogController.java
 ├── dto/                # Data Transfer Objects
 │   ├── SystemConfigDTO.java
 │   ├── PaymentConfigDTO.java
 │   ├── ShippingConfigDTO.java
 │   ├── NotificationConfigDTO.java
-│   ├── StoreDTO.java
 │   └── OperationLogDTO.java
 ├── entity/             # JPA Entities
 │   ├── SystemConfig.java
 │   ├── PaymentConfig.java
 │   ├── ShippingConfig.java
 │   ├── NotificationConfig.java
-│   ├── Store.java
 │   └── OperationLog.java
 ├── enums/              # Enumeration Types
-│   ├── NotificationType.java
 │   ├── PaymentMethod.java
 │   ├── ShippingMethod.java
 │   └── OperationType.java
@@ -209,16 +173,16 @@ E-commerce/src/main/java/com/info/ecommerce/modules/system/
 │   ├── PaymentConfigRepository.java
 │   ├── ShippingConfigRepository.java
 │   ├── NotificationConfigRepository.java
-│   ├── StoreRepository.java
 │   └── OperationLogRepository.java
 └── service/            # Business Logic Services
     ├── SystemConfigService.java
     ├── PaymentConfigService.java
     ├── ShippingConfigService.java
     ├── NotificationConfigService.java
-    ├── StoreService.java
     └── OperationLogService.java
 ```
+
+**Note**: Store-related classes are maintained in the separate `modules/store` package to avoid duplication.
 
 ### Database Schema
 All entities use JPA annotations for ORM mapping:
@@ -310,12 +274,6 @@ Content-Type: application/json
 }
 ```
 
-### List Enabled Stores
-```bash
-GET /api/system/stores/enabled
-Authorization: Bearer {token}
-```
-
 ### Search Operation Logs
 ```bash
 GET /api/system/operation-logs?page=0&size=20
@@ -344,25 +302,21 @@ Authorization: Bearer {token}
    - Add notification queue management
    - Implement notification statistics
 
-5. **Store Management**:
-   - Add store inventory management
-   - Implement store performance analytics
-   - Add multi-store order routing
-
-6. **Operation Logs**:
+5. **Operation Logs**:
    - Implement automatic sensitive data sanitization
    - Add log export functionality
    - Implement log retention policies
 
 ## Conclusion
 
-The System Settings Module has been successfully implemented according to the specifications in README.md. All components are working correctly, follow the project's coding standards, and are ready for production use.
+The System Settings Module has been successfully implemented with 5 core sub-modules according to the specifications in README.md. All components are working correctly, follow the project's coding standards, and are ready for production use.
 
 The module provides a solid foundation for:
 - Centralized system configuration management
 - Flexible payment and shipping options
 - Comprehensive notification system
-- O2O store management
 - Complete operation auditing
+
+**Note**: Store management functionality is available through the existing `modules/store` package to avoid code duplication.
 
 All APIs are documented, validated, and secured with appropriate role-based access control.
