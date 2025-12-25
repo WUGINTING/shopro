@@ -1,6 +1,8 @@
 package com.info.ecommerce.modules.product.service;
 
 import com.info.ecommerce.common.exception.BusinessException;
+import com.info.ecommerce.modules.album.entity.AlbumImage;
+import com.info.ecommerce.modules.album.repository.AlbumImageRepository;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
@@ -13,12 +15,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final AlbumImageRepository albumImageRepository;
 
     /**
      * 驗證並標準化 SKU
@@ -157,6 +163,36 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
         product.setStatus(ProductStatus.INACTIVE);
+        product = productRepository.save(product);
+        return toDTO(product);
+    }
+
+    /**
+     * 從相冊添加圖片到商品
+     */
+    @Transactional
+    public ProductDTO addAlbumImagesToProduct(Long productId, List<Long> albumImageIds) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException("商品不存在"));
+
+        // 獲取當前商品的圖片列表
+        List<String> imageUrls = product.getImageUrls();
+        if (imageUrls == null) {
+            imageUrls = new ArrayList<>();
+        }
+
+        // 添加相冊圖片的 URL
+        for (Long albumImageId : albumImageIds) {
+            AlbumImage albumImage = albumImageRepository.findById(albumImageId)
+                    .orElseThrow(() -> new BusinessException("相冊圖片不存在: " + albumImageId));
+            
+            // 添加圖片 URL（避免重複）
+            if (!imageUrls.contains(albumImage.getImageUrl())) {
+                imageUrls.add(albumImage.getImageUrl());
+            }
+        }
+
+        product.setImageUrls(imageUrls);
         product = productRepository.save(product);
         return toDTO(product);
     }

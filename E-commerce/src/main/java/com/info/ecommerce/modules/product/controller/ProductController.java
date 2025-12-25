@@ -109,4 +109,13 @@ public class ProductController {
             @Parameter(description = "商品 ID") @PathVariable Long id) {
         return ApiResponse.success("商品已下架", productService.deactivateProduct(id));
     }
+
+    @PostMapping("/{id}/album-images")
+    @Operation(summary = "從相冊添加圖片到商品")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<ProductDTO> addAlbumImagesToProduct(
+            @Parameter(description = "商品 ID") @PathVariable Long id,
+            @Parameter(description = "相冊圖片 ID 列表") @RequestBody java.util.List<Long> albumImageIds) {
+        return ApiResponse.success("圖片已添加", productService.addAlbumImagesToProduct(id, albumImageIds));
+    }
 }

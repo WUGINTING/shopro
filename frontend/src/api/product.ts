@@ -67,6 +67,11 @@ export const productApi = {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}/deactivate`)
   },
   
+  // 从相册添加图片到商品
+  addAlbumImages: (productId: number, albumImageIds: number[]) => {
+    return axios.post<any, ApiResponse<Product>>(`/products/${productId}/album-images`, albumImageIds)
+  },
+  
   // 获取商品分类
   getCategories: () => {
     return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
