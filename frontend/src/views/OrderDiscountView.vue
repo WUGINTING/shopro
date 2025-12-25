@@ -151,6 +151,9 @@
                 step="0.01"
                 class="q-mb-md"
                 suffix="%"
+                :rules="[
+                  val => val === undefined || val === null || (val >= 0 && val <= 100) || '折扣百分比必须在0到100之间'
+                ]"
               />
 
               <q-input

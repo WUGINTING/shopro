@@ -443,7 +443,7 @@ const getOperationTypeColor = (type?: string) => {
     CREATE: 'positive',
     UPDATE: 'primary',
     DELETE: 'negative',
-    READ: 'info',
+    READ: 'blue',
     LOGIN: 'teal',
     LOGOUT: 'grey'
   }

@@ -319,23 +319,23 @@ const onRequest = (props: any) => {
 }
 
 const getStatusColor = (status?: BlogStatus) => {
-  const colorMap = {
+  const colorMap: Record<string, string> = {
     DRAFT: 'grey',
     PUBLISHED: 'positive',
     SCHEDULED: 'warning',
     ARCHIVED: 'blue-grey'
   }
-  return colorMap[status || 'DRAFT']
+  return colorMap[status || 'DRAFT'] || 'grey'
 }
 
 const getStatusLabel = (status?: BlogStatus) => {
-  const labelMap = {
+  const labelMap: Record<string, string> = {
     DRAFT: '草稿',
     PUBLISHED: '已发布',
     SCHEDULED: '排程中',
     ARCHIVED: '已封存'
   }
-  return labelMap[status || 'DRAFT']
+  return labelMap[status || 'DRAFT'] || '未知'
 }
 
 const resetForm = () => {

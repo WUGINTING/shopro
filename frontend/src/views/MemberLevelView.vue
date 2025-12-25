@@ -135,6 +135,9 @@
                     type="number"
                     step="0.01"
                     hint="例如: 0.95 表示95折"
+                    :rules="[
+                      val => val === undefined || val === null || (val >= 0 && val <= 1) || '折扣率必须在0.0到1.0之间'
+                    ]"
                   />
                 </div>
 
@@ -146,6 +149,9 @@
                     type="number"
                     step="0.1"
                     hint="例如: 1.5 表示1.5倍积分"
+                    :rules="[
+                      val => val === undefined || val === null || (val > 0 && val <= 10) || '积分倍率必须在0到10之间'
+                    ]"
                   />
                 </div>
 
