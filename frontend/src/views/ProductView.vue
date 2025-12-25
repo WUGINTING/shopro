@@ -461,9 +461,47 @@ const loadProducts = async () => {
   }
 }
 
-const handleEdit = (product: Product) => {
+const handleEdit = async (product: Product) => {
   form.value = { ...product }
   showDialog.value = true
+  
+  // Load existing album images for this product if it has images
+  if (product.id && product.images && product.images.length > 0) {
+    try {
+      // Try to match product images with album images
+      // This is a best-effort approach since we need to query albums for matching URLs
+      selectedAlbumImages.value = []
+      
+      // Load all albums and their images to find matches
+      const albumsResponse = await albumApi.getAlbums({ page: 0, size: 100 })
+      if (albumsResponse.success && albumsResponse.data) {
+        const allAlbums = albumsResponse.data.content || []
+        
+        // For each album, load images and check if they match product images
+        for (const album of allAlbums) {
+          if (album.id) {
+            const imagesResponse = await albumApi.getAlbumImages(album.id)
+            if (imagesResponse.success && imagesResponse.data) {
+              const albumImages = imagesResponse.data
+              // Check if any product images match album images
+              for (const productImage of product.images) {
+                const matchingAlbumImage = albumImages.find(
+                  (albumImg) => albumImg.imageUrl === productImage
+                )
+                if (matchingAlbumImage && !selectedAlbumImages.value.some(img => img.id === matchingAlbumImage.id)) {
+                  selectedAlbumImages.value.push(matchingAlbumImage)
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load existing album images:', error)
+    }
+  } else {
+    selectedAlbumImages.value = []
+  }
 }
 
 const handlePublishToggle = async (product: Product) => {
