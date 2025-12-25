@@ -244,6 +244,16 @@ const handleLogout = () => {
             </q-item-section>
           </q-item>
 
+          <!-- User Management -->
+          <q-item clickable v-ripple to="/users" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="manage_accounts" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>帳號管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
           <!-- Settings -->
           <q-item clickable v-ripple>
             <q-item-section avatar>
