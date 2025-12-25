@@ -89,7 +89,11 @@ public class MarketingCampaignController {
     public ApiResponse<MarketingCampaignDTO> updateCampaignStatus(
             @Parameter(description = "活動 ID") @PathVariable Long id,
             @RequestBody Map<String, String> request) {
-        CampaignStatus status = CampaignStatus.valueOf(request.get("status"));
-        return ApiResponse.success("活動狀態已更新", campaignService.updateCampaignStatus(id, status));
+        try {
+            CampaignStatus status = CampaignStatus.valueOf(request.get("status"));
+            return ApiResponse.success("活動狀態已更新", campaignService.updateCampaignStatus(id, status));
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error("無效的活動狀態: " + request.get("status"));
+        }
     }
 }
