@@ -91,8 +91,21 @@ public class LinePayService implements PaymentGatewayService {
             log.info("Confirming LINE PAY payment for transaction: {}", confirm.getTransactionId());
 
             // 構建確認請求
+            // 注意: LINE PAY 需要傳入實際的支付金額
+            // 在實際應用中，應該從資料庫查詢原始交易金額或透過回調參數傳入
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("amount", 0); // 將由實際交易金額填入
+            if (confirm.getAmount() != null) {
+                requestBody.put("amount", confirm.getAmount().intValue());
+            } else {
+                // 如果沒有提供金額，需要先查詢交易取得金額
+                log.warn("Amount not provided for LINE PAY confirmation, querying transaction first");
+                PaymentResponseDTO queryResult = queryPayment(confirm.getTransactionId());
+                if (queryResult.getAmount() != null) {
+                    requestBody.put("amount", queryResult.getAmount().intValue());
+                } else {
+                    throw new RuntimeException("無法取得交易金額");
+                }
+            }
             requestBody.put("currency", "TWD");
             
             String requestBodyJson = objectMapper.writeValueAsString(requestBody);

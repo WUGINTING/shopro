@@ -25,6 +25,11 @@ public class PaymentConfirmDTO {
     private String orderNumber;
     
     /**
+     * 支付金額 (用於 LINE PAY 確認)
+     */
+    private java.math.BigDecimal amount;
+    
+    /**
      * 確認碼 (用於某些支付閘道)
      */
     private String confirmationCode;
