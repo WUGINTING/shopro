@@ -560,6 +560,11 @@ const handleDelete = (id?: number) => {
 
 const handleSubmit = async () => {
   try {
+    // Sync images array with selected album images
+    if (selectedAlbumImages.value.length > 0) {
+      form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
+    }
+    
     if (form.value.id) {
       await productApi.updateProduct(form.value.id, form.value)
       $q.notify({
@@ -589,7 +594,19 @@ const handleSubmit = async () => {
   }
 }
 
-const closeDialog = () => {
+const closeDialog = async () => {
+  // If there are selected album images and a product ID, save them before closing
+  if (form.value.id && selectedAlbumImages.value.length > 0) {
+    try {
+      // Sync images array with selected album images
+      form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
+      await productApi.updateProduct(form.value.id, form.value)
+      await loadProducts()
+    } catch (error) {
+      console.error('Failed to save images on close:', error)
+    }
+  }
+  
   showDialog.value = false
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
   selectedAlbumImages.value = []
@@ -652,6 +669,9 @@ const addSelectedImagesToProduct = async () => {
       }
     })
     
+    // Sync form.images with selected album images
+    form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
+    
     $q.notify({
       type: 'positive',
       message: `已添加 ${tempSelectedImages.value.length} 張圖片`,
@@ -673,11 +693,14 @@ const addSelectedImagesToProduct = async () => {
 }
 
 const removeSelectedImage = (imageId?: number) => {
-  // Note: This only removes from local preview
-  // The image remains on the backend until product is updated
+  // Remove from local preview
+  // The actual backend update happens when user clicks "保存" or "完成"
   const index = selectedAlbumImages.value.findIndex(img => img.id === imageId)
   if (index > -1) {
     selectedAlbumImages.value.splice(index, 1)
+    
+    // Immediately sync with form.images for consistency
+    form.value.images = selectedAlbumImages.value.map(img => img.imageUrl || '').filter(url => url)
   }
 }
 
