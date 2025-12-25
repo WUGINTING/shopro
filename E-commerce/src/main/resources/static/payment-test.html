@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付閘道測試頁面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        
+        .payment-section {
+            margin-bottom: 30px;
+        }
+        
+        .payment-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .payment-section h2::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 24px;
+            background: #667eea;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-linepay {
+            background: #00B900;
+            color: white;
+        }
+        
+        .btn-linepay:hover {
+            background: #009900;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,185,0,0.3);
+        }
+        
+        .btn-ecpay {
+            background: #FF6C00;
+            color: white;
+        }
+        
+        .btn-ecpay:hover {
+            background: #E55D00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,108,0,0.3);
+        }
+        
+        .response-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .response-section.show {
+            display: block;
+        }
+        
+        .response-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .response-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #555;
+        }
+        
+        .info-box ul li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 台灣支付閘道測試</h1>
+        
+        <div class="info-box">
+            <h4>📋 使用說明</h4>
+            <ul>
+                <li>填寫訂單資訊後，選擇支付方式</li>
+                <li>LINE PAY: 將導向 LINE PAY 支付頁面</li>
+                <li>綠界 ECPay: 將導向綠界支付頁面，可選擇多種支付方式</li>
+                <li>測試模式使用測試環境，不會產生實際交易</li>
+            </ul>
+        </div>
+        
+        <div class="payment-section">
+            <h2>訂單資訊</h2>
+            
+            <div class="form-group">
+                <label for="orderNumber">訂單編號 *</label>
+                <input type="text" id="orderNumber" placeholder="ORD20241225001" value="ORD20241225001">
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">支付金額 (TWD) *</label>
+                <input type="number" id="amount" placeholder="1000" value="1000" min="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="productName">商品名稱 *</label>
+                <input type="text" id="productName" placeholder="商品購買" value="測試商品">
+            </div>
+            
+            <div class="form-group">
+                <label for="customerName">付款人姓名</label>
+                <input type="text" id="customerName" placeholder="王小明" value="王小明">
+            </div>
+            
+            <div class="form-group">
+                <label for="customerEmail">付款人電子郵件</label>
+                <input type="email" id="customerEmail" placeholder="customer@example.com" value="test@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="customerPhone">付款人手機</label>
+                <input type="tel" id="customerPhone" placeholder="0912345678" value="0912345678">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-linepay" onclick="createPayment('LINE_PAY')">
+                    <span>💚</span> LINE PAY 支付
+                </button>
+                <button class="btn-ecpay" onclick="createPayment('ECPAY')">
+                    <span>🟠</span> 綠界支付
+                </button>
+            </div>
+        </div>
+        
+        <div class="response-section" id="responseSection">
+            <h3>📊 回應資料</h3>
+            <div class="response-content" id="responseContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        // API 基礎 URL (請根據實際環境修改)
+        const API_BASE_URL = 'http://localhost:8080/api/payment-gateway';
+        
+        async function createPayment(gateway) {
+            // 取得表單資料
+            const paymentRequest = {
+                orderId: null, // 實際應用中應該從系統獲取
+                orderNumber: document.getElementById('orderNumber').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: 'TWD',
+                productName: document.getElementById('productName').value,
+                customerName: document.getElementById('customerName').value,
+                customerEmail: document.getElementById('customerEmail').value,
+                customerPhone: document.getElementById('customerPhone').value
+            };
+            
+            // 驗證必填欄位
+            if (!paymentRequest.orderNumber || !paymentRequest.amount || !paymentRequest.productName) {
+                alert('請填寫所有必填欄位 (標記 * 的欄位)');
+                return;
+            }
+            
+            try {
+                // 顯示載入中
+                showResponse('處理中...\n正在建立支付請求...');
+                
+                // 發送請求
+                const response = await fetch(`${API_BASE_URL}/create?gateway=${gateway}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentRequest)
+                });
+                
+                const result = await response.json();
+                
+                // 顯示回應
+                showResponse(JSON.stringify(result, null, 2));
+                
+                // 如果成功，導向支付頁面
+                if (result.success && result.data && result.data.paymentUrl) {
+                    const confirmRedirect = confirm(
+                        `支付請求已建立！\n\n` +
+                        `訂單編號: ${result.data.orderNumber}\n` +
+                        `交易 ID: ${result.data.transactionId}\n` +
+                        `金額: TWD ${result.data.amount}\n\n` +
+                        `是否前往支付頁面？`
+                    );
+                    
+                    if (confirmRedirect) {
+                        // 對於 ECPay，需要使用表單 POST 提交
+                        if (gateway === 'ECPAY') {
+                            redirectToECPay(result.data.paymentUrl);
+                        } else {
+                            // LINE PAY 可以直接導向
+                            window.location.href = result.data.paymentUrl;
+                        }
+                    }
+                } else {
+                    alert('建立支付請求失敗: ' + (result.message || '未知錯誤'));
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showResponse('錯誤: ' + error.message);
+                alert('發生錯誤: ' + error.message);
+            }
+        }
+        
+        function redirectToECPay(url) {
+            // ECPay 需要使用表單 POST 方式提交
+            // 由於我們的 URL 已經包含所有參數，這裡直接導向
+            // 在實際應用中，應該從後端取得表單參數並動態建立表單提交
+            alert('ECPay 支付需要透過表單 POST 提交。\n實際應用中，後端應該返回表單參數。\n這裡僅作為演示。');
+            window.open(url, '_blank');
+        }
+        
+        function showResponse(content) {
+            const section = document.getElementById('responseSection');
+            const contentDiv = document.getElementById('responseContent');
+            contentDiv.textContent = content;
+            section.classList.add('show');
+            
+            // 滾動到回應區域
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // 頁面載入時檢查是否有回調參數
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // 檢查 LINE PAY 回調
+            if (urlParams.has('transactionId') && urlParams.has('orderId')) {
+                const message = `LINE PAY 支付回調\n\n` +
+                    `交易 ID: ${urlParams.get('transactionId')}\n` +
+                    `訂單 ID: ${urlParams.get('orderId')}\n\n` +
+                    `系統會自動處理支付確認。`;
+                showResponse(message);
+            }
+        });
+    </script>
+</body>
+</html>
