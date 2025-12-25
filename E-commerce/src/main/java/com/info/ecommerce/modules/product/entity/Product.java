@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 商品主表
@@ -42,6 +43,11 @@ public class Product {
     // 商品描述
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String description;
+    // 商品描述
+    @ElementCollection
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls;
 
     // 商品分類
     @Column(name = "category_id")

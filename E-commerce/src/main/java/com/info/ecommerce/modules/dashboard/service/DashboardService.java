@@ -39,7 +39,7 @@ public class DashboardService {
         // Calculate current month stats
         LocalDateTime startOfMonth = YearMonth.now().atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = YearMonth.now().atEndOfMonth().atTime(23, 59, 59);
-        
+
         // Calculate previous month stats for comparison
         LocalDateTime startOfLastMonth = YearMonth.now().minusMonths(1).atDay(1).atStartOfDay();
         LocalDateTime endOfLastMonth = YearMonth.now().minusMonths(1).atEndOfMonth().atTime(23, 59, 59);
@@ -50,9 +50,9 @@ public class DashboardService {
         Double productChange = calculatePercentageChange(totalProductsLastMonth, totalProducts);
 
         // Pending orders count
-        Long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
+        Long pendingOrders = orderRepository.countByStatus(OrderStatus.PROCESSING);
         Long pendingOrdersLastMonth = orderRepository.countByStatusAndCreatedAtBefore(
-            OrderStatus.PENDING, startOfMonth);
+            OrderStatus.PROCESSING, startOfMonth);
         Double pendingOrdersChange = calculatePercentageChange(pendingOrdersLastMonth, pendingOrders);
 
         // Total customers count
@@ -91,7 +91,7 @@ public class DashboardService {
                         .orderNumber(order.getOrderNumber())
                         .status(order.getStatus().name())
                         .totalAmount(order.getTotalAmount())
-                        .customerName(order.getCustomerName() != null ? 
+                        .customerName(order.getCustomerName() != null ?
                             order.getCustomerName() : "未知客戶")
                         .createdAt(order.getCreatedAt())
                         .build())
@@ -105,15 +105,15 @@ public class DashboardService {
      */
     public List<TopProductDTO> getTopProducts(int limit) {
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        
+
         return productRepository.findAll(pageable).getContent().stream()
                 .map(product -> TopProductDTO.builder()
                         .id(product.getId())
                         .name(product.getName())
                         .salesCount(0L) // TODO: Calculate actual sales from order_items table
-                        .price(product.getPrice())
-                        .imageUrl(product.getImages() != null && !product.getImages().isEmpty() ? 
-                            product.getImages().get(0) : null)
+                        .price(product.getBasePrice())
+                        .imageUrl(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ?
+                            product.getImageUrls().get(0) : null)
                         .build())
                 .collect(Collectors.toList());
     }
@@ -136,7 +136,7 @@ public class DashboardService {
         if (oldValue == null || oldValue.doubleValue() == 0) {
             return newValue.doubleValue() > 0 ? 100.0 : 0.0;
         }
-        
+
         double change = ((newValue.doubleValue() - oldValue.doubleValue()) / oldValue.doubleValue()) * 100;
         return BigDecimal.valueOf(change).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
