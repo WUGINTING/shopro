@@ -98,8 +98,11 @@ public class UserService {
         user.setEmail(dto.getEmail());
         user.setRole(dto.getRole());
 
-        // Only update password if provided
+        // Update password if provided and validate length
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            if (dto.getPassword().length() < 6) {
+                throw new BusinessException("密碼長度至少需要 6 個字元");
+            }
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 

@@ -127,7 +127,12 @@
                 :type="showPassword ? 'text' : 'password'"
                 class="q-mb-md"
                 :hint="form.id ? '留空表示不更改密碼' : '密碼至少需要6個字元'"
-                :rules="form.id ? [] : [val => !!val || '請輸入密碼', val => val.length >= 6 || '密碼至少需要6個字元']"
+                :rules="form.id ? [
+                  val => !val || val.length >= 6 || '密碼至少需要6個字元'
+                ] : [
+                  val => !!val || '請輸入密碼',
+                  val => val.length >= 6 || '密碼至少需要6個字元'
+                ]"
               >
                 <template v-slot:append>
                   <q-icon
@@ -310,7 +315,7 @@ const handleEdit = (user: User) => {
     email: user.email,
     password: '',
     role: user.role,
-    enabled: user.enabled || true
+    enabled: user.enabled ?? true
   }
   showDialog.value = true
 }

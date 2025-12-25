@@ -41,9 +41,9 @@ export const userApi = {
   },
   
   // 啟用/停用使用者
-  toggleUserStatus: (id: number, enabled: boolean) => {
+  toggleUserStatus: (id: number, newStatus: boolean) => {
     return axios.patch<any, ApiResponse<User>>(`/users/${id}/status`, null, {
-      params: { enabled }
+      params: { enabled: newStatus }
     })
   }
 }
