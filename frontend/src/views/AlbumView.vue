@@ -17,7 +17,7 @@
 
       <div v-else class="row q-col-gutter-md">
         <div v-for="album in albums" :key="album.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <q-card flat bordered class="album-card cursor-pointer" @click="viewAlbum(album.id!)">
+          <q-card flat bordered class="album-card cursor-pointer" @click="viewAlbum(album.id)">
             <q-img
               :src="album.coverImageUrl || 'https://via.placeholder.com/300x200?text=No+Cover'"
               :ratio="4/3"
@@ -138,8 +138,10 @@ const loadAlbums = async () => {
 }
 
 // 查看相冊
-const viewAlbum = (id: number) => {
-  router.push(`/albums/${id}`)
+const viewAlbum = (id: number | undefined) => {
+  if (id) {
+    router.push(`/albums/${id}`)
+  }
 }
 
 // 編輯相冊
@@ -193,6 +195,14 @@ const saveAlbum = async () => {
 
 // 刪除相冊確認
 const deleteAlbumConfirm = (album: Album) => {
+  if (!album.id) {
+    $q.notify({
+      type: 'warning',
+      message: '無效的相冊 ID'
+    })
+    return
+  }
+
   $q.dialog({
     title: '確認刪除',
     message: `確定要刪除相冊「${album.name}」嗎？此操作將同時刪除相冊中的所有圖片。`,

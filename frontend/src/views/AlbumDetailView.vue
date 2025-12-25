@@ -259,6 +259,14 @@ const viewImage = (image: AlbumImage) => {
 
 // 刪除圖片確認
 const deleteImageConfirm = (image: AlbumImage) => {
+  if (!image.id) {
+    $q.notify({
+      type: 'warning',
+      message: '無效的圖片 ID'
+    })
+    return
+  }
+
   $q.dialog({
     title: '確認刪除',
     message: `確定要刪除此圖片嗎？`,

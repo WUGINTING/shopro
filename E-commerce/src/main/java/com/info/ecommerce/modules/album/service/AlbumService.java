@@ -8,6 +8,7 @@ import com.info.ecommerce.modules.album.entity.AlbumImage;
 import com.info.ecommerce.modules.album.repository.AlbumImageRepository;
 import com.info.ecommerce.modules.album.repository.AlbumRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AlbumService {
 
     private final AlbumRepository albumRepository;
@@ -76,7 +78,8 @@ public class AlbumService {
                 String filename = extractFilename(image.getImageUrl());
                 fileStorageService.deleteFile(filename);
             } catch (Exception e) {
-                // 忽略刪除錯誤，繼續處理
+                // 記錄錯誤但繼續處理，避免因單個檔案刪除失敗而阻止整個相冊刪除
+                log.warn("刪除圖片檔案失敗: {}, 錯誤: {}", image.getFileName(), e.getMessage());
             }
         }
 
@@ -146,7 +149,8 @@ public class AlbumService {
             String filename = extractFilename(image.getImageUrl());
             fileStorageService.deleteFile(filename);
         } catch (Exception e) {
-            // 忽略刪除錯誤
+            // 記錄錯誤但繼續處理，避免因檔案刪除失敗而阻止圖片記錄刪除
+            log.warn("刪除圖片檔案失敗: {}, 錯誤: {}", image.getFileName(), e.getMessage());
         }
 
         album.removeImage(image);
