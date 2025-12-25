@@ -145,6 +145,7 @@ public class PaymentManagementController {
 
     @PostMapping("/settings/initialize")
     @Operation(summary = "初始化支付設定", description = "初始化所有支付閘道的預設設定（僅在設定不存在時）")
+    @org.springframework.transaction.annotation.Transactional
     public ApiResponse<String> initializeSettings() {
         log.info("Manually initializing payment settings");
         try {

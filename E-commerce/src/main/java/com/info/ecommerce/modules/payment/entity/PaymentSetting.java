@@ -34,11 +34,11 @@ public class PaymentSetting {
     private Boolean enabled;
 
     // 顯示名稱
-    @Column(name = "display_name", columnDefinition = "NVARCHAR(100)")
+    @Column(name = "display_name", length = 100)
     private String displayName;
 
     // 說明文字
-    @Column(name = "description", columnDefinition = "NVARCHAR(500)")
+    @Column(name = "description", length = 500)
     private String description;
 
     // 抽成比率 (%)
@@ -50,7 +50,7 @@ public class PaymentSetting {
     private Boolean maintenanceMode;
 
     // 維護說明
-    @Column(name = "maintenance_message", columnDefinition = "NVARCHAR(500)")
+    @Column(name = "maintenance_message", length = 500)
     private String maintenanceMessage;
 
     // 排序順序
