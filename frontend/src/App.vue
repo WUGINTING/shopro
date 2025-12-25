@@ -66,12 +66,12 @@ const handleLogout = () => {
         </q-toolbar-title>
 
         <q-btn flat round dense icon="notifications" aria-label="Notifications" />
-        
+
         <q-btn flat round dense>
           <q-avatar size="32px" color="white" text-color="primary">
             <q-icon name="person" />
           </q-avatar>
-          
+
           <q-menu>
             <q-list style="min-width: 200px">
               <q-item>
@@ -80,25 +80,25 @@ const handleLogout = () => {
                   <q-item-label caption>{{ userRole }}</q-item-label>
                 </q-item-section>
               </q-item>
-              
+
               <q-separator />
-              
+
               <q-item clickable v-close-popup to="/profile">
                 <q-item-section avatar>
                   <q-icon name="person" />
                 </q-item-section>
                 <q-item-section>个人中心</q-item-section>
               </q-item>
-              
+
               <q-item clickable v-close-popup>
                 <q-item-section avatar>
                   <q-icon name="settings" />
                 </q-item-section>
                 <q-item-section>设置</q-item-section>
               </q-item>
-              
+
               <q-separator />
-              
+
               <q-item clickable v-close-popup @click="handleLogout">
                 <q-item-section avatar>
                   <q-icon name="logout" color="negative" />
@@ -223,7 +223,7 @@ const handleLogout = () => {
           <q-separator spaced />
 
           <!-- Marketing -->
-          <q-item clickable v-ripple>
+          <q-item clickable v-ripple to="/marketing" active-class="active-item">
             <q-item-section avatar>
               <q-icon name="campaign" />
             </q-item-section>
@@ -233,7 +233,7 @@ const handleLogout = () => {
           </q-item>
 
           <!-- Statistics -->
-          <q-item clickable v-ripple>
+          <q-item clickable v-ripple to="/statistics" active-class="active-item">
             <q-item-section avatar>
               <q-icon name="bar_chart" />
             </q-item-section>
@@ -265,7 +265,7 @@ const handleLogout = () => {
           </q-item>
 
           <!-- Settings -->
-          <q-item clickable v-ripple>
+          <q-item clickable v-ripple to="/system-settings" active-class="active-item">
             <q-item-section avatar>
               <q-icon name="settings" />
             </q-item-section>
