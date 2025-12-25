@@ -168,6 +168,50 @@ const handleLogout = () => {
 
           <q-separator spaced />
 
+          <!-- Order Discounts -->
+          <q-item clickable v-ripple to="/order-discounts" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="local_offer" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>订单折扣</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- Order Q&A -->
+          <q-item clickable v-ripple to="/order-qa" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="question_answer" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>订单问答</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator spaced />
+
+          <!-- Member Levels -->
+          <q-item clickable v-ripple to="/member-levels" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="stars" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>会员等级</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <!-- Blog Management -->
+          <q-item clickable v-ripple to="/blog" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="article" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>部落格管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator spaced />
+
           <!-- Marketing -->
           <q-item clickable v-ripple>
             <q-item-section avatar>
@@ -189,6 +233,16 @@ const handleLogout = () => {
           </q-item>
 
           <q-separator spaced />
+
+          <!-- Operation Logs -->
+          <q-item clickable v-ripple to="/operation-logs" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="history" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>操作日志</q-item-label>
+            </q-item-section>
+          </q-item>
 
           <!-- Settings -->
           <q-item clickable v-ripple>
