@@ -49,6 +49,14 @@ public class OrderPayment {
     @Column(name = "transaction_id", length = 100)
     private String transactionId;
 
+    // 支付閘道類型
+    @Column(name = "payment_gateway", length = 20)
+    private String paymentGateway;
+
+    // 支付閘道交易 ID
+    @Column(name = "gateway_transaction_id", length = 100)
+    private String gatewayTransactionId;
+
     // 付款時間
     @Column(name = "payment_time")
     private LocalDateTime paymentTime;
