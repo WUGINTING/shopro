@@ -210,6 +210,16 @@ const handleLogout = () => {
             </q-item-section>
           </q-item>
 
+          <!-- Albums -->
+          <q-item clickable v-ripple to="/albums" active-class="active-item">
+            <q-item-section avatar>
+              <q-icon name="photo_library" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>相冊管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
           <q-separator spaced />
 
           <!-- Marketing -->

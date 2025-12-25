@@ -243,15 +243,15 @@ const quickActions = [
     onClick: () => router.push('/customers')
   },
   {
+    icon: 'photo_library',
+    label: '相冊管理',
+    color: 'purple',
+    onClick: () => router.push('/albums')
+  },
+  {
     icon: 'bar_chart',
     label: '查看报表',
     color: 'green',
-    onClick: () => {}
-  },
-  {
-    icon: 'campaign',
-    label: '创建活动',
-    color: 'deep-purple',
     onClick: () => {}
   },
   {

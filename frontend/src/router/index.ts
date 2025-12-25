@@ -83,6 +83,18 @@ const router = createRouter({
       component: () => import('../views/ProfileView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/albums',
+      name: 'albums',
+      component: () => import('../views/AlbumView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/albums/:id',
+      name: 'albumDetail',
+      component: () => import('../views/AlbumDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 
