@@ -6,6 +6,7 @@ import com.info.ecommerce.modules.payment.dto.PaymentTransactionDTO;
 import com.info.ecommerce.modules.payment.entity.PaymentSetting;
 import com.info.ecommerce.modules.payment.enums.PaymentGateway;
 import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
+import com.info.ecommerce.modules.payment.repository.PaymentSettingRepository;
 import com.info.ecommerce.modules.payment.service.PaymentManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +30,7 @@ import java.util.List;
 public class PaymentManagementController {
 
     private final PaymentManagementService paymentManagementService;
+    private final PaymentSettingRepository settingRepository;
 
     @GetMapping("/statistics")
     @Operation(summary = "取得支付統計資料", description = "取得今日、本月的交易統計及各閘道佔比")
@@ -138,6 +140,60 @@ public class PaymentManagementController {
         } catch (Exception e) {
             log.error("Failed to check availability", e);
             return ApiResponse.error("檢查閘道可用性失敗: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/settings/initialize")
+    @Operation(summary = "初始化支付設定", description = "初始化所有支付閘道的預設設定（僅在設定不存在時）")
+    public ApiResponse<String> initializeSettings() {
+        log.info("Manually initializing payment settings");
+        try {
+            // 初始化 LINE PAY
+            if (!settingRepository.findByGateway(PaymentGateway.LINE_PAY).isPresent()) {
+                PaymentSetting linePay = PaymentSetting.builder()
+                        .gateway(PaymentGateway.LINE_PAY)
+                        .enabled(true)
+                        .displayName("LINE PAY")
+                        .description("LINE PAY 行動支付，支援 LINE 用戶快速付款")
+                        .commissionRate(new java.math.BigDecimal("2.5"))
+                        .maintenanceMode(false)
+                        .sortOrder(1)
+                        .build();
+                settingRepository.save(linePay);
+            }
+            
+            // 初始化 ECPay
+            if (!settingRepository.findByGateway(PaymentGateway.ECPAY).isPresent()) {
+                PaymentSetting ecPay = PaymentSetting.builder()
+                        .gateway(PaymentGateway.ECPAY)
+                        .enabled(true)
+                        .displayName("綠界支付")
+                        .description("ECPay 多元支付，支援信用卡、ATM、超商代碼、超商條碼等多種付款方式")
+                        .commissionRate(new java.math.BigDecimal("2.8"))
+                        .maintenanceMode(false)
+                        .sortOrder(2)
+                        .build();
+                settingRepository.save(ecPay);
+            }
+            
+            // 初始化手動付款
+            if (!settingRepository.findByGateway(PaymentGateway.MANUAL).isPresent()) {
+                PaymentSetting manual = PaymentSetting.builder()
+                        .gateway(PaymentGateway.MANUAL)
+                        .enabled(true)
+                        .displayName("手動付款")
+                        .description("現金、銀行轉帳等手動記錄的付款方式")
+                        .commissionRate(java.math.BigDecimal.ZERO)
+                        .maintenanceMode(false)
+                        .sortOrder(3)
+                        .build();
+                settingRepository.save(manual);
+            }
+            
+            return ApiResponse.success("支付設定初始化完成");
+        } catch (Exception e) {
+            log.error("Failed to initialize settings", e);
+            return ApiResponse.error("初始化支付設定失敗: " + e.getMessage());
         }
     }
 }

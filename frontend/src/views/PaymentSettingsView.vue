@@ -5,9 +5,27 @@
 
       <q-card>
         <q-card-section>
-          <div class="text-subtitle1 q-mb-md">支付閘道設定</div>
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-subtitle1">支付閘道設定</div>
+            <q-btn
+              v-if="settings.length === 0"
+              color="primary"
+              label="初始化設定"
+              icon="add"
+              @click="initializeSettings"
+              :loading="initializing"
+            />
+          </div>
           
-          <q-list bordered separator>
+          <div v-if="settings.length === 0" class="text-center q-pa-lg">
+            <q-icon name="settings" size="64px" color="grey-5" />
+            <div class="text-h6 text-grey-7 q-mt-md">尚無支付設定</div>
+            <div class="text-body2 text-grey-6 q-mt-sm">
+              點擊「初始化設定」按鈕建立預設的支付閘道設定
+            </div>
+          </div>
+          
+          <q-list v-else bordered separator>
             <q-item v-for="setting in settings" :key="setting.id">
               <q-item-section avatar>
                 <q-avatar :color="getGatewayColor(setting.gateway)" text-color="white">
@@ -128,10 +146,12 @@
 import { ref, onMounted } from 'vue'
 import { getAllPaymentSettings, updatePaymentSetting, type PaymentSetting } from '@/api/payment'
 import { Notify } from 'quasar'
+import axiosInstance from '@/api/axios'
 
 const settings = ref<PaymentSetting[]>([])
 const showEditDialog = ref(false)
 const editingSetting = ref<PaymentSetting | null>(null)
+const initializing = ref(false)
 
 const getGatewayColor = (gateway: string): string => {
   const colors: Record<string, string> = {
@@ -209,6 +229,33 @@ const saveSetting = async () => {
       type: 'negative',
       message: '儲存設定失敗'
     })
+  }
+}
+
+const initializeSettings = async () => {
+  initializing.value = true
+  try {
+    const response = await axiosInstance.post('/payment-management/settings/initialize')
+    if (response.success) {
+      Notify.create({
+        type: 'positive',
+        message: '支付設定初始化完成'
+      })
+      loadSettings()
+    } else {
+      Notify.create({
+        type: 'negative',
+        message: response.message || '初始化失敗'
+      })
+    }
+  } catch (error) {
+    console.error('Failed to initialize settings:', error)
+    Notify.create({
+      type: 'negative',
+      message: '初始化設定失敗'
+    })
+  } finally {
+    initializing.value = false
   }
 }
 
