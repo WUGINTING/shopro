@@ -22,11 +22,18 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="inventory_2" size="40px" color="primary" />
                 <div>
-                  <div class="text-h4 text-weight-bold">1,234</div>
+                  <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalProducts) }}</div>
                   <div class="text-caption text-grey-7">总商品数</div>
                 </div>
               </div>
-              <q-badge color="positive" class="q-mt-sm">+12% ↑</q-badge>
+              <q-badge 
+                v-if="stats.totalProductsChange !== undefined"
+                :color="stats.totalProductsChange >= 0 ? 'positive' : 'negative'" 
+                class="q-mt-sm"
+              >
+                {{ stats.totalProductsChange >= 0 ? '+' : '' }}{{ stats.totalProductsChange }}% 
+                {{ stats.totalProductsChange >= 0 ? '↑' : '↓' }}
+              </q-badge>
             </q-card-section>
           </q-card>
         </div>
@@ -37,11 +44,18 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="shopping_bag" size="40px" color="orange" />
                 <div>
-                  <div class="text-h4 text-weight-bold">856</div>
+                  <div class="text-h4 text-weight-bold">{{ formatNumber(stats.pendingOrders) }}</div>
                   <div class="text-caption text-grey-7">待处理订单</div>
                 </div>
               </div>
-              <q-badge color="warning" class="q-mt-sm">+8% ↑</q-badge>
+              <q-badge 
+                v-if="stats.pendingOrdersChange !== undefined"
+                :color="stats.pendingOrdersChange >= 0 ? 'warning' : 'positive'" 
+                class="q-mt-sm"
+              >
+                {{ stats.pendingOrdersChange >= 0 ? '+' : '' }}{{ stats.pendingOrdersChange }}% 
+                {{ stats.pendingOrdersChange >= 0 ? '↑' : '↓' }}
+              </q-badge>
             </q-card-section>
           </q-card>
         </div>
@@ -52,11 +66,18 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="people" size="40px" color="teal" />
                 <div>
-                  <div class="text-h4 text-weight-bold">5,678</div>
+                  <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalCustomers) }}</div>
                   <div class="text-caption text-grey-7">总客户数</div>
                 </div>
               </div>
-              <q-badge color="positive" class="q-mt-sm">+15% ↑</q-badge>
+              <q-badge 
+                v-if="stats.totalCustomersChange !== undefined"
+                :color="stats.totalCustomersChange >= 0 ? 'positive' : 'negative'" 
+                class="q-mt-sm"
+              >
+                {{ stats.totalCustomersChange >= 0 ? '+' : '' }}{{ stats.totalCustomersChange }}% 
+                {{ stats.totalCustomersChange >= 0 ? '↑' : '↓' }}
+              </q-badge>
             </q-card-section>
           </q-card>
         </div>
@@ -67,11 +88,18 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="attach_money" size="40px" color="green" />
                 <div>
-                  <div class="text-h4 text-weight-bold">$89.2K</div>
+                  <div class="text-h4 text-weight-bold">¥{{ formatCurrency(stats.monthlySales) }}</div>
                   <div class="text-caption text-grey-7">本月销售额</div>
                 </div>
               </div>
-              <q-badge color="positive" class="q-mt-sm">+23% ↑</q-badge>
+              <q-badge 
+                v-if="stats.monthlySalesChange !== undefined"
+                :color="stats.monthlySalesChange >= 0 ? 'positive' : 'negative'" 
+                class="q-mt-sm"
+              >
+                {{ stats.monthlySalesChange >= 0 ? '+' : '' }}{{ stats.monthlySalesChange }}% 
+                {{ stats.monthlySalesChange >= 0 ? '↑' : '↓' }}
+              </q-badge>
             </q-card-section>
           </q-card>
         </div>
@@ -111,32 +139,20 @@
               </div>
             </q-card-section>
             <q-card-section class="q-pt-none">
-              <q-timeline color="secondary">
+              <q-timeline color="secondary" v-if="recentOrders.length > 0">
                 <q-timeline-entry
-                  title="订单 #12345 已完成支付"
-                  subtitle="2024-12-24 10:30"
-                  icon="check_circle"
-                  color="primary"
-                />
-                <q-timeline-entry
-                  title="订单 #12344 等待发货"
-                  subtitle="2024-12-24 09:15"
-                  icon="local_shipping"
-                  color="orange"
-                />
-                <q-timeline-entry
-                  title="订单 #12343 已发货"
-                  subtitle="2024-12-24 08:00"
-                  icon="flight_takeoff"
-                  color="teal"
-                />
-                <q-timeline-entry
-                  title="订单 #12342 已送达"
-                  subtitle="2024-12-23 20:45"
-                  icon="done_all"
-                  color="positive"
-                />
+                  v-for="order in recentOrders"
+                  :key="order.id"
+                  :title="`订单 ${order.orderNumber} - ${getStatusText(order.status)}`"
+                  :subtitle="formatDate(order.createdAt)"
+                  :icon="getStatusIcon(order.status)"
+                  :color="getStatusColor(order.status)"
+                >
+                  <div>客户: {{ order.customerName }}</div>
+                  <div class="text-weight-bold">金额: ¥{{ order.totalAmount }}</div>
+                </q-timeline-entry>
               </q-timeline>
+              <div v-else class="text-center text-grey-7 q-py-md">暂无订单数据</div>
             </q-card-section>
           </q-card>
         </div>
@@ -150,24 +166,25 @@
               </div>
             </q-card-section>
             <q-card-section class="q-pt-none">
-              <q-list separator>
-                <q-item v-for="i in 4" :key="i">
+              <q-list separator v-if="topProducts.length > 0">
+                <q-item v-for="product in topProducts" :key="product.id">
                   <q-item-section avatar>
                     <q-avatar rounded size="50px" color="grey-3" text-color="primary">
                       <q-icon name="inventory_2" />
                     </q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>商品名称 {{ i }}</q-item-label>
-                    <q-item-label caption>已售 {{ 100 + i * 50 }} 件</q-item-label>
+                    <q-item-label>{{ product.name }}</q-item-label>
+                    <q-item-label caption>已售 {{ product.salesCount }} 件</q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label class="text-primary text-weight-bold">
-                      ¥{{ 99 + i * 10 }}
+                      ¥{{ product.price }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
               </q-list>
+              <div v-else class="text-center text-grey-7 q-py-md">暂无商品数据</div>
             </q-card-section>
           </q-card>
         </div>
@@ -177,10 +194,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { dashboardApi, type DashboardStats, type RecentOrder, type TopProduct } from '@/api'
 
 const router = useRouter()
+const $q = useQuasar()
+
+const stats = ref<DashboardStats>({
+  totalProducts: 0,
+  pendingOrders: 0,
+  totalCustomers: 0,
+  monthlySales: 0
+})
+
+const recentOrders = ref<RecentOrder[]>([])
+const topProducts = ref<TopProduct[]>([])
+const loading = ref(false)
 
 const currentDate = computed(() => {
   const date = new Date()
@@ -230,6 +261,90 @@ const quickActions = [
     onClick: () => {}
   }
 ]
+
+const loadDashboardData = async () => {
+  loading.value = true
+  try {
+    // Load stats
+    const statsResponse = await dashboardApi.getStats()
+    stats.value = statsResponse.data
+
+    // Load recent orders
+    const ordersResponse = await dashboardApi.getRecentOrders(5)
+    recentOrders.value = ordersResponse.data
+
+    // Load top products
+    const productsResponse = await dashboardApi.getTopProducts(5)
+    topProducts.value = productsResponse.data
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error)
+    $q.notify({
+      type: 'warning',
+      message: '加载仪表板数据失败，显示默认数据',
+      position: 'top'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+const formatNumber = (num: number | undefined) => {
+  if (num === undefined || num === null) return '0'
+  return num.toLocaleString('zh-CN')
+}
+
+const formatCurrency = (amount: number | undefined) => {
+  if (amount === undefined || amount === null) return '0.00'
+  return amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getStatusText = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    PENDING: '待处理',
+    PROCESSING: '处理中',
+    SHIPPED: '已发货',
+    DELIVERED: '已送达',
+    CANCELLED: '已取消'
+  }
+  return statusMap[status] || status
+}
+
+const getStatusIcon = (status: string) => {
+  const iconMap: { [key: string]: string } = {
+    PENDING: 'schedule',
+    PROCESSING: 'local_shipping',
+    SHIPPED: 'flight_takeoff',
+    DELIVERED: 'done_all',
+    CANCELLED: 'cancel'
+  }
+  return iconMap[status] || 'help'
+}
+
+const getStatusColor = (status: string) => {
+  const colorMap: { [key: string]: string } = {
+    PENDING: 'orange',
+    PROCESSING: 'primary',
+    SHIPPED: 'teal',
+    DELIVERED: 'positive',
+    CANCELLED: 'negative'
+  }
+  return colorMap[status] || 'grey'
+}
+
+onMounted(() => {
+  loadDashboardData()
+})
 </script>
 
 <style scoped>
