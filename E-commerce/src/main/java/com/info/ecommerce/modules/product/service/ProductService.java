@@ -181,11 +181,16 @@ public class ProductService {
             imageUrls = new ArrayList<>();
         }
 
+        // 批次獲取所有相冊圖片（避免 N+1 查詢問題）
+        List<AlbumImage> albumImages = albumImageRepository.findAllById(albumImageIds);
+        
+        // 驗證所有圖片都存在
+        if (albumImages.size() != albumImageIds.size()) {
+            throw new BusinessException("部分相冊圖片不存在");
+        }
+
         // 添加相冊圖片的 URL
-        for (Long albumImageId : albumImageIds) {
-            AlbumImage albumImage = albumImageRepository.findById(albumImageId)
-                    .orElseThrow(() -> new BusinessException("相冊圖片不存在: " + albumImageId));
-            
+        for (AlbumImage albumImage : albumImages) {
             // 添加圖片 URL（避免重複）
             if (!imageUrls.contains(albumImage.getImageUrl())) {
                 imageUrls.add(albumImage.getImageUrl());

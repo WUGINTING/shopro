@@ -20,7 +20,7 @@ public class ProductImageDTO {
     @Schema(description = "圖片 URL", example = "/images/product1.jpg")
     private String imageUrl;
 
-    @Schema(description = "相冊圖片 ID（若來自相冊）", example = "1")
+    @Schema(description = "相冊圖片 ID（若此圖片來自相冊系統，此欄位記錄原始相冊圖片的 ID，用於追蹤圖片來源）", example = "1")
     private Long albumImageId;
 
     @Schema(description = "圖片類型", example = "MAIN")
