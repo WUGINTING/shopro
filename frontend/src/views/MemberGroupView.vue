@@ -276,7 +276,7 @@ const loadGroups = async () => {
   loading.value = true
   try {
     const result = await memberGroupApi.getGroups()
-    groups.value = result.content
+    groups.value = result?.content || []
   } catch (error) {
     $q.notify({
       type: 'negative',

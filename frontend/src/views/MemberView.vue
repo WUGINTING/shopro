@@ -359,8 +359,8 @@ const loadMembers = async () => {
       size: pagination.value.rowsPerPage,
       ...searchForm.value
     })
-    members.value = result.content
-    pagination.value.rowsNumber = result.totalElements
+    members.value = result?.content || []
+    pagination.value.rowsNumber = result?.totalElements || 0
   } catch (error) {
     $q.notify({
       type: 'negative',

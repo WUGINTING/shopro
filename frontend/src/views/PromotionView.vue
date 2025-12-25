@@ -349,8 +349,8 @@ const loadPromotions = async () => {
       pagination.value.page,
       pagination.value.rowsPerPage
     )
-    promotions.value = result.content
-    pagination.value.rowsNumber = result.totalElements
+    promotions.value = result?.content || []
+    pagination.value.rowsNumber = result?.totalElements || 0
   } catch (error) {
     $q.notify({
       type: 'negative',

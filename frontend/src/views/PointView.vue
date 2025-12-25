@@ -310,11 +310,11 @@ const loadRecords = async () => {
       pagination.value.page,
       pagination.value.rowsPerPage
     )
-    records.value = result.content
-    pagination.value.rowsNumber = result.totalElements
+    records.value = result?.content || []
+    pagination.value.rowsNumber = result?.totalElements || 0
     
     // 更新統計資料
-    stats.value.totalRecords = result.totalElements
+    stats.value.totalRecords = result?.totalElements || 0
   } catch (error) {
     $q.notify({
       type: 'negative',

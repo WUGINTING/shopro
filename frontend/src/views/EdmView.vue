@@ -463,8 +463,8 @@ const loadCampaigns = async () => {
     } else {
       result = await edmApi.getCampaignsByStatus(selectedStatus.value, pagination.value.page, pagination.value.rowsPerPage)
     }
-    campaigns.value = result.content
-    pagination.value.rowsNumber = result.totalElements
+    campaigns.value = result?.content || []
+    pagination.value.rowsNumber = result?.totalElements || 0
   } catch (error) {
     $q.notify({
       type: 'negative',
