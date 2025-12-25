@@ -43,7 +43,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/api/albums/images/**"  // Allow public access to album images
                         ).permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
