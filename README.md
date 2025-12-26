@@ -185,8 +185,12 @@ http://localhost:8080/swagger-ui.html
 
 ## 更多資訊
 
+### 開發文檔
 - [後端文檔](./E-commerce/README.md)
 - [前端文檔](./frontend/README.md)
+- [**前端開發手冊 - 商品上架與訂單產生**](./前端開發手冊_商品上架與訂單產生.md) ⭐ 新增
+
+### API 文檔
 - [產品模組 API](./產品模組API文檔.md)
 - [訂單管理 API](./訂單管理模組API文檔.md)
 - [CRM 模組 API](./CRM_MODULE_API_DOCUMENTATION.md)
