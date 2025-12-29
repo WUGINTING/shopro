@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
-// 订单Q&A相关接口
+// 訂嗢Q&A相關接口
 export interface OrderQA {
   id?: number
   orderId: number
@@ -16,9 +16,9 @@ export interface OrderQA {
   createdAt?: string
 }
 
-// 订单Q&A API
+// 訂單 Q&A API
 export const orderQAApi = {
-  // 新增问题
+  // 新增問題
   askQuestion: (data: OrderQA) => {
     return axios.post<any, ApiResponse<OrderQA>>('/orders/qa', data)
   },
@@ -30,24 +30,24 @@ export const orderQAApi = {
     })
   },
   
-  // 取得订单的所有问答
+  // 取得訂單的所有問答
   getQAByOrderId: (orderId: number) => {
     return axios.get<any, ApiResponse<OrderQA[]>>(`/orders/qa/order/${orderId}`)
   },
   
-  // 分页取得订单问答
+  // 分頁取得訂單問答
   getQAByOrderIdPage: (orderId: number, page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<OrderQA>>>(`/orders/qa/order/${orderId}/page`, {
       params: { page, size }
     })
   },
   
-  // 取得客户的所有提问
+  // 取得客戶的所有提問
   getQAByAskerId: (askerId: number) => {
     return axios.get<any, ApiResponse<OrderQA[]>>(`/orders/qa/asker/${askerId}`)
   },
   
-  // 删除问答
+  // 刪除問答
   deleteQA: (qaId: number) => {
     return axios.delete<any, ApiResponse<void>>(`/orders/qa/${qaId}`)
   }

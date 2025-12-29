@@ -7,7 +7,7 @@
             <div class="text-center">
               <q-icon name="shopping_cart" size="64px" />
               <div class="text-h4 q-mt-md text-weight-bold">Shopro</div>
-              <div class="text-subtitle1">电商管理系统</div>
+              <div class="text-subtitle1">電商管理系統</div>
             </div>
           </q-card-section>
 
@@ -15,9 +15,9 @@
             <q-form @submit="handleLogin">
               <q-input
                 v-model="loginForm.username"
-                label="用户名"
+                label="使用者名稱"
                 outlined
-                :rules="[val => !!val || '请输入用户名']"
+                :rules="[val => !!val || '請輸入使用者名稱']"
                 class="q-mb-md"
               >
                 <template v-slot:prepend>
@@ -27,10 +27,10 @@
 
               <q-input
                 v-model="loginForm.password"
-                label="密码"
+                label="密碼"
                 type="password"
                 outlined
-                :rules="[val => !!val || '请输入密码']"
+                :rules="[val => !!val || '請輸入密碼']"
                 class="q-mb-md"
               >
                 <template v-slot:prepend>
@@ -40,7 +40,7 @@
 
               <q-btn
                 type="submit"
-                label="登录"
+                label="登入"
                 color="primary"
                 unelevated
                 class="full-width q-mb-md"
@@ -48,10 +48,10 @@
               />
 
               <div class="text-caption text-grey-7 q-mt-md">
-                <p class="q-mb-sm"><strong>测试账号：</strong></p>
-                <p class="q-mb-xs">管理员：admin / admin123</p>
-                <p class="q-mb-xs">经理：manager / manager123</p>
-                <p class="q-mb-xs">员工：staff / staff123</p>
+                <p class="q-mb-sm"><strong>測試帳號：</strong></p>
+                <p class="q-mb-xs">管理員：admin / admin123</p>
+                <p class="q-mb-xs">經理：manager / manager123</p>
+                <p class="q-mb-xs">員工：staff / staff123</p>
               </div>
             </q-form>
           </q-card-section>
@@ -94,7 +94,7 @@ const handleLogin = async () => {
 
       $q.notify({
         type: 'positive',
-        message: '登录成功！',
+        message: '登入成功！',
         position: 'top'
       })
 
@@ -104,7 +104,7 @@ const handleLogin = async () => {
   } catch (error: any) {
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || '登录失败，请检查用户名和密码',
+      message: error.response?.data?.message || '登入失敗，請檢查使用者名稱和密碼',
       position: 'top'
     })
   } finally {

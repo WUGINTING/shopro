@@ -1,6 +1,6 @@
-// 通用 API 响应类型定义
+// 通用 API 回應類型定義
 
-// 通用响应接口
+// 通用回應接口
 export interface ApiResponse<T = any> {
   success: boolean
   message: string
@@ -8,7 +8,7 @@ export interface ApiResponse<T = any> {
   timestamp: string
 }
 
-// 分页响应接口
+// 分頁回應接口
 export interface PageResponse<T> {
   content: T[]
   pageable: {

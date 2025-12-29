@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// 订单相关接口
+// 訂單相關接口
 export interface Order {
   id?: number
   orderNumber?: string
@@ -25,31 +25,31 @@ export interface OrderItem {
   subtotal?: number
 }
 
-// 订单 API
+// 訂單 API
 export const orderApi = {
-  // 获取订单列表
+  // 獲取訂單列表
   getOrders: (params?: any) => {
     return axios.get<any, ApiResponse<Order[]>>('/orders', { params })
   },
   
-  // 获取订单详情
+  // 獲取訂單詳情
   getOrder: (id: number) => {
     return axios.get<any, ApiResponse<Order>>(`/orders/${id}`)
   },
   
-  // 创建订单
+  // 創建訂單
   createOrder: (data: Order) => {
     return axios.post<any, ApiResponse<Order>>('/orders', data)
   },
   
-  // 更新订单状态
+  // 更新訂單狀態
   updateOrderStatus: (id: number, status: Order['status']) => {
     return axios.patch<any, ApiResponse<Order>>(`/orders/${id}/status`, null, {
       params: { status }
     })
   },
   
-  // 取消订单
+  // 取消訂單
   cancelOrder: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/orders/${id}`)
   }

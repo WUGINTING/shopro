@@ -5,8 +5,8 @@
       <q-card class="welcome-banner q-mb-md">
         <q-card-section class="row items-center">
           <div class="col">
-            <div class="text-h4 text-weight-bold">欢迎回来！</div>
-            <div class="text-subtitle1 q-mt-sm">今天是 {{ currentDate }}，让我们开始新的一天吧</div>
+            <div class="text-h4 text-weight-bold">歡迎回來！</div>
+            <div class="text-subtitle1 q-mt-sm">今天是 {{ currentDate }}，讓我們開始新的一天吧</div>
           </div>
           <div class="col-auto">
             <q-icon name="shopping_cart" size="80px" style="opacity: 0.3" />
@@ -23,7 +23,7 @@
                 <q-icon name="inventory_2" size="40px" color="primary" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalProducts) }}</div>
-                  <div class="text-caption text-grey-7">总商品数</div>
+                  <div class="text-caption text-grey-7">總商品數</div>
                 </div>
               </div>
               <q-badge 
@@ -45,7 +45,7 @@
                 <q-icon name="shopping_bag" size="40px" color="orange" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.pendingOrders) }}</div>
-                  <div class="text-caption text-grey-7">待处理订单</div>
+                  <div class="text-caption text-grey-7">待處理訂單</div>
                 </div>
               </div>
               <q-badge 
@@ -67,7 +67,7 @@
                 <q-icon name="people" size="40px" color="teal" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalCustomers) }}</div>
-                  <div class="text-caption text-grey-7">总客户数</div>
+                  <div class="text-caption text-grey-7">總客戶數</div>
                 </div>
               </div>
               <q-badge 
@@ -89,7 +89,7 @@
                 <q-icon name="attach_money" size="40px" color="green" />
                 <div>
                   <div class="text-h4 text-weight-bold">¥{{ formatCurrency(stats.monthlySales) }}</div>
-                  <div class="text-caption text-grey-7">本月销售额</div>
+                  <div class="text-caption text-grey-7">本月銷售額</div>
                 </div>
               </div>
               <q-badge 
@@ -134,7 +134,7 @@
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
-                <div class="text-h6 text-weight-bold">最近订单</div>
+                <div class="text-h6 text-weight-bold">最近訂單</div>
                 <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/orders')" />
               </div>
             </q-card-section>
@@ -143,16 +143,16 @@
                 <q-timeline-entry
                   v-for="order in recentOrders"
                   :key="order.id"
-                  :title="`订单 ${order.orderNumber} - ${getStatusText(order.status)}`"
+                  :title="`訂單 ${order.orderNumber} - ${getStatusText(order.status)}`"
                   :subtitle="formatDate(order.createdAt)"
                   :icon="getStatusIcon(order.status)"
                   :color="getStatusColor(order.status)"
                 >
-                  <div>客户: {{ order.customerName }}</div>
-                  <div class="text-weight-bold">金额: ¥{{ order.totalAmount }}</div>
+                  <div>客戶: {{ order.customerName }}</div>
+                  <div class="text-weight-bold">金額: ¥{{ order.totalAmount }}</div>
                 </q-timeline-entry>
               </q-timeline>
-              <div v-else class="text-center text-grey-7 q-py-md">暂无订单数据</div>
+              <div v-else class="text-center text-grey-7 q-py-md">暫無訂單資料</div>
             </q-card-section>
           </q-card>
         </div>
@@ -161,7 +161,7 @@
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
-                <div class="text-h6 text-weight-bold">热销商品</div>
+                <div class="text-h6 text-weight-bold">熱銷商品</div>
                 <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/products')" />
               </div>
             </q-card-section>
@@ -184,7 +184,7 @@
                   </q-item-section>
                 </q-item>
               </q-list>
-              <div v-else class="text-center text-grey-7 q-py-md">暂无商品数据</div>
+              <div v-else class="text-center text-grey-7 q-py-md">暫無商品資料</div>
             </q-card-section>
           </q-card>
         </div>
@@ -232,13 +232,13 @@ const quickActions = [
   },
   {
     icon: 'receipt',
-    label: '处理订单',
+    label: '處理訂單',
     color: 'orange',
     onClick: () => router.push('/orders')
   },
   {
     icon: 'person_add',
-    label: '管理客户',
+    label: '管理客戶',
     color: 'teal',
     onClick: () => router.push('/customers')
   },
@@ -250,13 +250,13 @@ const quickActions = [
   },
   {
     icon: 'bar_chart',
-    label: '查看报表',
+    label: '查看報表',
     color: 'green',
     onClick: () => {}
   },
   {
     icon: 'settings',
-    label: '系统设置',
+    label: '系統設定',
     color: 'blue-grey',
     onClick: () => {}
   }
@@ -284,7 +284,7 @@ const loadDashboardData = async () => {
     
     $q.notify({
       type: 'warning',
-      message: '加载仪表板数据失败，显示默认数据',
+      message: '載入儀表板資料失敗，顯示預設資料',
       position: 'top'
     })
   } finally {
@@ -315,10 +315,10 @@ const formatDate = (dateStr: string) => {
 
 const getStatusText = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    PENDING: '待处理',
-    PROCESSING: '处理中',
-    SHIPPED: '已发货',
-    DELIVERED: '已送达',
+    PENDING: '待處理',
+    PROCESSING: '處理中',
+    SHIPPED: '已發貨',
+    DELIVERED: '已送達',
     CANCELLED: '已取消'
   }
   return statusMap[status] || status

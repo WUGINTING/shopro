@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
-// 创建 axios 实例
+// 創建 axios 實例
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 15000,
@@ -10,10 +10,10 @@ const axiosInstance: AxiosInstance = axios.create({
   }
 })
 
-// 请求拦截器
+// 請求攔截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    // 从 localStorage 获取 token 并添加到请求头
+    // 從 localStorage 獲取 token 並添加到請求標頭
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -25,17 +25,17 @@ axiosInstance.interceptors.request.use(
   }
 )
 
-// 响应拦截器
+// 回應攝截器
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
     return response.data
   },
   (error) => {
-    // 处理错误响应
+    // 處理錯誤回應
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          // 未授权，清除 token 并跳转到登录页
+          // 未授權，清除 token 並跳轉到登入頁
           localStorage.removeItem('token')
           localStorage.removeItem('user')
           if (window.location.pathname !== '/login') {
@@ -43,16 +43,16 @@ axiosInstance.interceptors.response.use(
           }
           break
         case 403:
-          console.error('没有权限访问')
+          console.error('沒有權限存取')
           break
         case 404:
-          console.error('请求的资源不存在')
+          console.error('請求的資源不存在')
           break
         case 500:
-          console.error('服务器错误')
+          console.error('服務器錯誤')
           break
         default:
-          console.error('请求失败')
+          console.error('請求失敗')
       }
     }
     return Promise.reject(error)

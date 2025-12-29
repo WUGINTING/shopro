@@ -5,7 +5,7 @@
       <div class="row items-center justify-between q-mb-md">
         <div>
           <div class="text-h5 text-weight-bold">商品管理</div>
-          <div class="text-caption text-grey-7">管理商品信息、上架状态和库存</div>
+          <div class="text-caption text-grey-7">管理商品資訊、上架狀態和庫存</div>
         </div>
         <q-btn
           color="primary"
@@ -25,7 +25,7 @@
                 v-model="searchQuery"
                 outlined
                 dense
-                placeholder="搜索商品名称"
+                placeholder="搜尋商品名稱"
                 clearable
               >
                 <template v-slot:prepend>
@@ -44,7 +44,7 @@
                 emit-value
                 map-options
                 clearable
-                placeholder="商品状态"
+                placeholder="商品狀態"
               />
             </div>
             <div class="col-12 col-sm-6 col-md-3">
@@ -54,11 +54,11 @@
                 dense
                 :options="categoryOptions"
                 clearable
-                placeholder="商品分类"
+                placeholder="商品分類"
               />
             </div>
             <div class="col-12 col-sm-6 col-md-2">
-              <q-btn color="primary" unelevated class="full-width" label="搜索" icon="search" />
+              <q-btn color="primary" unelevated class="full-width" label="搜尋" icon="search" />
             </div>
           </div>
         </q-card-section>
@@ -108,7 +108,7 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
-                <q-tooltip>编辑</q-tooltip>
+                <q-tooltip>編輯</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -124,7 +124,7 @@
               </q-btn>
 
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
-                <q-tooltip>删除</q-tooltip>
+                <q-tooltip>刪除</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -135,7 +135,7 @@
       <q-dialog v-model="showDialog" persistent>
         <q-card style="min-width: 600px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ form.id ? '编辑商品' : '新增商品' }}</div>
+            <div class="text-h6">{{ form.id ? '編輯商品' : '新增商品' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -144,10 +144,10 @@
             <q-form>
               <q-input
                 v-model="form.name"
-                label="商品名称 *"
+                label="商品名稱 *"
                 outlined
                 class="q-mb-md"
-                :rules="[val => !!val || '请输入商品名称']"
+                :rules="[val => !!val || '請輸入商品名稱']"
               />
 
               <q-input
@@ -163,20 +163,20 @@
                 <div class="col-6">
                   <q-input
                     v-model.number="form.price"
-                    label="价格 *"
+                    label="價格 *"
                     outlined
                     type="number"
                     prefix="¥"
-                    :rules="[val => val >= 0 || '价格不能为负数']"
+                    :rules="[val => val >= 0 || '價格不能為負數']"
                   />
                 </div>
                 <div class="col-6">
                   <q-input
                     v-model.number="form.stock"
-                    label="库存 *"
+                    label="庫存 *"
                     outlined
                     type="number"
-                    :rules="[val => val >= 0 || '库存不能为负数']"
+                    :rules="[val => val >= 0 || '庫存不能為負數']"
                   />
                 </div>
               </div>
@@ -185,7 +185,7 @@
                 <div class="col-6">
                   <q-select
                     v-model="form.status"
-                    label="商品状态 *"
+                    label="商品狀態 *"
                     outlined
                     :options="statusOptions"
                     option-value="value"
@@ -197,7 +197,7 @@
                 <div class="col-6">
                   <q-select
                     v-model="form.salesMode"
-                    label="销售模式 *"
+                    label="銷售模式 *"
                     outlined
                     :options="salesModeOptions"
                     option-value="value"
@@ -212,7 +212,7 @@
                 <div class="col-12">
                   <q-select
                     v-model="form.categoryId"
-                    label="商品分类"
+                    label="商品分類"
                     outlined
                     :options="categoryOptions"
                   />
@@ -221,7 +221,7 @@
 
               <q-file
                 v-model="productImage"
-                label="商品图片"
+                label="商品圖片"
                 outlined
                 accept="image/*"
                 class="q-mb-md"
@@ -276,7 +276,7 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" @click="closeDialog" />
-            <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
+            <q-btn unelevated label="儲存" color="primary" @click="handleSubmit" />
             <q-btn v-if="form.id" unelevated label="完成" color="positive" @click="closeDialog" />
           </q-card-actions>
         </q-card>
@@ -412,12 +412,12 @@ const pagination = ref({
 })
 
 const columns = [
-  { name: 'image', label: '图片', align: 'left' as const, field: 'image' },
+  { name: 'image', label: '圖片', align: 'left' as const, field: 'image' },
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'name', label: '商品名称', align: 'left' as const, field: 'name', sortable: true },
-  { name: 'price', label: '价格', align: 'left' as const, field: 'price', sortable: true },
-  { name: 'stock', label: '库存', align: 'center' as const, field: 'stock', sortable: true },
-  { name: 'status', label: '状态', align: 'center' as const, field: 'status' },
+  { name: 'name', label: '商品名稱', align: 'left' as const, field: 'name', sortable: true },
+  { name: 'price', label: '價格', align: 'left' as const, field: 'price', sortable: true },
+  { name: 'stock', label: '庫存', align: 'center' as const, field: 'stock', sortable: true },
+  { name: 'status', label: '狀態', align: 'center' as const, field: 'status' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -428,14 +428,14 @@ const statusOptions = [
 ]
 
 const salesModeOptions = [
-  { label: '正常销售', value: 'NORMAL' },
-  { label: '预购商品', value: 'PRE_ORDER' },
+  { label: '正常銷售', value: 'NORMAL' },
+  { label: '預購商品', value: 'PRE_ORDER' },
   { label: '票券商品', value: 'TICKET' },
-  { label: '订阅商品', value: 'SUBSCRIPTION' },
-  { label: '门市限定', value: 'STORE_ONLY' }
+  { label: '訂閱商品', value: 'SUBSCRIPTION' },
+  { label: '門市限定', value: 'STORE_ONLY' }
 ]
 
-const categoryOptions = ['电子产品', '服装', '食品', '图书', '家居']
+const categoryOptions = ['電子產品', '服裝', '食品', '圖書', '家居']
 
 const loadProducts = async () => {
   loading.value = true
@@ -452,7 +452,7 @@ const loadProducts = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载商品列表失败',
+      message: '載入商品清單失敗',
       position: 'top'
     })
     console.error('API Error:', error)
@@ -525,7 +525,7 @@ const handlePublishToggle = async (product: Product) => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '操作失败',
+      message: '操作失敗',
       position: 'top'
     })
   }
@@ -535,8 +535,8 @@ const handleDelete = (id?: number) => {
   if (!id) return
 
   $q.dialog({
-    title: '确认删除',
-    message: '确定要删除这个商品吗？此操作不可恢复。',
+    title: '確認刪除',
+    message: '確定要刪除這個商品嗎？此操作無法復原。',
     cancel: true,
     persistent: true
   }).onOk(async () => {
@@ -544,14 +544,14 @@ const handleDelete = (id?: number) => {
       await productApi.deleteProduct(id)
       $q.notify({
         type: 'positive',
-        message: '删除成功',
+        message: '刪除成功',
         position: 'top'
       })
       loadProducts()
     } catch (error) {
       $q.notify({
         type: 'negative',
-        message: '删除失败',
+        message: '操作失敗',
         position: 'top'
       })
     }
@@ -584,7 +584,7 @@ const handleSubmit = async () => {
       }
       $q.notify({
         type: 'positive',
-        message: '创建成功，現在可以添加相冊圖片',
+        message: '創建成功，現在可以添加相冊圖片',
         position: 'top'
       })
     }
@@ -592,7 +592,7 @@ const handleSubmit = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '操作失败',
+      message: '操作失敗',
       position: 'top'
     })
   }

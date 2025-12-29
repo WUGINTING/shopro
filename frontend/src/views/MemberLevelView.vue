@@ -4,13 +4,13 @@
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">会员等级管理</div>
-          <div class="text-caption text-grey-7">管理会员等级、权益和折扣</div>
+          <div class="text-h5 text-weight-bold">會員等級管理</div>
+          <div class="text-caption text-grey-7">管理會員等級、權益和折扣</div>
         </div>
         <q-btn
           color="primary"
           icon="add_circle"
-          label="新增等级"
+          label="新增等級"
           unelevated
           @click="showDialog = true; resetForm()"
         />
@@ -37,7 +37,7 @@
 
           <template v-slot:body-cell-levelOrder="props">
             <q-td :props="props">
-              <q-badge :color="getLevelColor(props.row.levelOrder)" :label="`等级 ${props.row.levelOrder}`" />
+              <q-badge :color="getLevelColor(props.row.levelOrder)" :label="`等級 ${props.row.levelOrder}`" />
             </q-td>
           </template>
 
@@ -75,10 +75,10 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
-                <q-tooltip>编辑</q-tooltip>
+                <q-tooltip>編輯</q-tooltip>
               </q-btn>
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
-                <q-tooltip>删除</q-tooltip>
+                <q-tooltip>刪除</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -89,7 +89,7 @@
       <q-dialog v-model="showDialog" persistent>
         <q-card style="min-width: 600px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ form.id ? '编辑会员等级' : '新增会员等级' }}</div>
+            <div class="text-h6">{{ form.id ? '編輯會員等級' : '新增會員等級' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -100,19 +100,19 @@
                 <div class="col-6">
                   <q-input
                     v-model="form.name"
-                    label="等级名称 *"
+                    label="等級名稱 *"
                     outlined
-                    :rules="[val => !!val || '请输入等级名称']"
+                    :rules="[val => !!val || '請輸入等級名稱']"
                   />
                 </div>
 
                 <div class="col-6">
                   <q-input
                     v-model.number="form.levelOrder"
-                    label="等级顺序 *"
+                    label="等級順序 *"
                     outlined
                     type="number"
-                    :rules="[val => val > 0 || '等级顺序必须大于0']"
+                    :rules="[val => val > 0 || '等級順序必須大於0']"
                   />
                 </div>
 
@@ -136,7 +136,7 @@
                     step="0.01"
                     hint="例如: 0.95 表示95折"
                     :rules="[
-                      val => val === undefined || val === null || (val >= 0 && val <= 1) || '折扣率必须在0.0到1.0之间'
+                      val => val === undefined || val === null || (val >= 0 && val <= 1) || '折扣率必須在0.0到1.0之間'
                     ]"
                   />
                 </div>
@@ -144,13 +144,13 @@
                 <div class="col-6">
                   <q-input
                     v-model.number="form.pointsMultiplier"
-                    label="积分倍率"
+                    label="積分倍率"
                     outlined
                     type="number"
                     step="0.1"
-                    hint="例如: 1.5 表示1.5倍积分"
+                    hint="例如: 1.5 表示1.5倍積分"
                     :rules="[
-                      val => val === undefined || val === null || (val > 0 && val <= 10) || '积分倍率必须在0到10之间'
+                      val => val === undefined || val === null || (val > 0 && val <= 10) || '積分倍率必須在0到10之間'
                     ]"
                   />
                 </div>
@@ -166,7 +166,7 @@
                 <div class="col-12">
                   <q-input
                     v-model="form.description"
-                    label="等级描述"
+                    label="等級描述"
                     outlined
                     type="textarea"
                     rows="3"
@@ -176,7 +176,7 @@
                 <div class="col-12">
                   <q-toggle
                     v-model="form.enabled"
-                    label="启用"
+                    label="啟用"
                     color="positive"
                   />
                 </div>
@@ -223,12 +223,12 @@ const pagination = ref({
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'name', label: '等级名称', align: 'left' as const, field: 'name' },
-  { name: 'levelOrder', label: '等级顺序', align: 'center' as const, field: 'levelOrder', sortable: true },
-  { name: 'minSpendAmount', label: '最低消费', align: 'left' as const, field: 'minSpendAmount', sortable: true },
+  { name: 'name', label: '等級名稱', align: 'left' as const, field: 'name' },
+  { name: 'levelOrder', label: '等級順序', align: 'center' as const, field: 'levelOrder', sortable: true },
+  { name: 'minSpendAmount', label: '最低消費', align: 'left' as const, field: 'minSpendAmount', sortable: true },
   { name: 'discountRate', label: '折扣率', align: 'center' as const, field: 'discountRate' },
-  { name: 'pointsMultiplier', label: '积分倍率', align: 'center' as const, field: 'pointsMultiplier' },
-  { name: 'enabled', label: '状态', align: 'center' as const, field: 'enabled' },
+  { name: 'pointsMultiplier', label: '積分倍率', align: 'center' as const, field: 'pointsMultiplier' },
+  { name: 'enabled', label: '狀態', align: 'center' as const, field: 'enabled' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -247,7 +247,7 @@ const loadLevels = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载会员等级列表失败',
+      message: '載入會員等級列表失敗',
       position: 'top'
     })
     console.error(error)
@@ -283,7 +283,7 @@ const handleSubmit = async () => {
   if (!form.value.name || !form.value.levelOrder) {
     $q.notify({
       type: 'warning',
-      message: '请填写必填字段',
+      message: '請填寫必填字段',
       position: 'top'
     })
     return
@@ -301,7 +301,7 @@ const handleSubmit = async () => {
       await memberLevelApi.createMemberLevel(form.value)
       $q.notify({
         type: 'positive',
-        message: '创建成功',
+        message: '創建成功',
         position: 'top'
       })
     }
@@ -310,7 +310,7 @@ const handleSubmit = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '操作失败',
+      message: '操作失敗',
       position: 'top'
     })
   }
@@ -323,14 +323,14 @@ const handleToggleEnabled = async (id?: number) => {
     await memberLevelApi.toggleEnabled(id)
     $q.notify({
       type: 'positive',
-      message: '状态更新成功',
+      message: '狀態更新成功',
       position: 'top'
     })
     loadLevels()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '状态更新失败',
+      message: '狀態更新失敗',
       position: 'top'
     })
   }
@@ -340,8 +340,8 @@ const handleDelete = (id?: number) => {
   if (!id) return
   
   $q.dialog({
-    title: '确认删除',
-    message: '确定要删除这个会员等级吗？此操作不可恢复。',
+    title: '確認刪除',
+    message: `確定要刪除這個會員等級嗎？此操作無法復原。`,
     cancel: true,
     persistent: true
   }).onOk(async () => {
@@ -349,14 +349,14 @@ const handleDelete = (id?: number) => {
       await memberLevelApi.deleteMemberLevel(id)
       $q.notify({
         type: 'positive',
-        message: '删除成功',
+        message: '刪除成功',
         position: 'top'
       })
       loadLevels()
     } catch (error) {
       $q.notify({
         type: 'negative',
-        message: '删除失败',
+        message: '操作失敗',
         position: 'top'
       })
     }

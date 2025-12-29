@@ -18,18 +18,18 @@ const toggleLeftDrawer = () => {
 const username = computed(() => authStore.user?.username || 'User')
 const userRole = computed(() => {
   const roleMap: Record<string, string> = {
-    'ADMIN': '管理员',
-    'MANAGER': '经理',
-    'STAFF': '员工',
-    'CUSTOMER': '客户'
+    'ADMIN': '管理員',
+    'MANAGER': '經理',
+    'STAFF': '員工',
+    'CUSTOMER': '客戶'
   }
   return authStore.user?.role ? roleMap[authStore.user.role] : ''
 })
 
 const handleLogout = () => {
   $q.dialog({
-    title: '确认退出',
-    message: '确定要退出登录吗？',
+    title: '確認退出',
+    message: '確定要退出登入嗎？',
     cancel: true,
     persistent: true
   }).onOk(() => {
@@ -37,7 +37,7 @@ const handleLogout = () => {
     router.push('/login')
     $q.notify({
       type: 'positive',
-      message: '已退出登录',
+      message: '已退出登入',
       position: 'top'
     })
   })
@@ -61,7 +61,7 @@ const handleLogout = () => {
         <q-toolbar-title>
           <div class="row items-center no-wrap">
             <q-icon name="shopping_cart" size="32px" class="q-mr-sm" />
-            <span class="text-weight-bold">Shopro 电商管理系统</span>
+            <span class="text-weight-bold">Shopro 電商管理系統</span>
           </div>
         </q-toolbar-title>
 
@@ -87,14 +87,14 @@ const handleLogout = () => {
                 <q-item-section avatar>
                   <q-icon name="person" />
                 </q-item-section>
-                <q-item-section>个人中心</q-item-section>
+                <q-item-section>個人中心</q-item-section>
               </q-item>
 
               <q-item clickable v-close-popup>
                 <q-item-section avatar>
                   <q-icon name="settings" />
                 </q-item-section>
-                <q-item-section>设置</q-item-section>
+                <q-item-section>設定</q-item-section>
               </q-item>
 
               <q-separator />
@@ -104,7 +104,7 @@ const handleLogout = () => {
                   <q-icon name="logout" color="negative" />
                 </q-item-section>
                 <q-item-section>
-                  <q-item-label class="text-negative">退出登录</q-item-label>
+                  <q-item-label class="text-negative">退出登入</q-item-label>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -152,7 +152,7 @@ const handleLogout = () => {
               <q-icon name="shopping_bag" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>订单管理</q-item-label>
+              <q-item-label>訂單管理</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -162,7 +162,7 @@ const handleLogout = () => {
               <q-icon name="people" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>客户管理</q-item-label>
+              <q-item-label>客戶管理</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -174,7 +174,7 @@ const handleLogout = () => {
               <q-icon name="local_offer" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>订单折扣</q-item-label>
+              <q-item-label>訂單折扣</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -184,7 +184,7 @@ const handleLogout = () => {
               <q-icon name="question_answer" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>订单问答</q-item-label>
+              <q-item-label>訂單問答</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -197,7 +197,7 @@ const handleLogout = () => {
               <q-icon name="stars" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>会员等级</q-item-label>
+              <q-item-label>會員等級</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -207,7 +207,7 @@ const handleLogout = () => {
               <q-icon name="group_work" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>会员分组</q-item-label>
+              <q-item-label>會員分組</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -217,7 +217,7 @@ const handleLogout = () => {
               <q-icon name="card_membership" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>会员管理</q-item-label>
+              <q-item-label>會員管理</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -227,7 +227,7 @@ const handleLogout = () => {
               <q-icon name="loyalty" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>积分管理</q-item-label>
+              <q-item-label>積分管理</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -240,7 +240,7 @@ const handleLogout = () => {
               <q-icon name="campaign" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>营销活动</q-item-label>
+              <q-item-label>行銷活動</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -250,7 +250,7 @@ const handleLogout = () => {
               <q-icon name="discount" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>促销管理</q-item-label>
+              <q-item-label>促銷管理</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -296,7 +296,7 @@ const handleLogout = () => {
               <q-icon name="bar_chart" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>数据统计</q-item-label>
+              <q-item-label>資料統計</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -308,7 +308,7 @@ const handleLogout = () => {
               <q-icon name="history" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>操作日志</q-item-label>
+              <q-item-label>操作日誌</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -328,7 +328,7 @@ const handleLogout = () => {
               <q-icon name="settings" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>系统设置</q-item-label>
+              <q-item-label>系統設定</q-item-label>
             </q-item-section>
           </q-item>
 
@@ -338,7 +338,7 @@ const handleLogout = () => {
               <q-icon name="info" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>关于</q-item-label>
+              <q-item-label>關於</q-item-label>
             </q-item-section>
           </q-item>
         </q-list>
