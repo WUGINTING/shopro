@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="customer-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -309,10 +309,3 @@ onMounted(() => {
   loadCustomers()
 })
 </script>
-
-<style scoped>
-.customer-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

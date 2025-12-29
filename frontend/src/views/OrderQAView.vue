@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="order-qa-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -427,10 +427,3 @@ const handleDelete = (id?: number) => {
   })
 }
 </script>
-
-<style scoped>
-.order-qa-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

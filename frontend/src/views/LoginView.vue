@@ -3,7 +3,7 @@
     <q-page-container>
       <q-page class="flex flex-center login-page">
         <q-card class="login-card">
-          <q-card-section class="bg-gradient text-white">
+          <q-card-section class="bg-gradient-primary text-white">
             <div class="text-center">
               <q-icon name="shopping_cart" size="64px" />
               <div class="text-h4 q-mt-md text-weight-bold">Shopro</div>
@@ -116,24 +116,22 @@ const handleLogin = async () => {
 <style scoped>
 .login-layout {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  height: 100vh;
 }
 
 .login-page {
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .login-card {
-  width: 100%;
-  max-width: 420px;
+  width: 90%;
+  max-width: 500px;
   border-radius: 16px;
   overflow: hidden;
-}
-
-.bg-gradient {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
-}
-
-.text-grey-7 {
-  color: #757575;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="user-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -424,10 +424,3 @@ onMounted(() => {
   loadUsers()
 })
 </script>
-
-<style scoped>
-.user-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

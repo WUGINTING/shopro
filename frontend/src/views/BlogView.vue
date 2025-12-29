@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="blog-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -106,7 +106,7 @@
       <!-- Add/Edit Dialog -->
       <q-dialog v-model="showDialog" persistent maximized>
         <q-card>
-          <q-card-section class="row items-center q-pb-none bg-primary text-white">
+          <q-card-section class="row items-center q-pb-none bg-primary">
             <div class="text-h6">{{ form.id ? '編輯文章' : '新增文章' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup color="white" />
@@ -473,9 +473,3 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.blog-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

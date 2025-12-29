@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="member-level-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -367,10 +367,3 @@ onMounted(() => {
   loadLevels()
 })
 </script>
-
-<style scoped>
-.member-level-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

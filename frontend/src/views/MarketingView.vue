@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="marketing-management">
+    <div class="page-container">
       <!-- Header -->
       <div class="row items-center justify-between q-mb-md">
         <div class="text-h4">營銷活動管理</div>
@@ -471,9 +471,3 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.marketing-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

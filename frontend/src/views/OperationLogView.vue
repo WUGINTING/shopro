@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="operation-log-management">
+    <div class="wide-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -167,7 +167,7 @@
       <!-- Details Dialog -->
       <q-dialog v-model="showDetailsDialog" maximized>
         <q-card>
-          <q-card-section class="row items-center q-pb-none bg-primary text-white">
+          <q-card-section class="row items-center q-pb-none bg-primary">
             <div class="text-h6">操作日誌詳情</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup color="white" />
@@ -535,11 +535,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.operation-log-management {
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
 .log-content {
   background: #f5f5f5;
   padding: 12px;

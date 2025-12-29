@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="profile-page">
+    <div class="profile-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
@@ -389,31 +389,3 @@ onMounted(() => {
   loadProfile()
 })
 </script>
-
-<style scoped>
-.profile-page {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-weight: 500;
-  color: #616161;
-}
-
-.info-value {
-  font-weight: 400;
-  color: #212121;
-}
-</style>

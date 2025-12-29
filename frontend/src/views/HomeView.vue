@@ -1,8 +1,8 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md" style="max-width: none; width: 100%;">
     <div class="dashboard">
       <!-- Welcome Banner -->
-      <q-card class="welcome-banner q-mb-md">
+      <q-card class="bg-gradient-primary q-mb-md">
         <q-card-section class="row items-center">
           <div class="col">
             <div class="text-h4 text-weight-bold">歡迎回來！</div>
@@ -17,7 +17,7 @@
       <!-- Stats Row -->
       <div class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card class="stat-card stat-card-1">
+          <q-card class="card-hover card-border-top border-primary">
             <q-card-section>
               <div class="row items-center q-gutter-md">
                 <q-icon name="inventory_2" size="40px" color="primary" />
@@ -39,7 +39,7 @@
         </div>
 
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card class="stat-card stat-card-2">
+          <q-card class="card-hover card-border-top border-orange">
             <q-card-section>
               <div class="row items-center q-gutter-md">
                 <q-icon name="shopping_bag" size="40px" color="orange" />
@@ -61,7 +61,7 @@
         </div>
 
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card class="stat-card stat-card-3">
+          <q-card class="card-hover card-border-top border-teal">
             <q-card-section>
               <div class="row items-center q-gutter-md">
                 <q-icon name="people" size="40px" color="teal" />
@@ -83,7 +83,7 @@
         </div>
 
         <div class="col-12 col-sm-6 col-md-3">
-          <q-card class="stat-card stat-card-4">
+          <q-card class="card-hover card-border-top border-green">
             <q-card-section>
               <div class="row items-center q-gutter-md">
                 <q-icon name="attach_money" size="40px" color="green" />
@@ -353,38 +353,7 @@ onMounted(() => {
 
 <style scoped>
 .dashboard {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.welcome-banner {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
-  color: white;
-}
-
-.stat-card {
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.stat-card-1 {
-  border-top: 4px solid #1976D2;
-}
-
-.stat-card-2 {
-  border-top: 4px solid #ff9800;
-}
-
-.stat-card-3 {
-  border-top: 4px solid #26A69A;
-}
-
-.stat-card-4 {
-  border-top: 4px solid #21BA45;
+  width: 100%;
+  padding: 0;
 }
 </style>
