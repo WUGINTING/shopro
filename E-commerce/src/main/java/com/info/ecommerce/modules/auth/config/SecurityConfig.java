@@ -33,30 +33,45 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF is disabled because this is a stateless REST API using JWT tokens.
-                // JWT tokens are immune to CSRF attacks as they are not automatically sent by browsers.
-                // This is a standard practice for JWT-based authentication.
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html",
-                                "/api/albums/images/**"  // Allow public access to album images
-                        ).permitAll()
-                        // All other requests require authentication
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll() // 允許所有路徑
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                );
+        // 如果你還是報錯，建議直接把下面這行註解掉：
+        // .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        http
+//                // CSRF is disabled because this is a stateless REST API using JWT tokens.
+//                // JWT tokens are immune to CSRF attacks as they are not automatically sent by browsers.
+//                // This is a standard practice for JWT-based authentication.
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .authorizeHttpRequests(auth -> auth
+//                        // Public endpoints
+//                        .requestMatchers(
+//                                "/api/auth/**",
+//                                "/swagger-ui/**",
+//                                "/v3/api-docs/**",
+//                                "/swagger-ui.html",
+//                                "/api/albums/images/**"  // Allow public access to album images
+//                        ).permitAll()
+//                        // All other requests require authentication
+//                        .anyRequest().authenticated()
+//                )
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                )
+//                .authenticationProvider(authenticationProvider())
+//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
