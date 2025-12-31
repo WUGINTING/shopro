@@ -29,7 +29,7 @@ public class SystemConfigController {
 
     @PutMapping
     @Operation(summary = "更新系統設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<SystemConfigDTO> saveSystemConfig(@Valid @RequestBody SystemConfigDTO dto) {
         return ApiResponse.success("系統設定已更新", systemConfigService.saveSystemConfig(dto));
     }

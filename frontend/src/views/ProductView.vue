@@ -49,12 +49,17 @@
             </div>
             <div class="col-12 col-sm-6 col-md-3">
               <q-select
-                v-model="categoryFilter"
-                outlined
-                dense
-                :options="categoryOptions"
-                clearable
-                placeholder="商品分類"
+                  v-model="categoryFilter"
+                  outlined
+                  dense
+                  :options="categoryOptions"
+                  clearable
+                  placeholder="商品分類"
+
+                  option-value="value"
+                  option-label="label"
+                  emit-value
+                  map-options
               />
             </div>
             <div class="col-12 col-sm-6 col-md-2">
@@ -207,14 +212,18 @@
                   />
                 </div>
               </div>
-
               <div class="row q-col-gutter-md q-mb-md">
                 <div class="col-12">
                   <q-select
-                    v-model="form.categoryId"
-                    label="商品分類"
-                    outlined
-                    :options="categoryOptions"
+                      v-model="form.categoryId"
+                      label="商品分類"
+                      outlined
+                      :options="categoryOptions"
+
+                      option-value="value"
+                      option-label="label"
+                      emit-value
+                      map-options
                   />
                 </div>
               </div>
@@ -435,7 +444,13 @@ const salesModeOptions = [
   { label: '門市限定', value: 'STORE_ONLY' }
 ]
 
-const categoryOptions = ['電子產品', '服裝', '食品', '圖書', '家居']
+const categoryOptions = [
+  { label: '電子產品', value: 1 },
+  { label: '服裝', value: 2 },
+  { label: '食品', value: 3 },
+  { label: '圖書', value: 4 },
+  { label: '家居', value: 5 }
+]
 
 const loadProducts = async () => {
   loading.value = true
@@ -464,19 +479,19 @@ const loadProducts = async () => {
 const handleEdit = async (product: Product) => {
   form.value = { ...product }
   showDialog.value = true
-  
+
   // Load existing album images for this product if it has images
   if (product.id && product.images && product.images.length > 0) {
     try {
       // Try to match product images with album images
       // This is a best-effort approach since we need to query albums for matching URLs
       selectedAlbumImages.value = []
-      
+
       // Load all albums and their images to find matches
       const albumsResponse = await albumApi.getAlbums({ page: 0, size: 100 })
       if (albumsResponse.success && albumsResponse.data) {
         const allAlbums = albumsResponse.data.content || []
-        
+
         // For each album, load images and check if they match product images
         for (const album of allAlbums) {
           if (album.id) {
@@ -557,28 +572,44 @@ const handleDelete = (id?: number) => {
     }
   })
 }
-
 const handleSubmit = async () => {
   try {
-    // Convert images array to ProductImageDTO format for backend
-    const productData = { ...form.value }
+    // 1. 複製一份表單資料，避免直接修改影響 UI 顯示
+    // 使用 'any' 類型轉換是為了方便刪除屬性而不報錯
+    const payload: any = { ...form.value }
+
+    // 2. --- 關鍵修改：欄位轉換 ---
+    // 將前端的 'price' 填入後端需要的價格欄位
+    payload.basePrice = form.value.price
+    payload.salePrice = form.value.price
+    payload.costPrice = 0 // 必須給個預設值，否則後端 @DecimalMin 檢查可能會擋
+
+    // 3. 移除後端不認識的欄位
+    delete payload.price // 後端沒有 'price' 欄位，刪掉避免報錯
+
+    // !!! 注意 !!!
+    // 如果您還沒在 Java DTO 加入 'stock' 欄位，請把下面這行取消註解，否則後端會報錯
+    // delete payload.stock
+
+    // 4. 處理圖片 (保持原有邏輯)
     if (selectedAlbumImages.value.length > 0) {
-      productData.images = selectedAlbumImages.value.map(img => ({
+      payload.images = selectedAlbumImages.value.map(img => ({
         imageUrl: img.imageUrl || '',
         albumImageId: img.id
       }))
     }
-    
+
+    // 5. 發送請求
     if (form.value.id) {
-      await productApi.updateProduct(form.value.id, productData)
+      await productApi.updateProduct(form.value.id, payload)
       $q.notify({
         type: 'positive',
         message: '更新成功',
         position: 'top'
       })
     } else {
-      const response = await productApi.createProduct(productData)
-      // Set the new product ID for album image selection
+      const response = await productApi.createProduct(payload)
+      // 更新 form ID 以便後續操作
       if (response.data && response.data.id) {
         form.value.id = response.data.id
       }
@@ -590,6 +621,7 @@ const handleSubmit = async () => {
     }
     loadProducts()
   } catch (error) {
+    console.error(error) // 建議印出錯誤以便除錯
     $q.notify({
       type: 'negative',
       message: '操作失敗',
@@ -614,7 +646,7 @@ const closeDialog = async () => {
       console.error('Failed to save images on close:', error)
     }
   }
-  
+
   showDialog.value = false
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
   selectedAlbumImages.value = []
@@ -635,7 +667,7 @@ const loadAlbums = async () => {
 
 const loadAlbumImages = async () => {
   if (!selectedAlbum.value) return
-  
+
   try {
     const response = await albumApi.getAlbumImages(selectedAlbum.value)
     if (response.success && response.data) {
@@ -669,20 +701,20 @@ const addSelectedImagesToProduct = async () => {
   try {
     const imageIds = tempSelectedImages.value.map(img => img.id).filter((id): id is number => id !== undefined)
     await productApi.addAlbumImages(form.value.id, imageIds)
-    
+
     // Add only new images to avoid duplicates
     tempSelectedImages.value.forEach(img => {
       if (!selectedAlbumImages.value.some(existing => existing.id === img.id)) {
         selectedAlbumImages.value.push(img)
       }
     })
-    
+
     $q.notify({
       type: 'positive',
       message: `已添加 ${tempSelectedImages.value.length} 張圖片`,
       position: 'top'
     })
-    
+
     // Reset and close
     tempSelectedImages.value = []
     showAlbumSelector.value = false

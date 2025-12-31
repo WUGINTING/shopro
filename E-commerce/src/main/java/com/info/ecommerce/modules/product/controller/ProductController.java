@@ -25,14 +25,14 @@ public class ProductController {
 
     @PostMapping
     @Operation(summary = "創建商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductDTO> createProduct(@Valid @RequestBody ProductDTO dto) {
         return ApiResponse.success("商品已創建", productService.createProduct(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductDTO> updateProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Valid @RequestBody ProductDTO dto) {
@@ -48,7 +48,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除商品")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
         productService.deleteProduct(id);
@@ -96,7 +96,7 @@ public class ProductController {
 
     @PutMapping("/{id}/activate")
     @Operation(summary = "上架商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductDTO> activateProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
         return ApiResponse.success("商品已上架", productService.activateProduct(id));
@@ -104,7 +104,7 @@ public class ProductController {
 
     @PutMapping("/{id}/deactivate")
     @Operation(summary = "下架商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductDTO> deactivateProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
         return ApiResponse.success("商品已下架", productService.deactivateProduct(id));
@@ -112,7 +112,7 @@ public class ProductController {
 
     @PostMapping("/{id}/album-images")
     @Operation(summary = "從相冊添加圖片到商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductDTO> addAlbumImagesToProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Parameter(description = "相冊圖片 ID 列表") @RequestBody java.util.List<Long> albumImageIds) {

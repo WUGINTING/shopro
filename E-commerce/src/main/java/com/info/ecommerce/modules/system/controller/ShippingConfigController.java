@@ -29,14 +29,14 @@ public class ShippingConfigController {
 
     @PostMapping
     @Operation(summary = "創建物流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ShippingConfigDTO> createShippingConfig(@Valid @RequestBody ShippingConfigDTO dto) {
         return ApiResponse.success("物流設定已創建", shippingConfigService.createShippingConfig(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新物流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ShippingConfigDTO> updateShippingConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id,
             @Valid @RequestBody ShippingConfigDTO dto) {
@@ -52,7 +52,7 @@ public class ShippingConfigController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除物流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteShippingConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id) {
         shippingConfigService.deleteShippingConfig(id);

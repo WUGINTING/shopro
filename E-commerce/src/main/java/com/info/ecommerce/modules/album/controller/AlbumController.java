@@ -40,14 +40,14 @@ public class AlbumController {
 
     @PostMapping
     @Operation(summary = "創建相冊")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<AlbumDTO> createAlbum(@Valid @RequestBody AlbumDTO dto) {
         return ApiResponse.success("相冊已創建", albumService.createAlbum(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新相冊")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<AlbumDTO> updateAlbum(
             @Parameter(description = "相冊 ID") @PathVariable Long id,
             @Valid @RequestBody AlbumDTO dto) {
@@ -63,7 +63,7 @@ public class AlbumController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除相冊")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteAlbum(
             @Parameter(description = "相冊 ID") @PathVariable Long id) {
         albumService.deleteAlbum(id);
@@ -81,7 +81,7 @@ public class AlbumController {
 
     @PostMapping("/{albumId}/images")
     @Operation(summary = "上傳圖片到相冊")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<AlbumImageDTO> uploadImage(
             @Parameter(description = "相冊 ID") @PathVariable Long albumId,
             @Parameter(description = "圖片檔案") @RequestParam("file") MultipartFile file,
@@ -93,7 +93,7 @@ public class AlbumController {
 
     @DeleteMapping("/{albumId}/images/{imageId}")
     @Operation(summary = "刪除相冊中的圖片")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> deleteImage(
             @Parameter(description = "相冊 ID") @PathVariable Long albumId,
             @Parameter(description = "圖片 ID") @PathVariable Long imageId) {

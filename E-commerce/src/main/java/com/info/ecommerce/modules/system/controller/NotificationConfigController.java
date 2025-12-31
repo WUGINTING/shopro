@@ -29,14 +29,14 @@ public class NotificationConfigController {
 
     @PostMapping
     @Operation(summary = "創建通知設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<NotificationConfigDTO> createNotificationConfig(@Valid @RequestBody NotificationConfigDTO dto) {
         return ApiResponse.success("通知設定已創建", notificationConfigService.createNotificationConfig(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新通知設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<NotificationConfigDTO> updateNotificationConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id,
             @Valid @RequestBody NotificationConfigDTO dto) {
@@ -52,7 +52,7 @@ public class NotificationConfigController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除通知設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteNotificationConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id) {
         notificationConfigService.deleteNotificationConfig(id);

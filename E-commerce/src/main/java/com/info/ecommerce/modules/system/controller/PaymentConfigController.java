@@ -29,14 +29,14 @@ public class PaymentConfigController {
 
     @PostMapping
     @Operation(summary = "創建金流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PaymentConfigDTO> createPaymentConfig(@Valid @RequestBody PaymentConfigDTO dto) {
         return ApiResponse.success("金流設定已創建", paymentConfigService.createPaymentConfig(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新金流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PaymentConfigDTO> updatePaymentConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id,
             @Valid @RequestBody PaymentConfigDTO dto) {
@@ -52,7 +52,7 @@ public class PaymentConfigController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除金流設定")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deletePaymentConfig(
             @Parameter(description = "設定 ID") @PathVariable Long id) {
         paymentConfigService.deletePaymentConfig(id);

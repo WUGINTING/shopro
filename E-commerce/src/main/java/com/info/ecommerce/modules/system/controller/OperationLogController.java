@@ -29,7 +29,7 @@ public class OperationLogController {
 
     @GetMapping("/{id}")
     @Operation(summary = "取得日誌詳情")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<OperationLogDTO> getLog(
             @Parameter(description = "日誌 ID") @PathVariable Long id) {
         return ApiResponse.success(operationLogService.getLog(id));
@@ -37,7 +37,7 @@ public class OperationLogController {
 
     @GetMapping
     @Operation(summary = "分頁查詢所有日誌")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listLogs(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
@@ -47,7 +47,7 @@ public class OperationLogController {
 
     @GetMapping("/user/{userId}")
     @Operation(summary = "依用戶查詢日誌")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listByUser(
             @Parameter(description = "用戶 ID") @PathVariable Long userId,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
@@ -58,7 +58,7 @@ public class OperationLogController {
 
     @GetMapping("/operation-type/{operationType}")
     @Operation(summary = "依操作類型查詢")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listByOperationType(
             @Parameter(description = "操作類型") @PathVariable String operationType,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
@@ -69,7 +69,7 @@ public class OperationLogController {
 
     @GetMapping("/module/{module}")
     @Operation(summary = "依模組查詢")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listByModule(
             @Parameter(description = "模組名稱") @PathVariable String module,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
@@ -80,7 +80,7 @@ public class OperationLogController {
 
     @GetMapping("/sensitive")
     @Operation(summary = "查詢敏感操作")
-    @PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Page<OperationLogDTO>> listSensitiveOperations(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
@@ -90,7 +90,7 @@ public class OperationLogController {
 
     @GetMapping("/date-range")
     @Operation(summary = "依時間範圍查詢")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listByDateRange(
             @Parameter(description = "開始時間") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @Parameter(description = "結束時間") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
@@ -102,7 +102,7 @@ public class OperationLogController {
 
     @GetMapping("/user/{userId}/module/{module}")
     @Operation(summary = "依用戶和模組查詢")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Page<OperationLogDTO>> listByUserAndModule(
             @Parameter(description = "用戶 ID") @PathVariable Long userId,
             @Parameter(description = "模組名稱") @PathVariable String module,
