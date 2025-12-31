@@ -12,7 +12,7 @@ export default defineConfig({
       template: { transformAssetUrls }
     }),
     quasar({
-      sassVariables: fileURLToPath(new URL('./src/quasar-variables.sass', import.meta.url))
+      sassVariables: fileURLToPath(new URL('./src/styles/quasar-variables.sass', import.meta.url))
     }),
     vueDevTools(),
   ],

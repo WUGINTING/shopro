@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
-// 商品相关接口
+// 商品相關接口
 export interface Product {
   id?: number
   name: string
@@ -32,17 +32,17 @@ export interface ProductCategory {
 
 // 商品 API
 export const productApi = {
-  // 获取商品列表
+  // 獲取商品列表
   getProducts: (params?: any) => {
     return axios.get<any, ApiResponse<Product[]>>('/products', { params })
   },
   
-  // 获取商品详情
+  // 獲取商品詳情
   getProduct: (id: number) => {
     return axios.get<any, ApiResponse<Product>>(`/products/${id}`)
   },
   
-  // 创建商品
+  // 創建商品
   createProduct: (data: Product) => {
     return axios.post<any, ApiResponse<Product>>('/products', data)
   },
@@ -52,7 +52,7 @@ export const productApi = {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}`, data)
   },
   
-  // 删除商品
+  // 刪除商品
   deleteProduct: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/products/${id}`)
   },
@@ -67,12 +67,12 @@ export const productApi = {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}/deactivate`)
   },
   
-  // 从相册添加图片到商品
+  // 從相冊添加圖片到商品
   addAlbumImages: (productId: number, albumImageIds: number[]) => {
     return axios.post<any, ApiResponse<Product>>(`/products/${productId}/album-images`, albumImageIds)
   },
   
-  // 获取商品分类
+  // 獲取商品分類
   getCategories: () => {
     return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
   }

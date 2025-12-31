@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// CRM 顾客相关接口
+// CRM 客戶相關接口
 export interface Customer {
   id?: number
   name: string
@@ -22,39 +22,39 @@ export interface CustomerGroup {
 
 // CRM API
 export const crmApi = {
-  // 获取客户列表
+  // 獲取客戶列表
   getCustomers: (params?: any) => {
     return axios.get<any, ApiResponse<Customer[]>>('/crm/members', { params })
   },
   
-  // 获取客户详情
+  // 獲取客戶詳情
   getCustomer: (id: number) => {
     return axios.get<any, ApiResponse<Customer>>(`/crm/members/${id}`)
   },
   
-  // 创建客户
+  // 創建客戶
   createCustomer: (data: Customer) => {
     return axios.post<any, ApiResponse<Customer>>('/crm/members', data)
   },
   
-  // 更新客户
+  // 更新客戶
   updateCustomer: (id: number, data: Customer) => {
     return axios.put<any, ApiResponse<Customer>>(`/crm/members/${id}`, data)
   },
   
-  // 获取客户分组
+  // 獲取客戶分組
   getCustomerGroups: () => {
     return axios.get<any, ApiResponse<CustomerGroup[]>>('/crm/member-groups')
   },
   
-  // 增加客户积分
+  // 增加客戶積分
   addCustomerPoints: (id: number, points: number) => {
     return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points/add`, null, {
       params: { points }
     })
   },
   
-  // 扣除客户积分
+  // 扣除客戶積分
   deductCustomerPoints: (id: number, points: number) => {
     return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points/deduct`, null, {
       params: { points }

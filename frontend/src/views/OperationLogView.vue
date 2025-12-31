@@ -1,16 +1,16 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="operation-log-management">
+    <div class="wide-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">操作日志</div>
-          <div class="text-caption text-grey-7">查看系统操作日志和审计记录</div>
+          <div class="text-h5 text-weight-bold">操作日誌</div>
+          <div class="text-caption text-grey-7">查看系統操作日誌和審計記錄</div>
         </div>
         <q-btn
           color="primary"
           icon="filter_list"
-          label="高级筛选"
+          label="高級篩選"
           outline
           @click="showFilterDialog = true"
         />
@@ -23,7 +23,7 @@
             <div class="col-12 col-md-3">
               <q-input
                 v-model="searchUserId"
-                label="用户ID"
+                label="使用者ID"
                 outlined
                 dense
                 clearable
@@ -33,7 +33,7 @@
             <div class="col-12 col-md-3">
               <q-select
                 v-model="filterModule"
-                label="模块"
+                label="模組"
                 outlined
                 dense
                 clearable
@@ -43,7 +43,7 @@
             <div class="col-12 col-md-3">
               <q-select
                 v-model="filterOperationType"
-                label="操作类型"
+                label="操作類型"
                 outlined
                 dense
                 clearable
@@ -51,7 +51,7 @@
               />
             </div>
             <div class="col-12 col-md-3">
-              <q-btn label="搜索" color="primary" @click="searchLogs" class="full-width" />
+              <q-btn label="搜尋" color="primary" @click="searchLogs" class="full-width" />
             </div>
           </div>
         </q-card-section>
@@ -114,7 +114,7 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn flat dense round icon="visibility" color="primary" size="sm" @click="handleViewDetails(props.row)">
-                <q-tooltip>查看详情</q-tooltip>
+                <q-tooltip>查看詳情</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -125,7 +125,7 @@
       <q-dialog v-model="showFilterDialog" persistent>
         <q-card style="min-width: 500px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">高级筛选</div>
+            <div class="text-h6">高級篩選</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -134,7 +134,7 @@
             <q-form>
               <q-input
                 v-model="advancedFilter.startDate"
-                label="开始时间"
+                label="開始時間"
                 outlined
                 type="datetime-local"
                 class="q-mb-md"
@@ -142,7 +142,7 @@
 
               <q-input
                 v-model="advancedFilter.endDate"
-                label="结束时间"
+                label="結束時間"
                 outlined
                 type="datetime-local"
                 class="q-mb-md"
@@ -150,7 +150,7 @@
 
               <q-toggle
                 v-model="advancedFilter.sensitiveOnly"
-                label="仅显示敏感操作"
+                label="僅顯示敏感操作"
                 color="warning"
               />
             </q-form>
@@ -159,7 +159,7 @@
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="重置" color="grey-7" @click="resetAdvancedFilter" />
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn unelevated label="应用" color="primary" @click="applyAdvancedFilter" />
+            <q-btn unelevated label="應用" color="primary" @click="applyAdvancedFilter" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -167,8 +167,8 @@
       <!-- Details Dialog -->
       <q-dialog v-model="showDetailsDialog" maximized>
         <q-card>
-          <q-card-section class="row items-center q-pb-none bg-primary text-white">
-            <div class="text-h6">操作日志详情</div>
+          <q-card-section class="row items-center q-pb-none bg-primary">
+            <div class="text-h6">操作日誌詳情</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup color="white" />
           </q-card-section>
@@ -179,25 +179,25 @@
                 <q-list bordered separator>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>日志ID</q-item-label>
+                      <q-item-label caption>日誌ID</q-item-label>
                       <q-item-label>{{ currentLog.id }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>用户</q-item-label>
+                      <q-item-label caption>使用者</q-item-label>
                       <q-item-label>{{ currentLog.username }} (ID: {{ currentLog.userId }})</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>操作类型</q-item-label>
+                      <q-item-label caption>操作類型</q-item-label>
                       <q-item-label>{{ currentLog.operationType }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>模块</q-item-label>
+                      <q-item-label caption>模組</q-item-label>
                       <q-item-label>{{ currentLog.module }}</q-item-label>
                     </q-item-section>
                   </q-item>
@@ -209,13 +209,13 @@
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>请求方法</q-item-label>
+                      <q-item-label caption>請求方法</q-item-label>
                       <q-item-label>{{ currentLog.requestMethod }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>请求URL</q-item-label>
+                      <q-item-label caption>請求URL</q-item-label>
                       <q-item-label class="text-caption">{{ currentLog.requestUrl }}</q-item-label>
                     </q-item-section>
                   </q-item>
@@ -232,22 +232,22 @@
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>响应状态</q-item-label>
+                      <q-item-label caption>回應狀態</q-item-label>
                       <q-item-label>{{ currentLog.responseStatus }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>执行时间</q-item-label>
+                      <q-item-label caption>執行時間</q-item-label>
                       <q-item-label>{{ currentLog.executionTime }}ms</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>成功状态</q-item-label>
+                      <q-item-label caption>成功狀態</q-item-label>
                       <q-item-label>
                         <q-badge :color="currentLog.success ? 'positive' : 'negative'">
-                          {{ currentLog.success ? '成功' : '失败' }}
+                            {{ currentLog.success ? '成功' : '失敗' }}
                         </q-badge>
                       </q-item-label>
                     </q-item-section>
@@ -263,7 +263,7 @@
                   </q-item>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>创建时间</q-item-label>
+                      <q-item-label caption>創建時間</q-item-label>
                       <q-item-label>{{ currentLog.createdAt }}</q-item-label>
                     </q-item-section>
                   </q-item>
@@ -273,7 +273,7 @@
               <div class="col-12" v-if="currentLog.requestBody">
                 <q-card flat bordered>
                   <q-card-section>
-                    <div class="text-subtitle2 q-mb-sm">请求内容</div>
+                    <div class="text-subtitle2 q-mb-sm">請求內容</div>
                     <pre class="log-content">{{ currentLog.requestBody }}</pre>
                   </q-card-section>
                 </q-card>
@@ -282,7 +282,7 @@
               <div class="col-12" v-if="currentLog.responseBody">
                 <q-card flat bordered>
                   <q-card-section>
-                    <div class="text-subtitle2 q-mb-sm">响应内容</div>
+                    <div class="text-subtitle2 q-mb-sm">回應內容</div>
                     <pre class="log-content">{{ currentLog.responseBody }}</pre>
                   </q-card-section>
                 </q-card>
@@ -335,15 +335,15 @@ const pagination = ref({
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'username', label: '用户', align: 'left' as const, field: 'username' },
-  { name: 'operationType', label: '操作类型', align: 'center' as const, field: 'operationType' },
-  { name: 'module', label: '模块', align: 'center' as const, field: 'module' },
+  { name: 'username', label: '使用者', align: 'left' as const, field: 'username' },
+  { name: 'operationType', label: '操作類型', align: 'center' as const, field: 'operationType' },
+  { name: 'module', label: '模組', align: 'center' as const, field: 'module' },
   { name: 'description', label: '描述', align: 'left' as const, field: 'description' },
   { name: 'requestMethod', label: '方法', align: 'center' as const, field: 'requestMethod' },
-  { name: 'success', label: '状态', align: 'center' as const, field: 'success' },
+  { name: 'success', label: '狀態', align: 'center' as const, field: 'success' },
   { name: 'sensitive', label: '敏感', align: 'center' as const, field: 'sensitive' },
-  { name: 'executionTime', label: '执行时间', align: 'center' as const, field: 'executionTime' },
-  { name: 'createdAt', label: '时间', align: 'left' as const, field: 'createdAt' },
+  { name: 'executionTime', label: '執行時間', align: 'center' as const, field: 'executionTime' },
+  { name: 'createdAt', label: '時間', align: 'left' as const, field: 'createdAt' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -368,7 +368,7 @@ const loadLogs = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载操作日志失败',
+      message: '載入操作日誌失敗',
       position: 'top'
     })
     console.error(error)
@@ -424,7 +424,7 @@ const searchLogs = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '搜索失败',
+      message: '搜尋失敗',
       position: 'top'
     })
   } finally {
@@ -471,7 +471,7 @@ const handleViewDetails = async (log: OperationLog) => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载详情失败',
+      message: '載入詳情失敗',
       position: 'top'
     })
   }
@@ -521,7 +521,7 @@ const applyAdvancedFilter = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '筛选失败',
+      message: '篩選失敗',
       position: 'top'
     })
   } finally {
@@ -535,11 +535,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.operation-log-management {
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
 .log-content {
   background: #f5f5f5;
   padding: 12px;

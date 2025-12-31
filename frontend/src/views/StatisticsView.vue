@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="statistics-management">
+    <div class="page-container">
       <!-- Header -->
       <div class="row items-center justify-between q-mb-md">
         <div class="text-h4">數據統計</div>
@@ -235,10 +235,3 @@ onMounted(() => {
   loadStatistics()
 })
 </script>
-
-<style scoped>
-.statistics-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

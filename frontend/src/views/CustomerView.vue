@@ -1,16 +1,16 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="customer-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">客户管理 (CRM)</div>
-          <div class="text-caption text-grey-7">管理客户信息、会员等级和积分</div>
+          <div class="text-h5 text-weight-bold">客戶管理 (CRM)</div>
+          <div class="text-caption text-grey-7">管理客戶資訊、會員等級和積分</div>
         </div>
         <q-btn
           color="primary"
           icon="person_add"
-          label="新增客户"
+          label="新增客戶"
           unelevated
           @click="showDialog = true; form = { name: '', email: '', phone: '', memberLevel: 'BRONZE' }"
         />
@@ -51,10 +51,10 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
-                <q-tooltip>编辑</q-tooltip>
+                <q-tooltip>編輯</q-tooltip>
               </q-btn>
               <q-btn flat dense round icon="add_circle" color="positive" size="sm" @click="handleAddPoints(props.row)">
-                <q-tooltip>加积分</q-tooltip>
+                <q-tooltip>加積分</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -65,7 +65,7 @@
       <q-dialog v-model="showDialog" persistent>
         <q-card style="min-width: 500px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ form.id ? '编辑客户' : '新增客户' }}</div>
+            <div class="text-h6">{{ form.id ? '編輯客戶' : '新增客戶' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -77,16 +77,16 @@
                 label="姓名 *"
                 outlined
                 class="q-mb-md"
-                :rules="[val => !!val || '请输入姓名']"
+                :rules="[val => !!val || '請輸入姓名']"
               />
 
               <q-input
                 v-model="form.email"
-                label="邮箱 *"
+                label="郵箱 *"
                 outlined
                 type="email"
                 class="q-mb-md"
-                :rules="[val => !!val || '请输入邮箱']"
+                :rules="[val => !!val || '請輸入郵箱']"
               />
 
               <q-input
@@ -98,7 +98,7 @@
 
               <q-select
                 v-model="form.memberLevel"
-                label="会员等级"
+                label="會員等級"
                 outlined
                 :options="memberLevelOptions"
                 class="q-mb-md"
@@ -117,7 +117,7 @@
       <q-dialog v-model="pointsDialogVisible" persistent>
         <q-card style="min-width: 400px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">积分操作</div>
+            <div class="text-h6">積分操作</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -125,11 +125,11 @@
           <q-card-section>
             <q-select
               v-model="pointsForm.operation"
-              label="操作类型"
+              label="操作類型"
               outlined
               :options="[
-                { label: '增加积分', value: 'add' },
-                { label: '扣除积分', value: 'deduct' }
+                { label: '增加積分', value: 'add' },
+                { label: '扣除積分', value: 'deduct' }
               ]"
               option-value="value"
               option-label="label"
@@ -140,7 +140,7 @@
             
             <q-input
               v-model.number="pointsForm.points"
-              label="积分数量"
+              label="積分數量"
               outlined
               type="number"
               :min="1"
@@ -149,7 +149,7 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn unelevated label="确定" color="primary" @click="handlePointsSubmit" />
+            <q-btn unelevated label="確定" color="primary" @click="handlePointsSubmit" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -191,10 +191,10 @@ const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
   { name: 'name', label: '姓名', align: 'left' as const, field: 'name' },
   { name: 'email', label: '邮箱', align: 'left' as const, field: 'email' },
-  { name: 'phone', label: '电话', align: 'left' as const, field: 'phone' },
-  { name: 'memberLevel', label: '会员等级', align: 'center' as const, field: 'memberLevel' },
-  { name: 'points', label: '积分', align: 'center' as const, field: 'points' },
-  { name: 'totalSpent', label: '总消费', align: 'left' as const, field: 'totalSpent' },
+  { name: 'phone', label: '電話', align: 'left' as const, field: 'phone' },
+  { name: 'memberLevel', label: '會員等級', align: 'center' as const, field: 'memberLevel' },
+  { name: 'points', label: '積分', align: 'center' as const, field: 'points' },
+  { name: 'totalSpent', label: '總消費', align: 'left' as const, field: 'totalSpent' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -216,7 +216,7 @@ const loadCustomers = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载客户列表失败',
+      message: '載入客戶列表失敗',
       position: 'top'
     })
     console.error(error)
@@ -260,7 +260,7 @@ const handleSubmit = async () => {
       await crmApi.createCustomer(form.value)
       $q.notify({
         type: 'positive',
-        message: '创建成功',
+        message: '創建成功',
         position: 'top'
       })
     }
@@ -269,7 +269,7 @@ const handleSubmit = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '操作失败',
+      message: '操作失敗',
       position: 'top'
     })
   }
@@ -281,14 +281,14 @@ const handlePointsSubmit = async () => {
       await crmApi.addCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
       $q.notify({
         type: 'positive',
-        message: '积分添加成功',
+        message: '積分添加成功',
         position: 'top'
       })
     } else {
       await crmApi.deductCustomerPoints(pointsForm.value.customerId, pointsForm.value.points)
       $q.notify({
         type: 'positive',
-        message: '积分扣除成功',
+        message: '積分扣除成功',
         position: 'top'
       })
     }
@@ -299,7 +299,7 @@ const handlePointsSubmit = async () => {
     const operationText = pointsForm.value.operation === 'add' ? '添加' : '扣除'
     $q.notify({
       type: 'negative',
-      message: `积分${operationText}失败`,
+      message: `積分${operationText}失敗`,
       position: 'top'
     })
   }
@@ -309,10 +309,3 @@ onMounted(() => {
   loadCustomers()
 })
 </script>
-
-<style scoped>
-.customer-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

@@ -1,11 +1,11 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="blog-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
           <div class="text-h5 text-weight-bold">部落格管理</div>
-          <div class="text-caption text-grey-7">管理部落格文章和内容</div>
+          <div class="text-caption text-grey-7">管理部落格文章和內容</div>
         </div>
         <q-btn
           color="primary"
@@ -21,7 +21,7 @@
         <q-tabs v-model="statusTab" dense class="text-grey" active-color="primary" indicator-color="primary" align="left">
           <q-tab name="all" label="全部" />
           <q-tab name="DRAFT" label="草稿" />
-          <q-tab name="PUBLISHED" label="已发布" />
+          <q-tab name="PUBLISHED" label="已發布" />
           <q-tab name="SCHEDULED" label="排程中" />
           <q-tab name="ARCHIVED" label="已封存" />
         </q-tabs>
@@ -69,14 +69,14 @@
                     <q-item-section avatar>
                       <q-icon name="edit" />
                     </q-item-section>
-                    <q-item-section>编辑</q-item-section>
+                    <q-item-section>編輯</q-item-section>
                   </q-item>
                   
                   <q-item v-if="props.row.status !== 'PUBLISHED'" clickable v-close-popup @click="handlePublish(props.row.id)">
                     <q-item-section avatar>
                       <q-icon name="publish" />
                     </q-item-section>
-                    <q-item-section>发布</q-item-section>
+                    <q-item-section>發布</q-item-section>
                   </q-item>
                   
                   <q-item v-if="props.row.status !== 'ARCHIVED'" clickable v-close-popup @click="handleArchive(props.row.id)">
@@ -93,7 +93,7 @@
                       <q-icon name="delete" color="negative" />
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label class="text-negative">删除</q-item-label>
+                      <q-item-label class="text-negative">刪除</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -106,8 +106,8 @@
       <!-- Add/Edit Dialog -->
       <q-dialog v-model="showDialog" persistent maximized>
         <q-card>
-          <q-card-section class="row items-center q-pb-none bg-primary text-white">
-            <div class="text-h6">{{ form.id ? '编辑文章' : '新增文章' }}</div>
+          <q-card-section class="row items-center q-pb-none bg-primary">
+            <div class="text-h6">{{ form.id ? '編輯文章' : '新增文章' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup color="white" />
           </q-card-section>
@@ -118,19 +118,19 @@
                 <div class="col-12 col-md-8">
                   <q-input
                     v-model="form.title"
-                    label="文章标题 *"
+                    label="文章標題 *"
                     outlined
-                    :rules="[val => !!val || '请输入文章标题']"
+                    :rules="[val => !!val || '請輸入文章標題']"
                   />
                 </div>
 
                 <div class="col-12 col-md-4">
                   <q-input
                     v-model="form.slug"
-                    label="文章别名 (URL) *"
+                    label="文章別名 (URL) *"
                     outlined
-                    hint="只能包含小写字母、数字和连字号"
-                    :rules="[val => !!val || '请输入文章别名', val => /^[a-z0-9-]+$/.test(val) || '只能包含小写字母、数字和连字号']"
+                    hint="只能包含小寫字母、數字和連字號"
+                    :rules="[val => !!val || '請輸入文章別名', val => /^[a-z0-9-]+$/.test(val) || '只能包含小寫字母、數字和連字號']"
                   />
                 </div>
 
@@ -147,7 +147,7 @@
                 <div class="col-12">
                   <q-input
                     v-model="form.content"
-                    label="文章内容"
+                    label="文章內容"
                     outlined
                     type="textarea"
                     rows="10"
@@ -157,7 +157,7 @@
                 <div class="col-12 col-md-6">
                   <q-input
                     v-model="form.coverImageUrl"
-                    label="封面图片URL"
+                    label="封面圖片URL"
                     outlined
                   />
                 </div>
@@ -165,16 +165,16 @@
                 <div class="col-12 col-md-6">
                   <q-input
                     v-model="form.tags"
-                    label="标签 (逗号分隔)"
+                    label="標籤 (逗號分隔)"
                     outlined
-                    hint="例如: 春季,新品,促销"
+                    hint="例如: 春季,新品,促銷"
                   />
                 </div>
 
                 <div class="col-12 col-md-6">
                   <q-input
                     v-model="form.authorName"
-                    label="作者名称"
+                    label="作者名稱"
                     outlined
                   />
                 </div>
@@ -182,7 +182,7 @@
                 <div class="col-12 col-md-6">
                   <q-select
                     v-model="form.status"
-                    label="状态"
+                    label="狀態"
                     outlined
                     :options="statusOptions"
                     emit-value
@@ -191,12 +191,12 @@
                 </div>
 
                 <div class="col-12">
-                  <q-expansion-item label="SEO 设置" icon="settings">
+                  <q-expansion-item label="SEO 設定" icon="settings">
                     <q-card>
                       <q-card-section>
                         <q-input
                           v-model="form.metaTitle"
-                          label="SEO 标题"
+                          label="SEO 標題"
                           outlined
                           class="q-mb-md"
                         />
@@ -210,7 +210,7 @@
                         />
                         <q-input
                           v-model="form.metaKeywords"
-                          label="SEO 关键字"
+                          label="SEO 關鍵字"
                           outlined
                         />
                       </q-card-section>
@@ -265,17 +265,17 @@ const pagination = ref({
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'title', label: '标题', align: 'left' as const, field: 'title' },
-  { name: 'status', label: '状态', align: 'center' as const, field: 'status' },
+  { name: 'title', label: '標題', align: 'left' as const, field: 'title' },
+  { name: 'status', label: '狀態', align: 'center' as const, field: 'status' },
   { name: 'authorName', label: '作者', align: 'left' as const, field: 'authorName' },
-  { name: 'viewCount', label: '浏览次数', align: 'center' as const, field: 'viewCount' },
-  { name: 'publishedAt', label: '发布时间', align: 'left' as const, field: 'publishedAt' },
+  { name: 'viewCount', label: '瀏覽次數', align: 'center' as const, field: 'viewCount' },
+  { name: 'publishedAt', label: '發布時間', align: 'left' as const, field: 'publishedAt' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
 const statusOptions = [
   { label: '草稿', value: 'DRAFT' },
-  { label: '已发布', value: 'PUBLISHED' },
+  { label: '已發布', value: 'PUBLISHED' },
   { label: '排程中', value: 'SCHEDULED' },
   { label: '已封存', value: 'ARCHIVED' }
 ]
@@ -303,7 +303,7 @@ const loadPosts = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载文章列表失败',
+      message: '載入文章清單失敗',
       position: 'top'
     })
     console.error(error)
@@ -331,7 +331,7 @@ const getStatusColor = (status?: BlogStatus) => {
 const getStatusLabel = (status?: BlogStatus) => {
   const labelMap: Record<string, string> = {
     DRAFT: '草稿',
-    PUBLISHED: '已发布',
+    PUBLISHED: '已發布',
     SCHEDULED: '排程中',
     ARCHIVED: '已封存'
   }
@@ -363,7 +363,7 @@ const handleSubmit = async () => {
   if (!form.value.title || !form.value.slug) {
     $q.notify({
       type: 'warning',
-      message: '请填写必填字段',
+      message: '請填寫必填字段',
       position: 'top'
     })
     return
@@ -381,7 +381,7 @@ const handleSubmit = async () => {
       await blogApi.createBlogPost(form.value)
       $q.notify({
         type: 'positive',
-        message: '创建成功',
+        message: '創建成功',
         position: 'top'
       })
     }
@@ -390,7 +390,7 @@ const handleSubmit = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '操作失败',
+      message: '操作失敗',
       position: 'top'
     })
   }
@@ -403,14 +403,14 @@ const handlePublish = async (id?: number) => {
     await blogApi.publishBlogPost(id)
     $q.notify({
       type: 'positive',
-      message: '文章已发布',
+      message: '文章已發布',
       position: 'top'
     })
     loadPosts()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '发布失败',
+      message: '發布失敗',
       position: 'top'
     })
   }
@@ -430,7 +430,7 @@ const handleArchive = async (id?: number) => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '封存失败',
+      message: '封存失敗',
       position: 'top'
     })
   }
@@ -440,8 +440,8 @@ const handleDelete = (id?: number) => {
   if (!id) return
   
   $q.dialog({
-    title: '确认删除',
-    message: '确定要删除这篇文章吗？此操作不可恢复。',
+    title: '確認刪除',
+    message: '確定要刪除這篇文章嗎？此操作無法復原。',
     cancel: true,
     persistent: true
   }).onOk(async () => {
@@ -449,14 +449,14 @@ const handleDelete = (id?: number) => {
       await blogApi.deleteBlogPost(id)
       $q.notify({
         type: 'positive',
-        message: '删除成功',
+        message: '刪除成功',
         position: 'top'
       })
-      loadPosts()
+      loadBlogs()
     } catch (error) {
       $q.notify({
         type: 'negative',
-        message: '删除失败',
+        message: '刪除失敗',
         position: 'top'
       })
     }
@@ -473,9 +473,3 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.blog-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

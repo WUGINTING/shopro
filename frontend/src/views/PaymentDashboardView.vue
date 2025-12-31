@@ -7,7 +7,7 @@
       <div class="row q-col-gutter-md q-mb-md">
         <!-- 今日成交金額 -->
         <div class="col-12 col-md-3">
-          <q-card class="stat-card">
+          <q-card class="stat-card card-border-top">
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日成交金額</div>
               <div class="text-h5 text-primary q-mt-sm">
@@ -22,7 +22,7 @@
 
         <!-- 今日成功率 -->
         <div class="col-12 col-md-3">
-          <q-card class="stat-card">
+          <q-card class="stat-card card-border-top">
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日成功率</div>
               <div class="text-h5 text-positive q-mt-sm">
@@ -37,7 +37,7 @@
 
         <!-- 本月成交金額 -->
         <div class="col-12 col-md-3">
-          <q-card class="stat-card">
+          <q-card class="stat-card card-border-top">
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">本月成交金額</div>
               <div class="text-h5 text-info q-mt-sm">
@@ -52,7 +52,7 @@
 
         <!-- 退款統計 -->
         <div class="col-12 col-md-3">
-          <q-card class="stat-card">
+          <q-card class="stat-card card-border-top">
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日退款</div>
               <div class="text-h5 text-negative q-mt-sm">
@@ -225,10 +225,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.stat-card {
-  border-left: 4px solid #2196F3;
-}
-
+/* 替換為統一樣式類別 */
 .stat-card:nth-child(1) {
   border-left-color: #2196F3;
 }

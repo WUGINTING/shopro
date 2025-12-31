@@ -1,11 +1,11 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="order-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">订单管理</div>
-          <div class="text-caption text-grey-7">管理订单状态和发货信息</div>
+          <div class="text-h5 text-weight-bold">訂單管理</div>
+          <div class="text-caption text-grey-7">管理訂單狀態和發貨資訊</div>
         </div>
       </div>
 
@@ -39,16 +39,16 @@
 
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
-              <q-btn-dropdown flat dense color="primary" label="更新状态" size="sm">
+              <q-btn-dropdown flat dense color="primary" label="更新狀態" size="sm">
                 <q-list>
                   <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'PROCESSING')">
                     <q-item-section>
-                      <q-item-label>处理中</q-item-label>
+                      <q-item-label>處理中</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'SHIPPED')">
                     <q-item-section>
-                      <q-item-label>已发货</q-item-label>
+                      <q-item-label>已發貨</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'DELIVERED')">
@@ -66,7 +66,7 @@
               </q-btn-dropdown>
               
               <q-btn flat dense round icon="visibility" color="primary" size="sm">
-                <q-tooltip>查看详情</q-tooltip>
+                <q-tooltip>查看詳情</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -93,11 +93,11 @@ const pagination = ref({
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'orderNumber', label: '订单号', align: 'left' as const, field: 'orderNumber' },
-  { name: 'customerName', label: '客户', align: 'left' as const, field: 'customerName' },
-  { name: 'totalAmount', label: '总金额', align: 'left' as const, field: 'totalAmount', sortable: true },
-  { name: 'status', label: '状态', align: 'center' as const, field: 'status' },
-  { name: 'createdAt', label: '创建时间', align: 'left' as const, field: 'createdAt' },
+  { name: 'orderNumber', label: '訂單號', align: 'left' as const, field: 'orderNumber' },
+  { name: 'customerName', label: '客戶', align: 'left' as const, field: 'customerName' },
+  { name: 'totalAmount', label: '總金額', align: 'left' as const, field: 'totalAmount', sortable: true },
+  { name: 'status', label: '狀態', align: 'center' as const, field: 'status' },
+  { name: 'createdAt', label: '創建時間', align: 'left' as const, field: 'createdAt' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -116,7 +116,7 @@ const loadOrders = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '加载订单列表失败',
+      message: '載入訂單清單失敗',
       position: 'top'
     })
     console.error(error)
@@ -138,10 +138,10 @@ const getStatusColor = (status: Order['status']) => {
 
 const getStatusLabel = (status: Order['status']) => {
   const labelMap = {
-    PENDING: '待处理',
-    PROCESSING: '处理中',
-    SHIPPED: '已发货',
-    DELIVERED: '已送达',
+    PENDING: '待處理',
+    PROCESSING: '處理中',
+    SHIPPED: '已發貨',
+    DELIVERED: '已送達',
     CANCELLED: '已取消'
   }
   return labelMap[status] || status
@@ -150,11 +150,11 @@ const getStatusLabel = (status: Order['status']) => {
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
   
-  // 对于取消状态，需要确认
+  // 對於取消狀態，需要確認
   if (status === 'CANCELLED') {
     $q.dialog({
       title: '警告',
-      message: '确定要取消此订单吗？此操作不可恢复。',
+      message: '確定要取消此訂單嗎？此操作無法復原。',
       cancel: true,
       persistent: true
     }).onOk(async () => {
@@ -170,14 +170,14 @@ const updateStatus = async (id: number, status: Order['status']) => {
     await orderApi.updateOrderStatus(id, status)
     $q.notify({
       type: 'positive',
-      message: '状态更新成功',
+      message: '狀態更新成功',
       position: 'top'
     })
     loadOrders()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '状态更新失败',
+      message: '狀態更新失敗',
       position: 'top'
     })
   }
@@ -187,10 +187,3 @@ onMounted(() => {
   loadOrders()
 })
 </script>
-
-<style scoped>
-.order-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

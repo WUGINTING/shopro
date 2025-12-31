@@ -1,11 +1,11 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="order-discount-management">
+    <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">订单折扣管理</div>
-          <div class="text-caption text-grey-7">管理订单折扣和优惠代码</div>
+          <div class="text-h5 text-weight-bold">訂單折扣管理</div>
+          <div class="text-caption text-grey-7">管理訂單折扣和優惠代碼</div>
         </div>
         <q-btn
           color="primary"
@@ -23,7 +23,7 @@
             <div class="col-12 col-md-4">
               <q-input
                 v-model="searchOrderId"
-                label="订单ID"
+                label="訂單ID"
                 outlined
                 dense
                 clearable
@@ -37,7 +37,7 @@
             <div class="col-12 col-md-4">
               <q-input
                 v-model="searchDiscountCode"
-                label="折扣代码"
+                label="折扣代碼"
                 outlined
                 dense
                 clearable
@@ -49,7 +49,7 @@
               </q-input>
             </div>
             <div class="col-12 col-md-4">
-              <q-btn label="清除筛选" outline color="grey-7" @click="clearFilters" />
+              <q-btn label="清除篩選" outline color="grey-7" @click="clearFilters" />
             </div>
           </div>
         </q-card-section>
@@ -89,7 +89,7 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
-                <q-tooltip>删除</q-tooltip>
+                <q-tooltip>刪除</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -100,7 +100,7 @@
       <q-dialog v-model="showDialog" persistent>
         <q-card style="min-width: 500px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">新增订单折扣</div>
+            <div class="text-h6">新增訂單折扣</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -109,38 +109,38 @@
             <q-form @submit="handleSubmit">
               <q-input
                 v-model.number="form.orderId"
-                label="订单ID *"
+                label="訂單ID *"
                 outlined
                 type="number"
                 class="q-mb-md"
-                :rules="[val => !!val || '请输入订单ID']"
+                :rules="[val => !!val || '請輸入訂單ID']"
               />
 
               <q-select
                 v-model="form.discountType"
-                label="折扣类型 *"
+                label="折扣類型 *"
                 outlined
                 :options="discountTypeOptions"
                 class="q-mb-md"
-                :rules="[val => !!val || '请选择折扣类型']"
+                :rules="[val => !!val || '請選擇折扣類型']"
               />
 
               <q-input
                 v-model="form.discountCode"
-                label="折扣代码"
+                label="折扣代碼"
                 outlined
                 class="q-mb-md"
               />
 
               <q-input
                 v-model.number="form.discountAmount"
-                label="折扣金额 *"
+                label="折扣金額 *"
                 outlined
                 type="number"
                 step="0.01"
                 class="q-mb-md"
                 prefix="¥"
-                :rules="[val => val >= 0 || '折扣金额不能小于0']"
+                :rules="[val => val >= 0 || '折扣金額不能小於0']"
               />
 
               <q-input
@@ -152,7 +152,7 @@
                 class="q-mb-md"
                 suffix="%"
                 :rules="[
-                  val => val === undefined || val === null || (val >= 0 && val <= 100) || '折扣百分比必须在0到100之间'
+                  val => val === undefined || val === null || (val >= 0 && val <= 100) || '折扣百分比必須在0到10之間'
                 ]"
               />
 
@@ -168,7 +168,7 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
+            <q-btn unelevated label="儲存" color="primary" @click="handleSubmit" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -205,13 +205,13 @@ const pagination = ref({
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
-  { name: 'orderId', label: '订单ID', align: 'left' as const, field: 'orderId', sortable: true },
-  { name: 'discountType', label: '折扣类型', align: 'center' as const, field: 'discountType' },
-  { name: 'discountCode', label: '折扣代码', align: 'left' as const, field: 'discountCode' },
-  { name: 'discountAmount', label: '折扣金额', align: 'left' as const, field: 'discountAmount', sortable: true },
+  { name: 'orderId', label: '訂單ID', align: 'left' as const, field: 'orderId', sortable: true },
+  { name: 'discountType', label: '折扣類型', align: 'center' as const, field: 'discountType' },
+  { name: 'discountCode', label: '折扣代碼', align: 'left' as const, field: 'discountCode' },
+  { name: 'discountAmount', label: '折扣金額', align: 'left' as const, field: 'discountAmount', sortable: true },
   { name: 'discountPercentage', label: '折扣百分比', align: 'center' as const, field: 'discountPercentage' },
   { name: 'description', label: '描述', align: 'left' as const, field: 'description' },
-  { name: 'createdAt', label: '创建时间', align: 'left' as const, field: 'createdAt' },
+  { name: 'createdAt', label: '創建時間', align: 'left' as const, field: 'createdAt' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -237,7 +237,7 @@ const searchByOrderId = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '查询失败',
+      message: '查詢失敗',
       position: 'top'
     })
   } finally {
@@ -254,7 +254,7 @@ const searchByDiscountCode = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '查询失败',
+      message: '查詢失敗',
       position: 'top'
     })
   } finally {
@@ -284,7 +284,7 @@ const handleSubmit = async () => {
   if (!form.value.orderId || !form.value.discountType || form.value.discountAmount === undefined) {
     $q.notify({
       type: 'warning',
-      message: '请填写必填字段',
+      message: '請填寫必填字段',
       position: 'top'
     })
     return
@@ -306,7 +306,7 @@ const handleSubmit = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '添加失败',
+      message: '添加失敗',
       position: 'top'
     })
   }
@@ -316,8 +316,8 @@ const handleDelete = (id?: number) => {
   if (!id) return
   
   $q.dialog({
-    title: '确认删除',
-    message: '确定要删除这条折扣记录吗？',
+    title: '確認刪除',
+    message: '確定要刪除這條折扣記錄嗎？',
     cancel: true,
     persistent: true
   }).onOk(async () => {
@@ -325,7 +325,7 @@ const handleDelete = (id?: number) => {
       await orderDiscountApi.deleteDiscount(id)
       $q.notify({
         type: 'positive',
-        message: '删除成功',
+        message: '刪除成功',
         position: 'top'
       })
       // Refresh list if we have a search active
@@ -337,17 +337,10 @@ const handleDelete = (id?: number) => {
     } catch (error) {
       $q.notify({
         type: 'negative',
-        message: '删除失败',
+        message: '刪除失敗',
         position: 'top'
       })
     }
   })
 }
 </script>
-
-<style scoped>
-.order-discount-management {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-</style>

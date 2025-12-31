@@ -1,0 +1,99 @@
+/**
+ * Shopro 專案統一樣式
+ * 整合所有重複出現的自定義樣式
+ */
+
+/* ============ 漸層背景 ============ */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+}
+
+.bg-gradient-purple {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ============ 卡片樣式 ============ */
+.card-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.card-border-top {
+  border-top: 4px solid;
+  
+  &.border-primary { border-top-color: #1976D2; }
+  &.border-orange { border-top-color: #ff9800; }
+  &.border-teal { border-top-color: #26A69A; }
+  &.border-green { border-top-color: #21BA45; }
+  &.border-red { border-top-color: #F44336; }
+  &.border-blue { border-top-color: #2196F3; }
+}
+
+/* ============ 導航樣式 ============ */
+.q-item {
+  border-radius: 8px;
+  margin: 4px 8px;
+}
+
+.q-expansion-item {
+  border-radius: 8px;
+  margin: 4px 8px;
+}
+
+/* ============ 資訊行樣式 ============ */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.info-label {
+  font-weight: 500;
+  color: #616161;
+}
+
+.info-value {
+  font-weight: 400;
+  color: #212121;
+}
+
+/* ============ 容器樣式 ============ */
+.page-container {
+  width: 100%;
+  padding: 0 16px;
+}
+
+.profile-container {
+  width: 100%;
+  padding: 0 16px;
+}
+
+.wide-container {
+  width: 100%;
+  padding: 0 16px;
+}
+
+/* ============ 圖片相關 ============ */
+.album-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.album-cover {
+  position: relative;
+}

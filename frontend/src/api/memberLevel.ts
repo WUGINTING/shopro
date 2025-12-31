@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
-// 会员等级相关接口
+// 會員等級相關接口
 export interface MemberLevel {
   id?: number
   name: string
@@ -14,46 +14,46 @@ export interface MemberLevel {
   enabled?: boolean
 }
 
-// 会员等级 API
+// 會員等級 API
 export const memberLevelApi = {
-  // 创建会员等级
+  // 創建會員等級
   createMemberLevel: (data: MemberLevel) => {
     return axios.post<any, ApiResponse<MemberLevel>>('/crm/member-levels', data)
   },
   
-  // 更新会员等级
+  // 更新會員等級
   updateMemberLevel: (id: number, data: MemberLevel) => {
     return axios.put<any, ApiResponse<MemberLevel>>(`/crm/member-levels/${id}`, data)
   },
   
-  // 取得会员等级详情
+  // 取得會員等級詳情
   getMemberLevel: (id: number) => {
     return axios.get<any, ApiResponse<MemberLevel>>(`/crm/member-levels/${id}`)
   },
   
-  // 删除会员等级
+  // 刪除會員等級
   deleteMemberLevel: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/crm/member-levels/${id}`)
   },
   
-  // 分页查询会员等级
+  // 分頁查詢會員等級
   listMemberLevels: (page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<MemberLevel>>>('/crm/member-levels', {
       params: { page, size }
     })
   },
   
-  // 取得所有会员等级
+  // 取得所有會員等級
   listAllMemberLevels: () => {
     return axios.get<any, ApiResponse<MemberLevel[]>>('/crm/member-levels/all')
   },
   
-  // 取得已启用的会员等级
+  // 取得已啟用的會員等級
   listEnabledMemberLevels: () => {
     return axios.get<any, ApiResponse<MemberLevel[]>>('/crm/member-levels/enabled')
   },
   
-  // 切换会员等级启用状态
+  // 切換會員等級啟用狀態
   toggleEnabled: (id: number) => {
     return axios.put<any, ApiResponse<MemberLevel>>(`/crm/member-levels/${id}/toggle-enabled`)
   }

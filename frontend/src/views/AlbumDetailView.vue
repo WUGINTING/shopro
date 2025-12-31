@@ -38,7 +38,7 @@
           :key="image.id"
           class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2"
         >
-          <q-card flat bordered class="image-card">
+          <q-card flat bordered class="album-card">
             <q-img
               :src="image.imageUrl"
               :ratio="1"
@@ -308,14 +308,3 @@ onMounted(() => {
   loadImages()
 })
 </script>
-
-<style scoped>
-.image-card {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.image-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-</style>

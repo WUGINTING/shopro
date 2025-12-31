@@ -1,7 +1,7 @@
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// 认证相关接口
+// 認證相關接口
 export interface LoginRequest {
   username: string
   password: string
@@ -31,36 +31,36 @@ export interface UpdateProfileRequest {
   newPassword?: string
 }
 
-// 认证 API
+// 認證 API
 export const authApi = {
-  // 用户登录
+  // 使用者登入
   login: (data: LoginRequest) => {
     return axios.post<any, ApiResponse<AuthResponse>>('/auth/login', data)
   },
   
-  // 用户注册
+  // 使用者註冊
   register: (data: { username: string; email: string; password: string }) => {
     return axios.post<any, ApiResponse<AuthResponse>>('/auth/register', data)
   },
   
-  // 登出（客户端清除 token）
+  // 登出（客戶端清除 token）
   logout: () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   },
   
-  // 获取当前用户信息
+  // 獲取當前使用者資訊
   getCurrentUser: (): User | null => {
     const userStr = localStorage.getItem('user')
     return userStr ? JSON.parse(userStr) : null
   },
   
-  // 保存用户信息
+  // 保存使用者資訊
   saveUser: (user: User) => {
     localStorage.setItem('user', JSON.stringify(user))
   },
   
-  // 检查是否已登录
+  // 檢查是否已登入
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('token')
   },

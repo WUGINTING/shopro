@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="settings-management">
+    <div class="profile-container">
       <!-- Header -->
       <div class="text-h4 q-mb-md">系統設置</div>
 
@@ -654,9 +654,3 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.settings-management {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-</style>

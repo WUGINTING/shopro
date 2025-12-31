@@ -1,10 +1,10 @@
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
-// 部落格状态枚举
+// 部落格狀態枚舉
 export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
 
-// 部落格文章相关接口
+// 部落格文章相關接口
 export interface BlogPost {
   id?: number
   title: string
@@ -26,7 +26,7 @@ export interface BlogPost {
 
 // 部落格 API
 export const blogApi = {
-  // 创建部落格文章
+  // 創建部落格文章
   createBlogPost: (data: BlogPost) => {
     return axios.post<any, ApiResponse<BlogPost>>('/crm/blog', data)
   },
@@ -41,50 +41,50 @@ export const blogApi = {
     return axios.get<any, ApiResponse<BlogPost>>(`/crm/blog/${id}`)
   },
   
-  // 依别名取得部落格文章
+  // 依別名取得部落格文章
   getBlogPostBySlug: (slug: string) => {
     return axios.get<any, ApiResponse<BlogPost>>(`/crm/blog/slug/${slug}`)
   },
   
-  // 删除部落格文章
+  // 刪除部落格文章
   deleteBlogPost: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/crm/blog/${id}`)
   },
   
-  // 分页查询部落格文章
+  // 分頁查詢部落格文章
   listBlogPosts: (page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<BlogPost>>>('/crm/blog', {
       params: { page, size }
     })
   },
   
-  // 依状态查询部落格文章
+  // 依狀態查詢部落格文章
   listBlogPostsByStatus: (status: BlogStatus, page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<BlogPost>>>(`/crm/blog/status/${status}`, {
       params: { page, size }
     })
   },
   
-  // 依作者查询部落格文章
+  // 依作者查詢部落格文章
   listBlogPostsByAuthor: (authorId: number, page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<BlogPost>>>(`/crm/blog/author/${authorId}`, {
       params: { page, size }
     })
   },
   
-  // 依标签查询部落格文章
+  // 依標籤查詢部落格文章
   listBlogPostsByTag: (tag: string, page: number = 0, size: number = 20) => {
     return axios.get<any, ApiResponse<PageResponse<BlogPost>>>(`/crm/blog/tag/${tag}`, {
       params: { page, size }
     })
   },
   
-  // 发布部落格文章
+  // 發布部落格文章
   publishBlogPost: (id: number) => {
     return axios.post<any, ApiResponse<BlogPost>>(`/crm/blog/${id}/publish`)
   },
   
-  // 排程发布部落格文章
+  // 排程發布部落格文章
   scheduleBlogPost: (id: number, scheduledAt: string) => {
     return axios.post<any, ApiResponse<BlogPost>>(`/crm/blog/${id}/schedule`, null, {
       params: { scheduledAt }
