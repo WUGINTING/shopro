@@ -1,0 +1,97 @@
+// 主要配色
+$primary: #f08304;
+$secondary: #ff6b35;
+$dark: #1a1a1a;
+$accent: #ffd700;
+
+// 輔助配色
+$red-dark: #b71c1c;
+$red-light: #ffcdd2;
+$orange-dark: #e65100;
+$orange-light: #ffe0b2;
+
+// 背景色
+$background-dark: #121212;
+$background-light: #fafafa;
+$surface-dark: #1e1e1e;
+$surface-light: #ffffff;
+
+// 文字色
+$text-primary: #ffffff;
+$text-secondary: #b0b0b0;
+$text-dark: #212121;
+
+// 間距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 字體大小
+$text-h1: 2.5rem;
+$text-h2: 2rem;
+$text-h3: 1.5rem;
+$text-h4: 1.25rem;
+$text-body1: 1rem;
+$text-body2: 0.875rem;
+$text-caption: 0.75rem;
+
+// 邊框圓角
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+
+// 陰影
+$shadow-light: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+$shadow-medium: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+$shadow-heavy: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+
+// 漸層
+$gradient-primary: linear-gradient(135deg, #{$primary} 0%, #{$red-dark} 100%);
+$gradient-secondary: linear-gradient(
+  135deg,
+  #{$secondary} 0%,
+  #{$orange-dark} 100%
+);
+$gradient-dark: linear-gradient(135deg, #{$dark} 0%, #{$surface-dark} 100%);
+
+// 響應式斷點
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 1024px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1440px;
+
+// =========================================
+// 購物車主題色彩變數 (明亮主題)
+// =========================================
+$shop-primary: #ff6b35; // 主要橘色
+$shop-primary-dark: #e65100; // 深橘色
+$shop-secondary: #2196f3; // 輔助藍色
+$shop-text: #212121; // 深灰黑字
+$shop-text-secondary: #757575; // 次要灰字
+$shop-bg: #ffffff; // 純白背景
+$shop-bg-light: #f5f5f5; // 淺灰背景
+$shop-white: #ffffff;
+$shop-danger: #ff5252; // 價格紅
+$shop-success: #4caf50; // 成功綠
+$shop-warning: #ffa726; // 警告橘
+$shop-gray-light: #eeeeee;
+$shop-pre-order: #9c27b0; // 預購紫
+$shop-dark: #424242; // 深灰
+$shop-border: #e0e0e0; // 邊框灰
+
+// 購物車尺寸
+$shop-header-height: 60px;
+$shop-container-max-width: 1200px;
+
+// 購物車陰影
+$shop-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shop-shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
+$shop-shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+// 購物車過渡效果
+$shop-transition: 0.3s ease;

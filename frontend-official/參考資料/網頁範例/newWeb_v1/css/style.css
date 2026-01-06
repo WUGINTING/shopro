@@ -1,0 +1,105 @@
+/* 基本字體和全頁設定 */
+body {
+    font-family: "Microsoft JhengHei", "微軟正黑體", "PingFang TC", sans-serif;
+    min-height: 100vh;
+}
+
+/* --- ▼▼▼ Navbar & Header ▼▼▼ --- */
+
+/* 1. Logo 樣式 */
+.navbar-brand img {
+    height: 60px;
+}
+
+/* Navbar 連結顏色 */
+.navbar-nav .nav-link {
+    color: #F08304 !important;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #d16b00 !important;
+}
+
+/* 2. 下拉選單樣式 */
+.dropdown-menu {
+    border-radius: 0;
+}
+
+.dropdown-item {
+    font-weight: 700;
+    padding: 0.7rem 1.2rem;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: #F08304;
+    color: white;
+}
+
+/* 滑鼠懸停觸發下拉選單 (僅在桌面版生效) */
+@media (min-width: 992px) {
+    .dropdown:hover .dropdown-menu {
+        display: block;
+        margin-top: 0;
+    }
+}
+
+/* --- ▼▼▼ 動態漢堡選單樣式 (已修正選擇器) ▼▼▼ --- */
+.navbar-toggler {
+    border: none;
+    padding: 0;
+}
+.navbar-toggler:focus {
+    box-shadow: none;
+}
+
+.navbar-toggler .bar {
+    display: block;
+    width: 28px;
+    height: 3px;
+    margin: 6px auto;
+    background-color: #F08304;
+    transition: all 0.3s ease-in-out;
+}
+
+/* 
+  BUG 修正: 
+  之前使用 :not(.collapsed) 在初始狀態可能判斷錯誤。
+  改用 [aria-expanded="true"] 選擇器，確保只在選單"展開時"才套用叉叉樣式。
+*/
+.navbar-toggler[aria-expanded="true"] .bar:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+.navbar-toggler[aria-expanded="true"] .bar:nth-child(2) {
+    opacity: 0;
+}
+.navbar-toggler[aria-expanded="true"] .bar:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+/* --- ▲▲▲ 動態漢堡選單樣式結束 ▲▲▲ --- */
+
+
+/* --- ▼▼▼ Main Content ▼▼▼ --- */
+
+.hero-section {
+    background-image: url('../images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 60px 0;
+}
+
+/* "賣場連結" 按鈕樣式 */
+.cta-button {
+    border-radius: 0;
+    color: #F08304 !important;
+}
+
+/* RWD 優化 */
+@media (max-width: 991.98px) {
+    .hero-section {
+        padding: 80px 0;
+    }
+}

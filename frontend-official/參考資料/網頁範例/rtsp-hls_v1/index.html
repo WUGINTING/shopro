@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTSPCloud</title>
+    <meta name="copyright" content="伸遠國際有限公司">
+    <meta name="description"
+        content="台灣最划算的方案,RTSPCloud 專業直播串流服務,只需國際大廠 1/10 的價格。提供企業私有部署與雲端代管方案,24h/7d 穩定運作,已服務 18+ 企業客戶、74+ 串流路數。">
+    <meta name="keywords" content="RTSP,HLS,直播串流,影像轉換,攝影機串流,網頁直播,視訊串流,監控直播,RTSP to HLS,串流服務,企業監控,直播解決方案">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <link rel="canonical" href="https://www.shenyuans.com/">
+    <link rel="icon" type="image/jpeg" href="./icons/logo.jpg">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="RTSPCloud - 台灣最划算的串流服務方案">
+    <meta property="og:description" content="RTSPCloud 專業直播串流服務,只需國際大廠 1/10 的價格。提供企業私有部署與雲端代管方案。">
+    <meta property="og:url" content="https://www.shenyuans.com">
+    <meta property="og:site_name" content="RTSPCloud 串流服務">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="RTSPCloud - 台灣最划算的串流服務方案">
+    <meta name="twitter:description" content="RTSPCloud 專業直播串流服務,只需國際大廠 1/10 的價格。">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "RTSPCloud 串流服務",
+      "url": "https://www.shenyuans.com"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "伸遠國際有限公司",
+      "url": "https://www.shenyuans.com",
+      "logo": "https://www.shenyuans.com/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+886-2-88113938",
+        "contactType": "客戶服務",
+        "email": "service.ginting@gmail.com",
+        "areaServed": "TW",
+        "availableLanguage": ["zh-TW", "zh-CN"]
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "永平街80巷16號1樓",
+        "addressLocality": "士林區",
+        "addressRegion": "臺北市",
+        "addressCountry": "TW"
+      },
+      "sameAs": [
+        "https://www.shenyuans.com"
+      ]
+    }
+    </script>
+
+    <!-- Google Site Verification -->
+    <meta name="google-site-verification" content="oIQkPhbCa_FNbmuHVx2kCuPM8w7p2-rJEU6ENOqQPMM" />
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./css/main.css">
+    <!-- AOS Animation Library -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <image src="./images/logo.jpg" alt="Logo" class="nav-logo">
+                    RTSPCloud
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="選單">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#streaming" class="nav-link" data-i18n="nav.streaming">串流服務</a></li>
+                <li><a href="#cases" class="nav-link" data-i18n="nav.cases">成功案例</a></li>
+                <li><a href="#how" class="nav-link" data-i18n="nav.how">運作原理</a></li>
+                <li><a href="#plans" class="nav-link" data-i18n="nav.plans">方案價格</a></li>
+                <li><a href="#contact" class="nav-link" data-i18n="nav.contact">聯絡我們</a></li>
+                <li class="nav-language">
+                    <select id="languageSelector" class="language-selector">
+                        <option value="tc">繁體中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero" id="streaming" data-aos="fade-up">
+        <h1><i class="bi bi-film"></i> RTSP to HLS 直播串流服務</h1>
+        <p>將您既有的 RTSP 攝影機，轉為全球通用的 HLS 網頁直播</p>
+        <a href="#plans" class="btn btn-primary">查看方案 NT$ 5,000 起</a>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="anchor-section" data-aos="fade-up">
+                <h2 class="section-title">全球同類服務,一年要花多少錢?</h2>
+                <p class="section-subtitle">看看國際大廠的收費標準(皆不含主機與流量)</p>
+
+                <div class="global-comparison">
+                    <div class="global-card" data-aos="fade-right" data-aos-delay="100">
+                        <div class="provider"><i class="bi bi-globe"></i> Wowza Streaming Engine</div>
+                        <div class="price">NT$ 50,000+</div>
+                        <div class="price-note">每年授權費用</div>
+                        <ul class="features">
+                            <li>按支計算</li>
+                            <li>業界標準軟體</li>
+                            <li>需自備主機</li>
+                            <li>流量另計</li>
+                            <li>DRM 支援</li>
+                        </ul>
+                    </div>
+
+
+                    <div class="global-card" data-aos="fade-left" data-aos-delay="200">
+                        <div class="provider"><i class="bi bi-globe"></i> Flussonic Media</div>
+                        <div class="price">NT$ 42,000+</div>
+                        <div class="price-note">每年訂閱費用</div>
+                        <ul class="features">
+                            <li>按支計算</li>
+                            <li>歐洲大廠</li>
+                            <li>需自備主機</li>
+                            <li>流量另計</li>
+                            <li>企業級功能</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="our-solution" data-aos="zoom-in">
+                <span class="badge"><i class="bi bi-bullseye"></i> 超值方案</span>
+                <h2>在台灣，您只需要...</h2>
+
+                <div class="price-comparison">
+                    <span class="old-price">NT$ 50,000</span>
+                    <span class="arrow">→</span>
+                    <span class="new-price">NT$ 5,000</span>
+                </div>
+
+                <div class="savings">
+                    <i class="bi bi-cash-coin"></i> 省下 90% 的成本！
+                </div>
+
+                <p>
+                    首年(含安裝)只需 <strong>NT$ 5,000</strong>，隔年維護費僅 <strong>NT$ 4,500</strong><br>
+                    同樣的串流功能，卻只要國際大廠的 <strong>1/10 價格</strong>
+                </p>
+            </section>
+        </div>
+
+        <section class="success-cases section" id="cases">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up"><i class="bi bi-trophy"></i> 成功案例實績</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">我們已為全台上百路攝影機提供穩定的 24h/7d 串流服務</p>
+
+                <div class="stats-grid">
+                    <div class="stat-card" data-aos="flip-left" data-aos-delay="100">
+                        <div class="stat-number">74+</div>
+                        <div class="stat-label">串流路數</div>
+                        <div class="stat-desc">穩定運作中</div>
+                    </div>
+
+                    <div class="stat-card" data-aos="flip-left" data-aos-delay="200">
+                        <div class="stat-number">18+</div>
+                        <div class="stat-label">企業客戶</div>
+                        <div class="stat-desc">長期合作</div>
+                    </div>
+
+                    <div class="stat-card" data-aos="flip-left" data-aos-delay="300">
+                        <div class="stat-number">24h/7d</div>
+                        <div class="stat-label">不間斷服務</div>
+                        <div class="stat-desc">全年無休</div>
+                    </div>
+
+                    <div class="stat-card" data-aos="flip-left" data-aos-delay="400">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">服務穩定度</div>
+                        <div class="stat-desc">持續監控</div>
+                    </div>
+                </div>
+
+                <div class="case-examples" data-aos="fade-up">
+                    <h3>應用場景</h3>
+                    <div class="examples-grid">
+                        <div class="example-item" data-aos="zoom-in" data-aos-delay="100">
+                            <div class="example-icon"><i class="bi bi-building"></i></div>
+                            <div class="example-title">企業監控</div>
+                            <div class="example-desc">多點位同步監看，提升管理效率</div>
+                        </div>
+
+                        <div class="example-item" data-aos="zoom-in" data-aos-delay="200">
+                            <div class="example-icon"><i class="bi bi-water"></i></div>
+                            <div class="example-title">環境監測</div>
+                            <div class="example-desc">河川、水位即時監控系統</div>
+                        </div>
+
+                        <div class="example-item" data-aos="zoom-in" data-aos-delay="300">
+                            <div class="example-icon"><i class="bi bi-building-gear"></i></div>
+                            <div class="example-title">工廠產線</div>
+                            <div class="example-desc">生產流程遠端監看與管理</div>
+                        </div>
+
+                        <div class="example-item" data-aos="zoom-in" data-aos-delay="400">
+                            <div class="example-icon"><i class="bi bi-cone-striped"></i></div>
+                            <div class="example-title">工地安全</div>
+                            <div class="example-desc">施工現場 24 小時監控</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="customer-groups">
+                    <p class="groups-note">
+                        我們已為 <strong>交通建設-環狀線監控、道路監控-淡北快速道路、電力設施-興達監控點</strong> 等 18+ 家企業客戶<br>
+                        提供穩定可靠的串流轉換服務
+                    </p>
+                </div>
+
+                <div class="live-demo-section">
+                    <h3><i class="bi bi-camera-video"></i> 實際串流展示</h3>
+                    <p class="demo-intro">點擊下方案例，即可觀看實際運作中的串流影像</p>
+
+                    <div class="demo-grid">
+                        <div class="demo-card">
+                            <div class="demo-tag">重大建設</div>
+                            <div class="demo-title">淡江大橋</div>
+                            <a href="http://ksecodb.com/ksecodb/index.php/Welcome/dj_Instant_image" target="_blank"
+                                class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+
+                        <div class="demo-card">
+                            <div class="demo-tag">交通建設</div>
+                            <div class="demo-title">環狀線監控</div>
+                            <a href="https://videos.shenyuans.com/index.html?group=G15c&number=1&title=%E7%92%B0%E7%8B%80%E7%B7%9A1"
+                                target="_blank" class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+
+                        <div class="demo-card">
+                            <div class="demo-tag">道路監控</div>
+                            <div class="demo-title">淡北快速道路</div>
+                            <a href="https://videos.shenyuans.com/index.html?group=G16c&number=1&title=%E6%B7%A1%E5%8C%97%E5%BF%AB%E9%80%9F%E9%81%93%E8%B7%AF"
+                                target="_blank" class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+
+                        <div class="demo-card">
+                            <div class="demo-tag">電力設施</div>
+                            <div class="demo-title">興達監控點</div>
+                            <a href="https://videos.shenyuans.com/index.html?group=G14c&number=2&title=%E8%88%88%E9%81%94%E7%9B%A3%E6%8E%A7-A%E9%BB%9E"
+                                target="_blank" class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+
+                        <div class="demo-card">
+                            <div class="demo-tag">港口設施</div>
+                            <div class="demo-title">大潭監控系統</div>
+                            <a href="https://videos.shenyuans.com/index.html?group=G13c&number=1&title=%E5%A4%A7%E6%BD%AD-CH1"
+                                target="_blank" class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+
+                        <div class="demo-card">
+                            <div class="demo-tag">工程監控</div>
+                            <div class="demo-title">三民玉里工區</div>
+                            <a href="https://videos.shenyuans.com/index.html?group=G19c&number=1&title=CB03%E6%A8%99%E4%B8%89%E6%B0%91%E8%87%B3%E7%8E%89%E9%87%8C%E5%9C%9F_01"
+                                target="_blank" class="demo-button">
+                                <i class="bi bi-camera-video-fill"></i> 觀看即時影像
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="demo-note">
+                        <p><i class="bi bi-lightbulb"></i> <strong>這些都是實際運作中的監控系統</strong></p>
+                        <p>採用 RTSP to HLS 轉換服務，24 小時穩定串流</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works section" id="how">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">運作原理</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">三步驟，將您的影像上線</p>
+                <div class="how-grid">
+                    <div class="how-card" data-aos="fade-up" data-aos-delay="100">
+                        <div class="how-icon"><i class="bi bi-camera-video"></i></div>
+                        <span class="how-step">STEP 1</span>
+                        <h3>提供 RTSP 來源</h3>
+                        <p>您只需提供一個可連線的 RTSP 網址 (rtsp://...)，無需更改現有設備。</p>
+                    </div>
+                    <div class="how-card" data-aos="fade-up" data-aos-delay="200">
+                        <div class="how-icon"><i class="bi bi-gear"></i></div>
+                        <span class="how-step">STEP 2</span>
+                        <h3>我們轉換處理</h3>
+                        <p>我們的串流主機 (On-Premise 或雲端) 會即時拉取影像，並轉換為 HLS 格式。</p>
+                    </div>
+                    <div class="how-card" data-aos="fade-up" data-aos-delay="300">
+                        <div class="how-icon"><i class="bi bi-display"></i></div>
+                        <span class="how-step">STEP 3</span>
+                        <h3>全球網頁播放</h3>
+                        <p>您會獲得一個 .m3u8 網址，可在任何瀏覽器、App 或播放器中嵌入播放。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="plans" class="plans-section section">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">選擇最適合您的方案</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">無論是私有部署或雲端代管，我們都有對應方案</p>
+
+                <div class="plans-grid">
+                    <div class="plan-card featured" data-aos="fade-up" data-aos-delay="100">
+                        <span class="badge"><i class="bi bi-star-fill"></i> 最受歡迎</span>
+                        <div class="plan-name">企業私有部署</div>
+                        <div class="plan-type">On-Premise｜自備主機</div>
+                        <div class="plan-price">
+                            NT$ 5,000
+                            <span class="plan-unit">/ 每路每年</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>客戶提供主機(實體或雲端)</li>
+                            <li>我們負責安裝與設定</li>
+                            <li>轉封裝處理(Passthrough)</li>
+                            <li>隔年維護費 NT$ 4,500</li>
+                            <li>適合有 IT 人員的企業</li>
+                            <li>完全掌控主機與資料</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-green cta-button">立即請詢</a>
+                    </div>
+
+                    <div class="plan-card" data-aos="fade-up" data-aos-delay="200">
+                        <span class="badge"><i class="bi bi-cloud"></i> 雲端方案</span>
+                        <div class="plan-name">雲端代管 (基礎型)</div>
+                        <div class="plan-type">SaaS｜我們搞定一切</div>
+                        <div class="plan-price">
+                            NT$ 1,200
+                            <span class="plan-unit">/ 每路每月</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>一站式服務，無需準備主機</li>
+                            <li>含每月 100 GB 流量</li>
+                            <li>轉封裝處理(Passthrough)</li>
+                            <li>超額流量 NT$ 4/GB</li>
+                            <li>適合中小企業、開發者</li>
+                            <li>快速上線，即開即用</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-primary cta-button">立即請詢</a>
+                    </div>
+
+                    <div class="plan-card" data-aos="fade-up" data-aos-delay="300">
+                        <span class="badge"><i class="bi bi-cloud"></i> 雲端方案</span>
+                        <div class="plan-name">雲端代管 (專業型)</div>
+                        <div class="plan-type">SaaS｜含多畫質轉碼</div>
+                        <div class="plan-price">
+                            NT$ 6,500
+                            <span class="plan-unit">/ 每路每月</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>一站式服務，無需準備主機</li>
+                            <li>含每月 500 GB 流量</li>
+                            <li>ABR 多畫質轉碼</li>
+                            <li>超額流量 NT$ 3/GB</li>
+                            <li>適合專業廣播、高流量活動</li>
+                            <li>自動調整畫質，觀看體驗佳</li>
+                        </ul>
+                        <a href="#contact" class="btn btn-primary cta-button">立即諮詢</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="why-us section">
+            <div class="container">
+                <h2 class="section-title" data-aos="fade-up">為什麼選擇我們？</h2>
+                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">專注於核心，為您省下不必要的開銷</p>
+
+                <div class="benefits-grid">
+                    <div class="benefit" data-aos="zoom-in" data-aos-delay="100">
+                        <div class="benefit-icon"><i class="bi bi-cash-coin"></i></div>
+                        <h3>超高性價比</h3>
+                        <p>只要國際方案 1/10 的價格，就能享受同等級的串流服務。我們專注於核心功能，去除不必要的溢價。</p>
+                    </div>
+
+                    <div class="benefit" data-aos="zoom-in" data-aos-delay="200">
+                        <div class="benefit-icon"><i class="bi bi-chat-dots"></i></div>
+                        <h3>在地化服務</h3>
+                        <p>台灣團隊、中文溝通、本地支援。遇到問題不用等Email時差，隨時都能找到我們。</p>
+                    </div>
+
+                    <div class="benefit" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="benefit-icon"><i class="bi bi-lightning-charge"></i></div>
+                        <h3>快速部署</h3>
+                        <p>專業團隊幫您處理所有技術細節，從安裝到上線，最快當天完成設定。</p>
+                    </div>
+
+                    <div class="benefit" data-aos="zoom-in" data-aos-delay="400">
+                        <div class="benefit-icon"><i class="bi bi-tools"></i></div>
+                        <h3>持續維護</h3>
+                        <p>不只是賣軟體，我們提供長期維護支援，確保系統 24h/7d 穩定運作。</p>
+                    </div>
+
+                    <div class="benefit" data-aos="zoom-in" data-aos-delay="500">
+                        <div class="benefit-icon"><i class="bi bi-award"></i></div>
+                        <h3>豐富經驗</h3>
+                        <p>團隊擁有 8 年以上開發經驗，系統已穩定運作 7 年，經過時間考驗的可靠方案。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-cta" id="contact">
+            <div class="container" data-aos="fade-up">
+                <div class="contact-wrapper">
+                    <!-- 左側：原本的內容 -->
+                    <div class="contact-left">
+                        <h2 data-i18n="contact.title">準備好開始了嗎？</h2>
+                        <p data-i18n="contact.subtitle">立即聯繫我們，取得專屬報價與免費技術諮詢</p>
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <i class="bi bi-envelope-fill"></i>
+                                <div>
+                                    <strong data-i18n="contact.info.email">電子郵件</strong>
+                                    <p>service.ginting@gmail.com</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右側：表單 -->
+                    <div class="contact-right">
+                        <form id="contactForm" class="contact-form">
+                            <h3 data-i18n="contact.form.title">填寫表單聯繫我們</h3>
+                            <div class="form-group">
+                                <label for="name" data-i18n="contact.form.name">姓名 *</label>
+                                <input type="text" id="name" name="name" required data-i18n-attr="placeholder:contact.form.namePlaceholder" placeholder="請輸入您的姓名">
+                            </div>
+                            <div class="form-group">
+                                <label for="email" data-i18n="contact.form.email">電子郵件 *</label>
+                                <input type="email" id="email" name="email" required data-i18n-attr="placeholder:contact.form.emailPlaceholder" placeholder="example@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="phone" data-i18n="contact.form.phone">聯絡電話</label>
+                                <input type="tel" id="phone" name="phone" data-i18n-attr="placeholder:contact.form.phonePlaceholder" placeholder="0912-345-678">
+                            </div>
+                            <div class="form-group">
+                                <label for="company" data-i18n="contact.form.company">公司名稱</label>
+                                <input type="text" id="company" name="company" data-i18n-attr="placeholder:contact.form.companyPlaceholder" placeholder="請輸入公司名稱">
+                            </div>
+                            <div class="form-group">
+                                <label for="message" data-i18n="contact.form.message">訊息內容 *</label>
+                                <textarea id="message" name="message" rows="4" required data-i18n-attr="placeholder:contact.form.messagePlaceholder" placeholder="請告訴我們您的需求或問題"></textarea>
+                            </div>
+                            <button type="submit" class="btn-submit" data-i18n="contact.form.submit">
+                                <i class="bi bi-send-fill"></i> 送出訊息
+                            </button>
+                            <div id="formMessage" class="form-message"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 data-i18n="footer.company">伸遠國際有限公司</h3>
+                    <p data-i18n="footer.service">RTSPCloud 串流服務</p>
+                    <p class="footer-tagline" data-i18n="footer.tagline">專業的串流技術，平實的在地價格</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3 data-i18n="footer.contactTitle">聯絡方式</h3>
+                    <p class="footer-contact">
+                        <i class="bi bi-envelope"></i>service.ginting@gmail.com
+                    </p>
+                    <p class="footer-contact">
+                        <i class="bi bi-telephone"></i>02-88113938
+                    </p>
+                    <p class="footer-contact">
+                        <i class="bi bi-geo-alt"></i>
+                        <span data-i18n="footer.address">臺北市士林區永平街80巷16號1樓</span>
+                    </p>
+                </div>
+
+                <div class="footer-section">
+                    <h3 data-i18n="footer.quickLinks">快速連結</h3>
+                    <ul class="footer-links">
+                        <li><a href="#streaming" data-i18n="nav.streaming">串流服務</a></li>
+                        <li><a href="#cases" data-i18n="nav.cases">成功案例</a></li>
+                        <li><a href="#plans" data-i18n="nav.plans">方案價格</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p data-i18n="footer.copyright">&copy; 2025 伸遠國際有限公司. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="back-to-top" aria-label="回到頂部" data-i18n-attr="aria-label:footer.backToTop">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
+    <!-- AOS Animation Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // 初始化 AOS
+        AOS.init({
+            duration: 800, // 動畫持續時間 (毫秒)
+            once: true, // 動畫只執行一次
+            offset: 100, // 觸發動畫的偏移距離
+            easing: 'ease-in-out' // 動畫緩動效果
+        });
+    </script>
+    <!-- Language files -->
+    <script src="./lang/Tc.js"></script>
+    <script src="./lang/En.js"></script>
+    <script src="./lang/index.js"></script>
+    <script src="./js/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+// 注意：由於 quasar.config.js 會自動注入 variables.scss，這裡不需要再次 import
+
+// 引入共用樣式
+@import 'common.scss';
+
+// 引入官網樣式
+@import 'official/app.scss';
+
+// 引入購物車樣式
+@import 'shop/app.scss';
+
+// 全域樣式重置
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+  line-height: 1.6;
+}

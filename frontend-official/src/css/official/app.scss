@@ -1,0 +1,186 @@
+// 官網專用樣式
+// 注意：由於 quasar.config.js 會自動注入 variables.scss，這裡不需要再次 import
+
+// 引入共用樣式
+@import '../common.scss';
+
+// 全域樣式重置 - 官網
+body:not(.shop-body) {
+  background-color: $background-dark;
+}
+
+// 官網主題類別
+.gradient-primary {
+  background: $gradient-primary;
+}
+
+.gradient-secondary {
+  background: $gradient-secondary;
+}
+
+.gradient-dark {
+  background: $gradient-dark;
+}
+
+.text-gradient-primary {
+  background: $gradient-primary;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.story-divider {
+  width: 80px;
+  height: 4px;
+  background: #f57c00;
+  border-radius: 2px;
+}
+
+.section-padding {
+  padding: $spacing-xxl $spacing-lg;
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding: $spacing-lg $spacing-md;
+  }
+}
+
+// 動畫效果
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.6s ease-out;
+}
+
+// 客製化 Quasar 元件 - 官網
+.q-card {
+  background: $surface-dark;
+  color: $text-primary;
+
+  &.glass {
+    @extend .glass-effect;
+  }
+}
+
+.q-btn {
+  &.btn-primary {
+    background: $gradient-primary;
+    color: $text-primary;
+
+    &:hover {
+      box-shadow: $shadow-medium;
+    }
+  }
+
+  &.btn-secondary {
+    background: $gradient-secondary;
+    color: $text-primary;
+
+    &:hover {
+      box-shadow: $shadow-medium;
+    }
+  }
+}
+
+.q-toolbar {
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.q-carousel__slide {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1;
+  }
+
+  .q-carousel__slide-content {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+// 響應式設計
+@media (max-width: 1024px) {
+  .text-h1 {
+    font-size: 2rem;
+  }
+  .text-h2 {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .text-h1 {
+    font-size: 1.75rem;
+  }
+  .text-h2 {
+    font-size: 1.5rem;
+  }
+  .text-h3 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .text-h1 {
+    font-size: 1.5rem;
+  }
+  .text-h2 {
+    font-size: 1.25rem;
+  }
+  .section-padding {
+    padding: $spacing-md $spacing-sm;
+  }
+}

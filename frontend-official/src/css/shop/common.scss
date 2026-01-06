@@ -1,0 +1,205 @@
+// 購物車專用共用樣式
+
+.shop-container {
+  max-width: $shop-container-max-width;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.shop-section {
+  margin-bottom: 50px;
+}
+
+.shop-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  border-bottom: 2px solid $shop-primary;
+  padding-bottom: 10px;
+
+  .section-title {
+    font-size: 1.5rem;
+    color: $shop-text;
+    font-weight: 600;
+  }
+
+  .section-link {
+    font-size: 0.9rem;
+    color: $shop-text-secondary;
+    text-decoration: none;
+    transition: color $shop-transition;
+
+    &:hover {
+      color: $shop-primary;
+    }
+  }
+}
+
+// 商品網格
+.shop-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+// 響應式設計
+@media (max-width: 768px) {
+  .shop-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .shop-section-header {
+    .section-title {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+// 購物車徽章
+.shop-cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: $shop-danger;
+  color: white;
+  font-size: 0.7rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+}
+
+// 標籤系統
+.shop-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
+  z-index: 2;
+
+  &.hot {
+    background: $shop-danger;
+  }
+
+  &.new {
+    background: $shop-success;
+  }
+
+  &.pre-order {
+    background: $shop-pre-order;
+  }
+}
+
+// Hero 區域
+.shop-hero {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, #fff5f0 0%, #e3f2fd 100%);
+  margin-bottom: 30px;
+  border-radius: 12px;
+  box-shadow: $shop-shadow-sm;
+
+  .hero-content {
+    padding: 20px;
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      color: $shop-text;
+      font-weight: 700;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: $shop-text-secondary;
+      margin-bottom: 20px;
+    }
+  }
+}
+
+// 中間橫幅
+.shop-mid-banner {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    $shop-primary 0%,
+    $shop-primary-dark 100%
+  );
+  border-radius: 12px;
+  margin-bottom: 50px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: $shop-shadow-md;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 53, 0.9) 0%,
+      rgba(230, 81, 0, 0.8) 100%
+    );
+  }
+
+  .banner-text {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: white;
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    p {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .shop-hero {
+    height: 300px;
+
+    .hero-content h1 {
+      font-size: 1.8rem;
+    }
+
+    .hero-content p {
+      font-size: 1rem;
+    }
+  }
+
+  .shop-mid-banner {
+    height: 180px;
+
+    .banner-text h2 {
+      font-size: 1.5rem;
+    }
+
+    .banner-text p {
+      font-size: 1rem;
+    }
+  }
+}

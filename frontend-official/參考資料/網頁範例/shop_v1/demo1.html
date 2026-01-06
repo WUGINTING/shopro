@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電商平台首頁 - Gold 級別 (ShopApplication)</title>
+    <meta name="description" content="基於 Spring Boot 架構規劃的前端原型，包含開店支援、商品管理與行銷活動展示">
+    <style>
+        /* =========================================
+           1. 開店支援與設計 - 視覺設計 (Gold Theme)
+           ========================================= */
+        :root {
+            --primary-color: #c5a059; /* Gold 級別主色調 */
+            --primary-dark: #b08d4b;
+            --text-color: #333;
+            --bg-color: #f9f9f9;
+            --white: #ffffff;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --gray-light: #eee;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding-top: 60px; /* 預留 Header 高度 */
+        }
+
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; }
+        img { max-width: 100%; display: block; object-fit: cover; }
+
+        /* 通用按鈕 */
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: var(--white);
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        .btn:hover { background-color: var(--primary-dark); }
+        .btn-sm { padding: 5px 10px; font-size: 0.85rem; }
+
+        /* =========================================
+           Header & Nav (基礎設定)
+           ========================================= */
+        header {
+            background: var(--white);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+
+        .nav-links { display: flex; gap: 25px; }
+        .nav-links a:hover { color: var(--primary-color); }
+
+        .nav-icons { display: flex; gap: 20px; align-items: center; cursor: pointer; }
+        
+        /* 購物車徽章 (CRM 互動提醒) */
+        .cart-icon { position: relative; }
+        .badge {
+            position: absolute;
+            top: -8px; right: -8px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================================
+           1. 首頁彈跳廣告 (Popup Ad)
+           ========================================= */
+        .popup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: flex; /* JS 控制顯示 */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .popup-overlay.show { opacity: 1; pointer-events: auto; }
+
+        .popup-box {
+            background: var(--white);
+            width: 90%; max-width: 450px;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .close-popup {
+            position: absolute; top: 10px; right: 15px;
+            font-size: 1.5rem; cursor: pointer; color: #999;
+        }
+
+        /* =========================================
+           Layout Blocks (首頁區塊設計)
+           ========================================= */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Block 1: Hero Carousel (主視覺) */
+        .hero-section {
+            height: 400px;
+            background: #eee;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background-image: linear-gradient(45deg, #f3e7e9 0%, #e3eeff 99%, #e3eeff 100%);
+            margin-bottom: 30px;
+        }
+        .hero-content h1 { font-size: 2.5rem; margin-bottom: 15px; color: #333; }
+        .hero-content p { font-size: 1.1rem; color: #666; margin-bottom: 20px; }
+
+        /* Block 2: Coupons (行銷活動) */
+        .coupon-section { margin-bottom: 40px; }
+        .coupon-scroll {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .coupon-card {
+            min-width: 260px;
+            border: 1px dashed var(--primary-color);
+            background: #fffcf5;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .coupon-info h4 { color: var(--danger); font-size: 1.1rem; }
+        .coupon-info span { font-size: 0.85rem; color: #888; }
+
+        /* Block 3 & 5: Product Grid (商品管理) */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+        .section-title { font-size: 1.5rem; color: #333; }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .product-card {
+            background: var(--white);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s;
+            position: relative;
+        }
+        .product-card:hover { transform: translateY(-5px); }
+
+        /* 商品標籤 (Tag) */
+        .tag {
+            position: absolute; top: 10px; left: 10px;
+            padding: 4px 8px; font-size: 0.75rem; color: white;
+            font-weight: bold; border-radius: 4px; z-index: 2;
+        }
+        .tag.hot { background: var(--danger); }
+        .tag.new { background: var(--success); }
+        .tag.pre { background: #9b59b6; }
+
+        .p-img-box {
+            height: 200px;
+            background: #f4f4f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+        }
+        .p-details { padding: 15px; }
+        .p-name {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .p-price { color: var(--danger); font-weight: bold; font-size: 1.1rem; }
+        .p-price del { color: #999; font-size: 0.85rem; font-weight: normal; margin-right: 5px; }
+        
+        .add-cart-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .add-cart-btn:hover { background: var(--primary-color); }
+
+        /* Block 4: Mid Banner (廣告與追蹤) */
+        .mid-banner {
+            background: url('https://via.placeholder.com/1200x300?text=Marketing+Campaign+Banner') no-repeat center center;
+            background-size: cover;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-bottom: 50px;
+            position: relative;
+        }
+        .mid-banner::before {
+            content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.4);
+        }
+        .banner-text { position: relative; z-index: 2; text-align: center; }
+
+        /* Footer */
+        footer {
+            background: #222;
+            color: #ccc;
+            padding: 50px 0 20px;
+            margin-top: 50px;
+        }
+        .footer-cols {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+        .f-col h4 { color: white; margin-bottom: 20px; border-left: 3px solid var(--primary-color); padding-left: 10px; }
+        .f-col li { margin-bottom: 10px; font-size: 0.9rem; }
+        .copyright { text-align: center; border-top: 1px solid #444; padding-top: 20px; font-size: 0.8rem; }
+
+        /* RWD */
+        @media (max-width: 768px) {
+            .nav-links { display: none; } /* 簡化手機版選單 */
+            .hero-content h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 開店支援：彈跳廣告 -->
+    <div id="popupAd" class="popup-overlay">
+        <div class="popup-box">
+            <span class="close-popup" onclick="closePopup()">&times;</span>
+            <img src="https://via.placeholder.com/400x200?text=New+Member+Gift" alt="Popup Ad" style="margin-bottom:15px; width:100%; border-radius:4px;">
+            <h3>歡迎光臨 Demo Shop</h3>
+            <p style="margin:10px 0; color:#666;">註冊會員立即獲得 $100 購物金，首購再享免運優惠！</p>
+            <button class="btn" onclick="closePopup()">立即領取</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="navbar">
+            <a href="#" class="logo">GOLD SHOP</a>
+            <nav class="nav-links">
+                <a href="#">首頁</a>
+                <a href="#">商店介紹</a>
+                <a href="#">最新消息</a> <!-- 部落格功能 -->
+                <a href="#">會員中心</a>
+            </nav>
+            <div class="nav-icons">
+                <span>🔍</span>
+                <span style="position:relative;" onclick="alert('CRM: 這是會員通知功能')">🔔</span>
+                <div class="cart-icon" onclick="alert('Order: 前往結帳頁面')">
+                    🛒
+                    <span class="badge" id="cartCount">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Block 1: 首頁主視覺 -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>質感生活，由此開始</h1>
+            <p>2024 夏季新品系列，全館 85 折起</p>
+            <button class="btn">前往選購</button>
+        </div>
+    </section>
+
+    <!-- Block 2: 行銷活動 (優惠券) -->
+    <div class="container coupon-section">
+        <div class="coupon-scroll">
+            <div class="coupon-card">
+                <div class="coupon-info">
+                    <h4>滿千折百</h4>
+                    <span>全館商品適用</span>
+                </div>
+                <button class="btn btn-sm">領取</button>
+            </div>
+            <div class="coupon-card">
+                <div class="coupon-info">
+                    <h4>免運券</h4>
+                    <span>滿 $499 免運費</span>
+                </div>
+                <button class="btn btn-sm">領取</button>
+            </div>
+            <div class="coupon-card">
+                <div class="coupon-info">
+                    <h4>會員禮</h4>
+                    <span>新會員專屬</span>
+                </div>
+                <button class="btn btn-sm">領取</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Block 3: 熱銷商品 (商品管理) -->
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">熱銷排行</h2>
+            <a href="#" style="font-size:0.9rem; color:#888;">查看更多 &rarr;</a>
+        </div>
+        
+        <div class="product-grid">
+            <!-- Product Item -->
+            <div class="product-card">
+                <span class="tag hot">HOT</span>
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=Product+1" alt="商品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">極簡純棉 T-shirt</h3>
+                    <div class="p-price"><del>$790</del> $590</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=Product+2" alt="商品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">修身丹寧褲</h3>
+                    <div class="p-price">$1,280</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <span class="tag pre">預購</span>
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=Product+3" alt="商品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">限量聯名球鞋</h3>
+                    <div class="p-price">$3,600</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <span class="tag hot">HOT</span>
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=Product+4" alt="商品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">無線藍牙耳機</h3>
+                    <div class="p-price"><del>$2,200</del> $1,890</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Block 4: 站內廣告區塊 -->
+    <section class="mid-banner">
+        <div class="banner-text">
+            <h2>MID-SEASON SALE</h2>
+            <p style="font-size:1.2rem; margin-top:10px;">年中大促 | 指定商品兩件五折</p>
+        </div>
+    </section>
+
+    <!-- Block 5: 最新上架 (商品管理) -->
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">最新上架</h2>
+        </div>
+        
+        <div class="product-grid">
+            <div class="product-card">
+                <span class="tag new">NEW</span>
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=New+1" alt="新品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">多功能後背包</h3>
+                    <div class="p-price">$980</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <span class="tag new">NEW</span>
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=New+2" alt="新品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">不鏽鋼保溫瓶</h3>
+                    <div class="p-price">$450</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=New+3" alt="新品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">真皮零錢包</h3>
+                    <div class="p-price">$650</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="p-img-box">
+                    <img src="https://via.placeholder.com/250x200?text=New+4" alt="新品">
+                </div>
+                <div class="p-details">
+                    <h3 class="p-name">抗藍光眼鏡</h3>
+                    <div class="p-price">$399</div>
+                    <button class="add-cart-btn" onclick="addToCart()">加入購物車</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-cols">
+                <div class="f-col">
+                    <h4>關於商店</h4>
+                    <ul>
+                        <li><a href="#">品牌故事</a></li>
+                        <li><a href="#">隱私權政策</a></li>
+                        <li><a href="#">服務條款</a></li>
+                    </ul>
+                </div>
+                <div class="f-col">
+                    <h4>顧客服務</h4>
+                    <ul>
+                        <li><a href="#">訂單查詢</a></li>
+                        <li><a href="#">退換貨說明</a></li>
+                        <li><a href="#">常見問題</a></li>
+                    </ul>
+                </div>
+                <div class="f-col">
+                    <h4>聯絡我們</h4>
+                    <ul>
+                        <li>客服信箱: service@demo.com</li>
+                        <li>客服專線: 02-1234-5678</li>
+                        <li>服務時間: 09:00 - 18:00</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2024 com.info.ecommerce. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // =========================================
+        // 互動邏輯 JavaScript
+        // =========================================
+
+        // 1. 彈跳廣告控制
+        window.addEventListener('load', () => {
+            const popup = document.getElementById('popupAd');
+            // 模擬延遲 1 秒後顯示
+            setTimeout(() => {
+                popup.classList.add('show');
+            }, 1000);
+        });
+
+        function closePopup() {
+            document.getElementById('popupAd').classList.remove('show');
+        }
+
+        // 2. 購物車計數 (模擬 CRM/Order 互動)
+        let cartItems = 0;
+        const badge = document.getElementById('cartCount');
+
+        function addToCart() {
+            cartItems++;
+            badge.innerText = cartItems;
+            
+            // 簡單的動畫效果
+            badge.style.transform = 'scale(1.5)';
+            setTimeout(() => {
+                badge.style.transform = 'scale(1)';
+            }, 200);
+
+            // 模擬: 後續可對接 POST /api/v1/cart/add
+            console.log("商品已加入購物車, 目前數量: " + cartItems);
+        }
+    </script>
+</body>
+</html>

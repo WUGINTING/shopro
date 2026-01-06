@@ -1,0 +1,172 @@
+// 共用佈局類別
+.container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.max-width-sm {
+  max-width: 400px;
+}
+
+.max-width-md {
+  max-width: 600px;
+}
+
+.max-width-lg {
+  max-width: 800px;
+}
+
+// 防止橫向滾動的全域樣式
+.q-page-container {
+  width: 100%;
+}
+
+.q-page {
+  width: 100%;
+  max-width: 100%;
+}
+
+// 圖片響應式處理 - 新的設計
+.responsive-img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+}
+
+.image-container {
+  width: 100%;
+  position: relative;
+  border-radius: 12px;
+
+  .responsive-img,
+  .q-img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+  }
+
+  // 確保子元素的圓角
+  .q-img__container,
+  .q-img__content {
+    border-radius: 12px;
+  }
+}
+
+// 響應式圖片高度調整
+@media (max-width: 768px) {
+  .responsive-img,
+  .image-container .q-img {
+    height: 50vw; // 使用視窗寬度百分比
+    max-height: 280px;
+    min-height: 180px;
+  }
+
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+    width: calc(100% - 32px);
+  }
+
+  .section-padding {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsive-img,
+  .image-container .q-img {
+    height: 60vw; // 小螢幕使用略大的百分比
+    max-height: 240px;
+    min-height: 160px;
+  }
+
+  .section-padding {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+// 邊框圓角共用樣式
+.rounded-borders-lg {
+  border-radius: $border-radius-lg;
+}
+
+.rounded-borders-top-lg {
+  border-top-left-radius: $border-radius-lg;
+  border-top-right-radius: $border-radius-lg;
+}
+
+// 文字行高
+.line-height-lg {
+  line-height: 1.8;
+}
+
+// 卡片圖片容器共用樣式
+.card-image-container {
+  position: relative;
+  border-radius: $border-radius-lg $border-radius-lg 0 0;
+
+  .q-img {
+    border-radius: $border-radius-lg $border-radius-lg 0 0;
+  }
+}
+
+// 圖片覆蓋層共用樣式
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  .overlay-content {
+    text-align: center;
+    color: white;
+  }
+}
+
+// 共用動畫
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+// 地圖標記專用的 pulse 動畫
+@keyframes mapPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  80% {
+    transform: translateY(-5px);
+  }
+}

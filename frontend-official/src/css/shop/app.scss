@@ -1,0 +1,10 @@
+// 購物車專用樣式
+// 注意：由於 quasar.config.js 會自動注入 variables.scss，這裡不需要再次 import
+
+// 引入共用樣式
+@import '../common.scss';
+
+// 購物車背景
+body.shop-body {
+  background-color: #ffffff;
+}
