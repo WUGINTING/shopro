@@ -6,8 +6,8 @@
           <q-card-section class="bg-gradient-primary text-white">
             <div class="text-center">
               <q-icon name="shopping_cart" size="64px" />
-              <div class="text-h4 q-mt-md text-weight-bold">Shopro</div>
-              <div class="text-subtitle1">電商管理系統</div>
+              <div class="text-h4 q-mt-md text-weight-bold">遇日小舖</div>
+              <div class="text-subtitle1">管理系統</div>
             </div>
           </q-card-section>
 

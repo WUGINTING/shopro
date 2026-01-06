@@ -7,7 +7,7 @@
         
         <q-toolbar-title>
           <q-icon name="shopping_cart" size="sm" class="q-mr-sm" />
-          ShoPro 管理系統
+          遇日小舖 - 管理系統
         </q-toolbar-title>
 
         <q-space />
