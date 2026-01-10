@@ -571,13 +571,68 @@ src/styles/
 
 ## API 開發規範
 
-### 1. API 模組化結構
+### 📖 完整 API 文檔
 
-#### 檔案組織
-每個業務模組對應一個 API 檔案：
+**所有 API 相關的詳細文檔、規範、範例，請參考：**
+
+🔗 **[API_DOCS.md](./API_DOCS.md)** - 完整 API 開發文檔（v2.0.0）
+
+該文檔包含：
+- ✅ **Swagger API 文檔連結** - 後端 API 即時文檔
+- ✅ **API 模組列表** - 所有前端 API 模組說明
+- ✅ **JSDoc 規範** - 完整的註解規範和範例
+- ✅ **Interface 定義** - 所有數據類型定義
+- ✅ **使用範例** - 實際程式碼範例
+- ✅ **開發建議** - 最佳實踐和常見問題
+
+### 1. 快速開始
+
+#### API 檔案組織
 
 ```
 src/api/
+├── axios.ts                # Axios 實例配置
+├── types.ts                # 通用類型定義
+├── index.ts                # 統一匯出
+├── product.ts              # 商品模組
+├── order.ts                # 訂單模組
+├── auth.ts                 # 認證模組
+├── payment.ts              # 支付管理
+└── ...                     # 其他業務模組
+```
+
+#### 快速使用
+
+```typescript
+// 從統一出口匯入
+import { productApi, orderApi, authApi, type Product, type Order } from '@/api'
+
+// 使用 API
+const products = await productApi.getProducts({ page: 0, size: 10 })
+const order = await orderApi.createOrder(orderData)
+```
+
+### 2. 重要資源連結
+
+| 資源 | 連結 | 說明 |
+|-----|------|------|
+| **API 完整文檔** | [API_DOCS.md](./API_DOCS.md) | 所有 API 的詳細說明、規範、範例 |
+| **Swagger UI** | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) | 後端 API 即時文檔（可測試） |
+| **開發規範** | 本文檔 | 前端開發整體規範 |
+
+### 3. 開發流程
+
+#### 開發新 API 的標準流程
+
+1. **查閱 Swagger 文檔** - 了解後端 API 定義
+2. **參考 API_DOCS.md** - 學習 JSDoc 規範和範例
+3. **建立 API 文件** - 在 `src/api/` 建立對應模組
+4. **撰寫 JSDoc** - 遵循規範撰寫完整註解
+5. **測試 API** - 在 Swagger UI 或前端測試功能
+
+> 💡 **提示**: 所有 API 相關的詳細規範、範例、最佳實踐，請參考 [API_DOCS.md](./API_DOCS.md)
+
+### 4. Axios 配置規範
 ├── axios.ts                # Axios 實例配置
 ├── types.ts                # 通用類型定義
 ├── index.ts                # 統一匯出
@@ -762,101 +817,59 @@ export interface ApiResponse<T = any> {
   /** 回應資料 */
   data: T
   /** 時間戳記 */
+#### 通用類型定義
+```typescript
+export interface ApiResponse<T = any> {
+  success: boolean
+  message: string
+  data: T
   timestamp: string
 }
 
-/**
- * 分頁回應介面
- * @interface PageResponse
- * @template T - 資料類型
- */
 export interface PageResponse<T> {
-  /** 資料內容 */
   content: T[]
-  /** 分頁資訊 */
   pageable: {
     pageNumber: number
     pageSize: number
   }
-  /** 總元素數 */
   totalElements: number
-  /** 總頁數 */
   totalPages: number
-  /** 是否最後一頁 */
   last: boolean
-  /** 是否第一頁 */
   first: boolean
-  /** 是否空資料 */
   empty: boolean
 }
 ```
 
-> 📖 **完整 API 文檔**: 所有 24 個 API 模組的詳細文檔請參考 [api_docs.md](../frontend/src/api/api_docs.md)，包含：
-> - 完整的模組列表和說明
-> - 所有 Interface 定義
-> - API 方法使用範例
-> - 錯誤處理建議
-> - TypeScript 類型使用指南
-
 ### 5. API 使用範例
 
-#### 在 Vue 元件中使用
-```vue
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { productApi, type Product, type ApiResponse } from '@/api'
+```typescript
+// 從統一出口匯入
+import { productApi, orderApi, authApi, type Product, type Order } from '@/api'
 
-const $q = useQuasar()
-const products = ref<Product[]>([])
-const loading = ref(false)
+// 獲取商品列表
+const products = await productApi.getProducts({ page: 0, size: 10 })
 
-/**
- * 載入商品列表
- */
-const loadProducts = async () => {
-  loading.value = true
-  try {
-    const response = await productApi.getProducts()
-    products.value = response.data
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '載入商品失敗',
-      position: 'top'
-    })
-    console.error('載入商品失敗:', error)
-  } finally {
-    loading.value = false
+// 創建訂單
+const order = await orderApi.createOrder(orderData)
+
+// 錯誤處理
+try {
+  const response = await productApi.getProduct(123)
+  // 處理成功回應
+} catch (error: any) {
+  if (error.response?.status === 401) {
+    router.push('/login')
+  } else if (error.response?.status === 404) {
+    showNotFound()
+  } else {
+    showError('操作失敗')
   }
 }
-
-/**
- * 創建商品
- */
-const createProduct = async (productData: Product) => {
-  try {
-    await productApi.createProduct(productData)
-    $q.notify({
-      type: 'positive',
-      message: '商品創建成功'
-    })
-    await loadProducts()
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '商品創建失敗'
-    })
-  }
-}
-
-onMounted(() => {
-  loadProducts()
-})
-</script>
 ```
 
-#### 統一的匯入方式
+> 💡 **更多範例**: 完整的 API 使用範例和最佳實踐請參考 [API_DOCS.md](./API_DOCS.md)
+
+### 6. 統一的匯入方式
 
 ```typescript
 // ✅ 推薦：從統一出口匯入
@@ -865,30 +878,6 @@ import { productApi, orderApi, authApi, type Product, type Order } from '@/api'
 // ❌ 不推薦：直接從個別文件匯入
 import productApi from '@/api/product'
 ```
-
-#### 完整的錯誤處理
-
-```typescript
-try {
-  const response = await productApi.getProduct(123)
-  // 處理成功回應
-} catch (error) {
-  if (error.response?.status === 401) {
-    // 未授權，跳轉登入
-    router.push('/login')
-  } else if (error.response?.status === 404) {
-    // 資源不存在
-    showNotFound()
-  } else {
-    // 其他錯誤
-    showError('操作失敗')
-  }
-}
-```
-
-> 📚 **更多範例**: 完整的 API 使用範例和最佳實踐請參考：
-> - [api_docs.md](../frontend/src/api/api_docs.md) - 詳細的 API 文檔
-> - 各個 API 文件中的 `@example` 註解
 
 ---
 
@@ -1712,7 +1701,9 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL
 |-----|------|---------|
 | 1.0.0 | 2026-01-10 | 初始版本，完整開發規範建立 |
 | 1.1.0 | 2026-01-10 | 新增 i18n 國際化、Cookie 管理、表單驗證工具 |
-| 1.2.0 | 2026-01-10 | **完成所有 API 文件的 JSDoc 規範更新（24 個檔案）** |
+| 1.2.0 | 2026-01-10 | 完成所有 API 文件的 JSDoc 規範更新（24 個檔案） |
+| 2.0.0 | 2026-01-10 | 整合 Swagger API 文檔、更新 API 開發規範、更新主要 API 檔案 JSDoc |
+| **2.1.0** | **2026-01-10** | **簡化 API 規範章節，統一參考 API_DOCS.md，移除重複的 API 定義和範例** |
 
 ---
 
@@ -1720,4 +1711,6 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL
 **最後更新**: 2026年1月10日  
 **專案狀態**: ✅ 活躍開發中
 
-**API 文檔**: 📖 [api_docs.md](../frontend/src/api/api_docs.md) - 完整的 API 模組文檔
+**相關文檔**:  
+- 📖 [API_DOCS.md](./API_DOCS.md) - 完整的 API 開發文檔（包含所有模組、JSDoc 規範、使用範例）
+- 🔗 [Swagger UI](http://localhost:8080/swagger-ui/index.html) - 後端 API 即時文檔

@@ -60,40 +60,51 @@ export interface OrderItem {
  */
 export const orderApi = {
   /**
-   * 獲取訂單列表
+   * 分頁查詢訂單
+   * @description 支援分頁查詢訂單列表，可依狀態篩選
    * @param {Object} [params] - 查詢參數
-   * @param {number} [params.page] - 頁碼
-   * @param {number} [params.size] - 每頁數量
-   * @param {string} [params.status] - 訂單狀態篩選
+   * @param {number} [params.page] - 頁碼（從 0 開始）
+   * @param {number} [params.size] - 每頁數量（預設 20）
+   * @param {string} [params.status] - 訂單狀態篩選 (PENDING | PROCESSING | SHIPPED | DELIVERED | CANCELLED)
    * @returns {Promise<ApiResponse<Order[]>>} 訂單列表回應
+   * @swagger GET /api/orders
    * @example
-   * const response = await orderApi.getOrders({ page: 1, size: 10 })
+   * const response = await orderApi.getOrders({ page: 0, size: 10, status: 'PENDING' })
    */
   getOrders: (params?: any) => {
     return axios.get<any, ApiResponse<Order[]>>('/orders', { params })
   },
   
   /**
-   * 獲取單一訂單詳情
+   * 取得訂單詳情
+   * @description 根據訂單 ID 獲取完整訂單資訊（包含訂單項目）
    * @param {number} id - 訂單 ID
    * @returns {Promise<ApiResponse<Order>>} 訂單詳情回應
-   * @throws {Error} 當訂單不存在時拋出錯誤
+   * @throws {Error} 當訂單不存在時拋出 404 錯誤
+   * @swagger GET /api/orders/{id}
    * @example
    * const response = await orderApi.getOrder(123)
+   * console.log(response.data.orderNumber) // 訂單編號
    */
   getOrder: (id: number) => {
     return axios.get<any, ApiResponse<Order>>(`/orders/${id}`)
   },
   
   /**
-   * 創建新訂單
+   * 創建訂單
+   * @description 創建新訂單，預設狀態為 PENDING
    * @param {Order} data - 訂單資料
+   * @param {number} data.customerId - 客戶 ID（必填）
+   * @param {number} data.totalAmount - 訂單總金額（必填）
+   * @param {OrderItem[]} [data.orderItems] - 訂單項目列表
    * @returns {Promise<ApiResponse<Order>>} 創建成功的訂單資料
+   * @swagger POST /api/orders
    * @example
    * const newOrder = await orderApi.createOrder({
    *   customerId: 1,
    *   totalAmount: 1000,
-   *   status: 'PENDING'
+   *   status: 'PENDING',
+   *   orderItems: [{ productId: 1, quantity: 2, price: 500 }]
    * })
    */
   createOrder: (data: Order) => {
@@ -102,11 +113,14 @@ export const orderApi = {
   
   /**
    * 更新訂單狀態
+   * @description 更新指定訂單的狀態（PENDING → PROCESSING → SHIPPED → DELIVERED）
    * @param {number} id - 訂單 ID
    * @param {Order['status']} status - 新的訂單狀態
    * @returns {Promise<ApiResponse<Order>>} 更新後的訂單資料
+   * @swagger PATCH /api/orders/{id}/status
    * @example
    * const updated = await orderApi.updateOrderStatus(123, 'PROCESSING')
+   * console.log(updated.data.status) // 'PROCESSING'
    */
   updateOrderStatus: (id: number, status: Order['status']) => {
     return axios.patch<any, ApiResponse<Order>>(`/orders/${id}/status`, null, {
@@ -115,9 +129,12 @@ export const orderApi = {
   },
   
   /**
-   * 取消訂單
+   * 刪除訂單
+   * @description 刪除指定訂單（建議使用 updateOrderStatus 設為 CANCELLED 代替）
    * @param {number} id - 訂單 ID
-   * @returns {Promise<ApiResponse<void>>} 取消結果
+   * @returns {Promise<ApiResponse<void>>} 刪除結果
+   * @swagger DELETE /api/orders/{id}
+   * @warning 此操作無法復原
    * @example
    * await orderApi.cancelOrder(123)
    */

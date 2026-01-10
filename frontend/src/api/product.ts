@@ -81,41 +81,54 @@ export interface ProductCategory {
  */
 export const productApi = {
   /**
-   * 獲取商品列表
+   * 分頁查詢商品
+   * @description 支援分頁查詢商品列表，可依狀態篩選
    * @param {Object} [params] - 查詢參數
-   * @param {number} [params.page] - 頁碼
-   * @param {number} [params.size] - 每頁數量
-   * @param {string} [params.status] - 商品狀態篩選
-   * @returns {Promise<ApiResponse<Product[]>>} 商品列表回應
+   * @param {number} [params.page] - 頁碼（從 0 開始）
+   * @param {number} [params.size] - 每頁數量（預設 20）
+   * @param {string} [params.status] - 商品狀態篩選 (DRAFT | PUBLISHED | UNPUBLISHED)
+   * @returns {Promise<ApiResponse<PageResponse<Product>>>} 分頁商品列表回應
+   * @swagger GET /api/products
    * @example
-   * const response = await productApi.getProducts({ page: 1, size: 10 })
+   * const response = await productApi.getProducts({ page: 0, size: 10, status: 'PUBLISHED' })
    */
   getProducts: (params?: any) => {
     return axios.get<any, ApiResponse<Product[]>>('/products', { params })
   },
 
   /**
-   * 獲取單一商品詳情
+   * 取得商品詳情
+   * @description 根據商品 ID 獲取完整商品資訊
    * @param {number} id - 商品 ID
    * @returns {Promise<ApiResponse<Product>>} 商品詳情回應
-   * @throws {Error} 當商品不存在時拋出錯誤
+   * @throws {Error} 當商品不存在時拋出 404 錯誤
+   * @swagger GET /api/products/{id}
    * @example
    * const response = await productApi.getProduct(123)
+   * console.log(response.data.name) // 商品名稱
    */
   getProduct: (id: number) => {
     return axios.get<any, ApiResponse<Product>>(`/products/${id}`)
   },
 
   /**
-   * 創建新商品
+   * 創建商品
+   * @description 創建新商品，預設狀態為 DRAFT
    * @param {Product} data - 商品資料
+   * @param {string} data.name - 商品名稱（必填）
+   * @param {string} data.description - 商品描述（必填）
+   * @param {number} data.price - 商品價格（必填）
+   * @param {number} data.stock - 庫存數量（必填）
+   * @param {number} [data.categoryId] - 商品分類 ID
    * @returns {Promise<ApiResponse<Product>>} 創建成功的商品資料
+   * @swagger POST /api/products
    * @example
    * const newProduct = await productApi.createProduct({
    *   name: '新商品',
    *   description: '商品描述',
    *   price: 100,
-   *   stock: 50
+   *   stock: 50,
+   *   categoryId: 1
    * })
    */
   createProduct: (data: Product) => {
@@ -123,12 +136,17 @@ export const productApi = {
   },
 
   /**
-   * 更新商品資料
+   * 更新商品
+   * @description 更新指定商品的資料
    * @param {number} id - 商品 ID
-   * @param {Product} data - 更新的商品資料
+   * @param {Product} data - 更新的商品資料（部分更新）
    * @returns {Promise<ApiResponse<Product>>} 更新後的商品資料
+   * @swagger PUT /api/products/{id}
    * @example
-   * const updated = await productApi.updateProduct(123, { name: '更新後的名稱' })
+   * const updated = await productApi.updateProduct(123, { 
+   *   name: '更新後的名稱',
+   *   price: 150 
+   * })
    */
   updateProduct: (id: number, data: Product) => {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}`, data)
@@ -136,8 +154,11 @@ export const productApi = {
 
   /**
    * 刪除商品
+   * @description 永久刪除指定商品（包含相關圖片、規格等資料）
    * @param {number} id - 商品 ID
    * @returns {Promise<ApiResponse<void>>} 刪除結果
+   * @swagger DELETE /api/products/{id}
+   * @warning 此操作無法復原
    * @example
    * await productApi.deleteProduct(123)
    */
@@ -147,10 +168,13 @@ export const productApi = {
 
   /**
    * 上架商品
+   * @description 將商品狀態設為 PUBLISHED（已上架）
    * @param {number} id - 商品 ID
    * @returns {Promise<ApiResponse<Product>>} 上架後的商品資料
+   * @swagger PUT /api/products/{id}/activate
    * @example
    * const activated = await productApi.activateProduct(123)
+   * console.log(activated.data.status) // 'PUBLISHED'
    */
   activateProduct: (id: number) => {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}/activate`)
@@ -158,10 +182,13 @@ export const productApi = {
 
   /**
    * 下架商品
+   * @description 將商品狀態設為 UNPUBLISHED（已下架）
    * @param {number} id - 商品 ID
    * @returns {Promise<ApiResponse<Product>>} 下架後的商品資料
+   * @swagger PUT /api/products/{id}/deactivate
    * @example
    * const deactivated = await productApi.deactivateProduct(123)
+   * console.log(deactivated.data.status) // 'UNPUBLISHED'
    */
   deactivateProduct: (id: number) => {
     return axios.put<any, ApiResponse<Product>>(`/products/${id}/deactivate`)
@@ -169,21 +196,27 @@ export const productApi = {
 
   /**
    * 從相冊添加圖片到商品
+   * @description 將相冊中的圖片批量關聯到指定商品
    * @param {number} productId - 商品 ID
    * @param {number[]} albumImageIds - 相冊圖片 ID 陣列
-   * @returns {Promise<ApiResponse<Product>>} 更新後的商品資料
+   * @returns {Promise<ApiResponse<Product>>} 更新後的商品資料（包含新增的圖片）
+   * @swagger POST /api/products/{id}/album-images
    * @example
    * const updated = await productApi.addAlbumImages(123, [1, 2, 3])
+   * console.log(updated.data.images.length) // 顯示圖片數量
    */
   addAlbumImages: (productId: number, albumImageIds: number[]) => {
     return axios.post<any, ApiResponse<Product>>(`/products/${productId}/album-images`, albumImageIds)
   },
 
   /**
-   * 獲取商品分類列表
+   * 取得所有分類
+   * @description 獲取商品分類列表（支持 100 ~ 600 個分類）
    * @returns {Promise<ApiResponse<ProductCategory[]>>} 商品分類列表
+   * @swagger GET /api/product-categories
    * @example
    * const categories = await productApi.getCategories()
+   * categories.data.forEach(cat => console.log(cat.name))
    */
   getCategories: () => {
     return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
