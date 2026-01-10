@@ -1,3 +1,10 @@
+/**
+ * API 統一匯出模組
+ * @module API
+ * @description 此模組統一匯出所有 API 服務，方便在應用中使用
+ */
+
+// 匯出所有類型定義
 export * from './product'
 export * from './order'
 export * from './crm'
@@ -10,6 +17,7 @@ export * from './blog'
 export * from './orderQA'
 export * from './operationLog'
 
+// 匯出所有 API 服務
 export { default as productApi } from './product'
 export { default as orderApi } from './order'
 export { default as crmApi } from './crm'

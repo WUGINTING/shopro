@@ -1,3 +1,8 @@
+/**
+ * 訂單折扣相關 API
+ * @module OrderDiscountAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 

@@ -1,7 +1,15 @@
+/**
+ * Axios 實例配置與攔截器
+ * @module AxiosConfig
+ */
+
 import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
-// 創建 axios 實例
+/**
+ * 創建 axios 實例
+ * @constant {AxiosInstance} axiosInstance - 配置好的 axios 實例
+ */
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 15000,

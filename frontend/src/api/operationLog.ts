@@ -1,3 +1,8 @@
+/**
+ * 操作日誌相關 API
+ * @module OperationLogAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 

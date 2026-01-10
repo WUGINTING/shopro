@@ -1,3 +1,8 @@
+/**
+ * 積點管理 API
+ * @module PointAPI
+ */
+
 import axios from 'axios'
 
 export interface PointRecord {

@@ -1,3 +1,8 @@
+/**
+ * 營銷活動相關 API
+ * @module MarketingAPI
+ */
+
 import axiosInstance from './axios'
 
 export interface MarketingCampaign {

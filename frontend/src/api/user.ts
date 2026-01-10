@@ -1,7 +1,15 @@
+/**
+ * 使用者管理 API
+ * @module UserAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// 使用者資料類型
+/**
+ * 使用者資料介面
+ * @interface User
+ */
 export interface User {
   id?: number
   username: string
@@ -13,7 +21,10 @@ export interface User {
   updatedAt?: string
 }
 
-// 使用者 API
+/**
+ * 使用者 API 服務
+ * @namespace userApi
+ */
 export const userApi = {
   // 取得所有使用者
   getAllUsers: () => {

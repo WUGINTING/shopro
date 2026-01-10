@@ -1,7 +1,15 @@
+/**
+ * 儀表板相關 API
+ * @module DashboardAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// Dashboard statistics interfaces
+/**
+ * 儀表板統計介面
+ * @interface DashboardStats
+ */
 export interface DashboardStats {
   totalProducts: number
   totalProductsChange?: number
@@ -40,7 +48,10 @@ export interface OrderStatistics {
   dailyAmountTrend?: { [key: string]: number }
 }
 
-// Dashboard API
+/**
+ * 儀表板 API 服務
+ * @namespace dashboardApi
+ */
 export const dashboardApi = {
   // Get dashboard summary statistics
   getStats: () => {

@@ -581,24 +581,46 @@ src/api/
 ├── axios.ts                # Axios 實例配置
 ├── types.ts                # 通用類型定義
 ├── index.ts                # 統一匯出
-├── api_docs.md             # API 文檔
+├── api_docs.md             # API 完整文檔（已更新至 v1.0.0）
 ├── product.ts              # 商品模組
 ├── order.ts                # 訂單模組
 ├── auth.ts                 # 認證模組
-├── payment.ts              # 支付模組
-└── ...                     # 其他模組
+├── crm.ts                  # CRM 客戶管理
+├── payment.ts              # 支付管理
+├── member.ts               # 會員管理
+├── memberLevel.ts          # 會員等級
+├── memberGroup.ts          # 會員群組
+├── marketing.ts            # 營銷活動
+├── promotion.ts            # 促銷優惠
+├── point.ts                # 積點系統
+├── edm.ts                  # EDM 電子報
+├── blog.ts                 # 部落格
+├── album.ts                # 相冊管理
+├── dashboard.ts            # 儀表板
+├── statistics.ts           # 統計分析
+├── settings.ts             # 系統設定
+├── user.ts                 # 使用者管理
+└── ...                     # 其他模組（共 24 個 API 檔案）
 ```
+
+> 💡 **重要**: 所有 API 檔案已完整遵循 JSDoc 規範，詳細文檔請參考 [api_docs.md](../frontend/src/api/api_docs.md)
 
 ### 2. JSDoc 註解規範
 
-**所有 API 函式必須遵循 JSDoc 規範撰寫註解**：
+**所有 API 檔案必須遵循 JSDoc 規範撰寫註解**。✅ **已完成 24 個 API 檔案的 JSDoc 規範更新**
+
+#### 模組級別註解（必須）
 
 ```typescript
 /**
  * 商品相關 API
  * @module ProductAPI
  */
+```
 
+#### Interface 註解（必須）
+
+```typescript
 /**
  * 商品介面
  * @interface Product
@@ -617,7 +639,13 @@ export interface Product {
   /** 商品狀態 */
   status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
 }
+```
 
+#### API 函式註解（必須）
+
+所有 API 函式必須包含完整的 JSDoc 註解：
+
+```typescript
 /**
  * 商品 API 服務
  * @namespace productApi
@@ -625,7 +653,7 @@ export interface Product {
 export const productApi = {
   /**
    * 獲取商品列表
-   * @param {Object} params - 查詢參數
+   * @param {Object} [params] - 查詢參數
    * @param {number} [params.page] - 頁碼
    * @param {number} [params.size] - 每頁數量
    * @param {string} [params.status] - 商品狀態篩選
@@ -717,6 +745,11 @@ export default axiosInstance
 #### types.ts - API 回應類型
 ```typescript
 /**
+ * 通用 API 類型定義
+ * @module APITypes
+ */
+
+/**
  * 通用 API 回應介面
  * @interface ApiResponse
  * @template T - 資料類型
@@ -757,6 +790,13 @@ export interface PageResponse<T> {
   empty: boolean
 }
 ```
+
+> 📖 **完整 API 文檔**: 所有 24 個 API 模組的詳細文檔請參考 [api_docs.md](../frontend/src/api/api_docs.md)，包含：
+> - 完整的模組列表和說明
+> - 所有 Interface 定義
+> - API 方法使用範例
+> - 錯誤處理建議
+> - TypeScript 類型使用指南
 
 ### 5. API 使用範例
 
@@ -815,6 +855,40 @@ onMounted(() => {
 })
 </script>
 ```
+
+#### 統一的匯入方式
+
+```typescript
+// ✅ 推薦：從統一出口匯入
+import { productApi, orderApi, authApi, type Product, type Order } from '@/api'
+
+// ❌ 不推薦：直接從個別文件匯入
+import productApi from '@/api/product'
+```
+
+#### 完整的錯誤處理
+
+```typescript
+try {
+  const response = await productApi.getProduct(123)
+  // 處理成功回應
+} catch (error) {
+  if (error.response?.status === 401) {
+    // 未授權，跳轉登入
+    router.push('/login')
+  } else if (error.response?.status === 404) {
+    // 資源不存在
+    showNotFound()
+  } else {
+    // 其他錯誤
+    showError('操作失敗')
+  }
+}
+```
+
+> 📚 **更多範例**: 完整的 API 使用範例和最佳實踐請參考：
+> - [api_docs.md](../frontend/src/api/api_docs.md) - 詳細的 API 文檔
+> - 各個 API 文件中的 `@example` 註解
 
 ---
 
@@ -1638,9 +1712,12 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL
 |-----|------|---------|
 | 1.0.0 | 2026-01-10 | 初始版本，完整開發規範建立 |
 | 1.1.0 | 2026-01-10 | 新增 i18n 國際化、Cookie 管理、表單驗證工具 |
+| 1.2.0 | 2026-01-10 | **完成所有 API 文件的 JSDoc 規範更新（24 個檔案）** |
 
 ---
 
 **文檔維護者**: AI Assistant  
 **最後更新**: 2026年1月10日  
 **專案狀態**: ✅ 活躍開發中
+
+**API 文檔**: 📖 [api_docs.md](../frontend/src/api/api_docs.md) - 完整的 API 模組文檔

@@ -1,3 +1,8 @@
+/**
+ * 統計分析相關 API
+ * @module StatisticsAPI
+ */
+
 import axiosInstance from './axios'
 
 export interface StatisticsData {

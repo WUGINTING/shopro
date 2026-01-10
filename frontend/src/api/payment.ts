@@ -1,8 +1,14 @@
+/**
+ * 支付相關 API
+ * @module PaymentAPI
+ */
+
 import axiosInstance from './axios'
 import type { ApiResponse } from './types'
 
 /**
- * 支付統計 DTO
+ * 支付統計介面
+ * @interface PaymentStatistics
  */
 export interface PaymentStatistics {
   todayAmount: number

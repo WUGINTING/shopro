@@ -1,3 +1,8 @@
+/**
+ * 會員群組管理 API
+ * @module MemberGroupAPI
+ */
+
 import axios from 'axios'
 
 export interface MemberGroup {

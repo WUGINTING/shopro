@@ -1,3 +1,8 @@
+/**
+ * EDM 電子報相關 API
+ * @module EDMAPI
+ */
+
 import axiosInstance from './axios'
 
 export interface EdmCampaign {

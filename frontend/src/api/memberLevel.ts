@@ -1,3 +1,8 @@
+/**
+ * 會員等級管理 API
+ * @module MemberLevelAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 

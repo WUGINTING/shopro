@@ -1,3 +1,8 @@
+/**
+ * 系統設定相關 API
+ * @module SettingsAPI
+ */
+
 import axiosInstance from './axios'
 
 export interface SystemSettings {

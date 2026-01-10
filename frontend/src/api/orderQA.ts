@@ -1,3 +1,8 @@
+/**
+ * 訂單問答相關 API
+ * @module OrderQAAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 

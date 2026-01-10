@@ -1,3 +1,8 @@
+/**
+ * 會員管理 API
+ * @module MemberAPI
+ */
+
 import axios from 'axios'
 
 export interface Member {

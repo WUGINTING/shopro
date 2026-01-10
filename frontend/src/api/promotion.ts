@@ -1,3 +1,8 @@
+/**
+ * 促銷和優惠券管理 API
+ * @module PromotionAPI
+ */
+
 import axiosInstance from './axios'
 
 export interface Promotion {

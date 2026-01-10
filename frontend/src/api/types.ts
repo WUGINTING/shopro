@@ -1,6 +1,13 @@
-// 通用 API 回應類型定義
+/**
+ * 通用 API 類型定義
+ * @module APITypes
+ */
 
-// 通用回應接口
+/**
+ * 通用 API 回應介面
+ * @interface ApiResponse
+ * @template T - 資料類型
+ */
 export interface ApiResponse<T = any> {
   success: boolean
   message: string
@@ -8,7 +15,11 @@ export interface ApiResponse<T = any> {
   timestamp: string
 }
 
-// 分頁回應接口
+/**
+ * 分頁回應介面
+ * @interface PageResponse
+ * @template T - 資料類型
+ */
 export interface PageResponse<T> {
   content: T[]
   pageable: {

@@ -1,7 +1,15 @@
+/**
+ * CRM 客戶關係管理 API
+ * @module CRMAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse } from './types'
 
-// CRM 客戶相關接口
+/**
+ * CRM 客戶介面
+ * @interface Customer
+ */
 export interface Customer {
   id?: number
   name: string
@@ -20,7 +28,10 @@ export interface CustomerGroup {
   memberCount?: number
 }
 
-// CRM API
+/**
+ * CRM API 服務
+ * @namespace crmApi
+ */
 export const crmApi = {
   // 獲取客戶列表
   getCustomers: (params?: any) => {

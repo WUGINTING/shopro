@@ -1,30 +1,60 @@
+/**
+ * 部落格相關 API
+ * @module BlogAPI
+ */
+
 import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
-// 部落格狀態枚舉
+/**
+ * 部落格狀態枚舉
+ * @typedef {'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'} BlogStatus
+ */
 export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
 
-// 部落格文章相關接口
+/**
+ * 部落格文章介面
+ * @interface BlogPost
+ */
 export interface BlogPost {
+  /** 文章 ID */
   id?: number
+  /** 文章標題 */
   title: string
+  /** 文章別名 (URL slug) */
   slug: string
+  /** 文章內容 */
   content?: string
+  /** 文章摘要 */
   summary?: string
+  /** 封面圖片 URL */
   coverImageUrl?: string
+  /** 文章狀態 */
   status?: BlogStatus
+  /** 作者 ID */
   authorId?: number
+  /** 作者名稱 */
   authorName?: string
+  /** 標籤 */
   tags?: string
+  /** SEO 標題 */
   metaTitle?: string
+  /** SEO 描述 */
   metaDescription?: string
+  /** SEO 關鍵字 */
   metaKeywords?: string
+  /** 觀看次數 */
   viewCount?: number
+  /** 排程發佈時間 */
   scheduledAt?: string
+  /** 發佈時間 */
   publishedAt?: string
 }
 
-// 部落格 API
+/**
+ * 部落格 API 服務
+ * @namespace blogApi
+ */
 export const blogApi = {
   // 創建部落格文章
   createBlogPost: (data: BlogPost) => {
