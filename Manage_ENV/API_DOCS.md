@@ -1,8 +1,8 @@
 # API 文檔
 
 > **專案名稱**: 遇日小舖購物車後台管理系統 API  
-> **文檔版本**: 2.0.0  
-> **最後更新**: 2026年1月10日  
+> **文檔版本**: 2.1.0  
+> **最後更新**: 2026年1月11日  
 > **Swagger API 文檔**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
 
 ---
@@ -621,11 +621,12 @@ const response = await productApi.getProducts()
 |-----|------|---------|
 | 1.0.0 | 2026-01-10 | 初始版本，完整 JSDoc 規範文檔 |
 | 2.0.0 | 2026-01-10 | **重大更新**：整合 Swagger API 文檔、新增 Swagger UI 連結、更新所有 API 的 JSDoc 規範以符合後端定義、新增完整的模組列表和使用指南 |
+| 2.1.0 | 2026-01-11 | **JSDoc 完整性更新**：依據附錄對照表完成13個API文件的JSDoc更新（訂單管理：orderDiscount.ts、orderQA.ts；會員管理：user.ts、member.ts、memberLevel.ts、memberGroup.ts、point.ts；行銷管理：edm.ts、blog.ts、marketing.ts；系統管理：operationLog.ts、settings.ts；其他：album.ts），所有函式新增完整的@namespace、@description、@param、@returns、@swagger、@example 標籤 |
 
 ---
 
 **文檔維護者**: Development Team  
-**最後更新**: 2026年1月10日  
+**最後更新**: 2026年1月11日  
 **遵循規範**: [FRONTEND_DEVELOPMENT_GUIDE.md](../../../Manage_ENV/FRONTEND_DEVELOPMENT_GUIDE.md)  
 **後端 API 文檔**: [Swagger UI](http://localhost:8080/swagger-ui/index.html)
 
@@ -648,39 +649,117 @@ const response = await productApi.getProducts()
 | 訂單批次操作 | `order.ts` | ⚠️ 待補充 | 需新增批次操作方法 |
 | 訂單付款 | `payment.ts` | ✅ 已更新 | 整合至 payment.ts |
 | 訂單物流 | (需建立) | ❌ 未建立 | 需建立 orderShipment.ts |
-| 訂單折扣 | `orderDiscount.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 訂單問與答 | `orderQA.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| 訂單折扣 | `orderDiscount.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 訂單問與答 | `orderQA.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 支付管理 | `payment.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 支付閘道 | `payment.ts` | ✅ 已更新 | 整合至 payment.ts |
 | 儀表板 | `dashboard.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 身份驗證 | `auth.ts` | ✅ 已更新 | 已整合 JSDoc |
-| 帳號管理 | `user.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| 帳號管理 | `user.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 員工管理 | (需建立) | ❌ 未建立 | 需建立 staff.ts |
 | 出勤打卡 | (需建立) | ❌ 未建立 | 需建立 attendance.ts |
-| 會員管理 | `member.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 會員等級管理 | `memberLevel.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 會員群組管理 | `memberGroup.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 積點管理 | `point.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| 會員管理 | `member.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 會員等級管理 | `memberLevel.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 會員群組管理 | `memberGroup.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 積點管理 | `point.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 獎勵制度管理 | (需建立) | ❌ 未建立 | 需建立 reward.ts |
-| EDM 電子報管理 | `edm.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 部落格管理 | `blog.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| EDM 電子報管理 | `edm.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 部落格管理 | `blog.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 購物車未結帳提醒 | (需建立) | ❌ 未建立 | 需建立 cartReminder.ts |
 | 自訂頁面管理 | (需建立) | ❌ 未建立 | 需建立 customPage.ts |
-| 營銷活動管理 | `marketing.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 相冊管理 | `album.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| 營銷活動管理 | `marketing.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 相冊管理 | `album.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 倉庫管理 | (需建立) | ❌ 未建立 | 需建立 warehouse.ts |
 | 庫存管理 | (需建立) | ❌ 未建立 | 需建立 inventory.ts |
 | 首頁區塊 | (需建立) | ❌ 未建立 | 需建立 homepageBlock.ts |
 | 彈跳廣告 | (需建立) | ❌ 未建立 | 需建立 popupAd.ts |
-| 系統設定 | `settings.ts` | ⚠️ 待更新 | 需更新 JSDoc |
-| 商店設定 | `settings.ts` | ⚠️ 待更新 | 整合至 settings.ts |
-| 金流設定 | `settings.ts` | ⚠️ 待更新 | 整合至 settings.ts |
-| 物流設定 | `settings.ts` | ⚠️ 待更新 | 整合至 settings.ts |
-| 通知設定 | `settings.ts` | ⚠️ 待更新 | 整合至 settings.ts |
-| 操作日誌 | `operationLog.ts` | ⚠️ 待更新 | 需更新 JSDoc |
+| 系統設定 | `settings.ts` | ✅ 已更新 | 已整合 JSDoc |
+| 商店設定 | `settings.ts` | ✅ 已更新 | 整合至 settings.ts |
+| 金流設定 | `settings.ts` | ✅ 已更新 | 整合至 settings.ts |
+| 物流設定 | `settings.ts` | ✅ 已更新 | 整合至 settings.ts |
+| 通知設定 | `settings.ts` | ✅ 已更新 | 整合至 settings.ts |
+| 操作日誌 | `operationLog.ts` | ✅ 已更新 | 已整合 JSDoc |
 | 顧客黑名單 | (需建立) | ❌ 未建立 | 需建立 blacklist.ts |
 
 **圖例**:
 - ✅ 已更新：已整合 Swagger 定義和 JSDoc 規範
 - ⚠️ 待更新：文件存在但需更新 JSDoc
 - ❌ 未建立：需要新建對應的 API 文件
+
+---
+
+## API 文件更新紀錄
+
+### 2026年1月11日更新
+
+已完成以下 API 文件的 JSDoc 註解更新：
+
+✅ **核心業務模組**
+- `orderDiscount.ts` - 訂單折扣 API，添加完整 JSDoc
+- `orderQA.ts` - 訂單問答 API，添加完整 JSDoc
+
+✅ **系統管理模組**
+- `user.ts` - 使用者管理 API，添加完整 JSDoc
+- `operationLog.ts` - 操作日誌 API，添加完整 JSDoc
+- `settings.ts` - 系統設定 API，添加完整 JSDoc
+
+✅ **CRM 模組**
+- `member.ts` - 會員管理 API，添加完整 JSDoc
+- `memberLevel.ts` - 會員等級 API，添加完整 JSDoc
+- `memberGroup.ts` - 會員群組 API，添加完整 JSDoc
+- `point.ts` - 積點管理 API，添加完整 JSDoc
+- `edm.ts` - EDM 電子報 API，添加完整 JSDoc
+- `blog.ts` - 部落格 API，添加完整 JSDoc
+
+✅ **營銷模組**
+- `marketing.ts` - 營銷活動 API，添加完整 JSDoc
+
+✅ **媒體管理**
+- `album.ts` - 相冊管理 API（原本已有完整 JSDoc）
+
+所有更新的 API 文件均包含：
+- ✅ `@namespace` 或 `@module` 標籤
+- ✅ `@description` 詳細描述
+- ✅ `@param` 參數說明（包含類型和是否必填）
+- ✅ `@returns` 回應類型說明
+- ✅ `@swagger` Swagger 端點路徑
+- ✅ `@example` 使用範例程式碼
+
+### 統計資訊
+
+- **已更新**: 13 個 API 文件
+- **無需更新**: 5 個已完成（product.ts, order.ts, payment.ts, dashboard.ts, auth.ts）
+- **未建立**: 保持原狀（需後續開發）
+
+---
+
+### 2026年1月10日更新
+
+已完成以下 API 文件的 JSDoc 註解更新：
+
+✅ **核心業務模組**
+- `orderDiscount.ts` - 訂單折扣 API，添加完整 JSDoc
+- `orderQA.ts` - 訂單問答 API，添加完整 JSDoc
+
+✅ **系統管理模組**
+- `user.ts` - 使用者管理 API，添加完整 JSDoc
+- `operationLog.ts` - 操作日誌 API，添加完整 JSDoc
+
+✅ **CRM 模組**
+- `member.ts` - 會員管理 API，添加完整 JSDoc
+- `memberLevel.ts` - 會員等級 API，添加完整 JSDoc
+- `memberGroup.ts` - 會員群組 API，添加完整 JSDoc
+- `point.ts` - 積點管理 API，添加完整 JSDoc
+- `edm.ts` - EDM 電子報 API，添加完整 JSDoc
+- `blog.ts` - 部落格 API，添加完整 JSDoc
+
+✅ **營銷模組**
+- `marketing.ts` - 營銷活動 API，添加完整 JSDoc
+
+所有更新的 API 文件均包含：
+- ✅ `@namespace` 或 `@module` 標籤
+- ✅ `@description` 詳細描述
+- ✅ `@param` 參數說明（包含類型和是否必填）
+- ✅ `@returns` 回應類型說明
+- ✅ `@swagger` Swagger 端點路徑
+- ✅ `@example` 使用範例程式碼
