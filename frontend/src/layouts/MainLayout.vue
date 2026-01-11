@@ -95,7 +95,7 @@
           <q-expansion-item
             icon="inventory"
             label="商品管理"
-            :default-opened="isMenuActive(['products'])"
+            :default-opened="isMenuActive(['products', 'categories'])"
           >
             <q-item
               clickable
@@ -109,6 +109,20 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>商品列表</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('categories')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('categories')"
+            >
+              <q-item-section avatar>
+                <q-icon name="category" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>分類管理</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>

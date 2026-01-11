@@ -81,7 +81,14 @@
         >
           <template v-slot:body-cell-image="props">
             <q-td :props="props">
-              <q-avatar rounded size="50px" color="grey-3">
+              <q-avatar v-if="getProductImageUrl(props.row)" rounded size="50px">
+                <q-img 
+                  :src="getProductImageUrl(props.row)" 
+                  :ratio="1"
+                  @error="(err) => console.error('圖片載入失敗:', getProductImageUrl(props.row), err, props.row)"
+                />
+              </q-avatar>
+              <q-avatar v-else rounded size="50px" color="grey-3">
                 <q-icon name="image" />
               </q-avatar>
             </q-td>
@@ -382,9 +389,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { productApi, type Product, type PageResponse } from '@/api'
+import { productApi, categoryApi, type Product, type ProductCategory, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
 
 const $q = useQuasar()
@@ -404,6 +411,7 @@ const selectedAlbum = ref<number | null>(null)
 const albumImages = ref<AlbumImage[]>([])
 const tempSelectedImages = ref<AlbumImage[]>([])
 const selectedAlbumImages = ref<AlbumImage[]>([])
+const defaultAlbumId = ref<number | null>(null)
 
 const form = ref<Product>({
   name: '',
@@ -444,26 +452,31 @@ const salesModeOptions = [
   { label: '門市限定', value: 'STORE_ONLY' }
 ]
 
-const categoryOptions = [
-  { label: '電子產品', value: 1 },
-  { label: '服裝', value: 2 },
-  { label: '食品', value: 3 },
-  { label: '圖書', value: 4 },
-  { label: '家居', value: 5 }
-]
+const categories = ref<ProductCategory[]>([])
+const categoryOptions = computed(() => {
+  return categories.value.map(cat => ({
+    label: cat.name,
+    value: cat.id
+  })).filter(opt => opt.value !== undefined)
+})
 
 const loadProducts = async () => {
   loading.value = true
   try {
     const response = await productApi.getProducts()
     const data = response.data as PageResponse<Product> | Product[]
+    let productList: Product[] = []
     if (Array.isArray(data)) {
-      products.value = data
+      productList = data
     } else if (data && 'content' in data) {
-      products.value = data.content
-    } else {
-      products.value = []
+      productList = data.content
     }
+    
+    // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
+    products.value = productList.map(product => ({
+      ...product,
+      price: product.salePrice ?? product.basePrice ?? 0
+    }))
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -477,7 +490,11 @@ const loadProducts = async () => {
 }
 
 const handleEdit = async (product: Product) => {
-  form.value = { ...product }
+  // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
+  form.value = {
+    ...product,
+    price: product.salePrice ?? product.basePrice ?? 0
+  }
   showDialog.value = true
 
   // Load existing album images for this product if it has images
@@ -591,34 +608,91 @@ const handleSubmit = async () => {
     // 如果您還沒在 Java DTO 加入 'stock' 欄位，請把下面這行取消註解，否則後端會報錯
     // delete payload.stock
 
-    // 4. 處理圖片 (保持原有邏輯)
-    if (selectedAlbumImages.value.length > 0) {
-      payload.images = selectedAlbumImages.value.map(img => ({
-        imageUrl: img.imageUrl || '',
-        albumImageId: img.id
-      }))
-    }
-
-    // 5. 發送請求
-    if (form.value.id) {
-      await productApi.updateProduct(form.value.id, payload)
-      $q.notify({
-        type: 'positive',
-        message: '更新成功',
-        position: 'top'
-      })
-    } else {
+    // 4. 先創建或更新商品（需要先有商品ID才能添加圖片）
+    let productId = form.value.id
+    if (!productId) {
       const response = await productApi.createProduct(payload)
       // 更新 form ID 以便後續操作
       if (response.data && response.data.id) {
         form.value.id = response.data.id
+        productId = response.data.id
       }
-      $q.notify({
-        type: 'positive',
-        message: '創建成功，現在可以添加相冊圖片',
-        position: 'top'
-      })
+    } else {
+      await productApi.updateProduct(productId, payload)
     }
+
+    // 5. 處理直接上傳的圖片（需要商品ID）
+    let uploadedImageId: number | null = null
+    if (productImage.value && productId) {
+      // 確保預設相冊存在
+      if (!defaultAlbumId.value) {
+        await ensureDefaultAlbum()
+      }
+
+      if (defaultAlbumId.value) {
+        try {
+          // 將圖片上傳到預設相冊
+          const uploadResponse = await albumApi.uploadImage(
+            defaultAlbumId.value,
+            productImage.value as File,
+            `商品圖片 - ${form.value.name || '未命名'}`
+          )
+
+          if (uploadResponse.success && uploadResponse.data && uploadResponse.data.id) {
+            uploadedImageId = uploadResponse.data.id
+            // 將上傳的圖片添加到 selectedAlbumImages（用於顯示）
+            selectedAlbumImages.value.push(uploadResponse.data)
+          }
+        } catch (uploadError) {
+          console.error('上傳圖片失敗:', uploadError)
+          $q.notify({
+            type: 'negative',
+            message: '圖片上傳失敗',
+            position: 'top'
+          })
+        }
+      }
+    }
+
+    // 6. 收集所有要添加到商品的圖片ID（包括新上傳的和已選中的相冊圖片）
+    const imageIdsToAdd: number[] = []
+    
+    // 添加新上傳的圖片ID
+    if (uploadedImageId) {
+      imageIdsToAdd.push(uploadedImageId)
+    }
+    
+    // 添加已選中的相冊圖片ID
+    const selectedImageIds = selectedAlbumImages.value
+      .map(img => img.id)
+      .filter((id): id is number => id !== undefined && id !== uploadedImageId) // 避免重複添加
+    
+    imageIdsToAdd.push(...selectedImageIds)
+
+    // 7. 將所有圖片添加到商品
+    if (productId && imageIdsToAdd.length > 0) {
+      try {
+        await productApi.addAlbumImages(productId, imageIdsToAdd)
+      } catch (error) {
+        console.error('添加圖片到商品失敗:', error)
+        $q.notify({
+          type: 'negative',
+          message: '添加圖片到商品失敗',
+          position: 'top'
+        })
+      }
+    }
+
+    // 8. 顯示成功訊息
+    $q.notify({
+      type: 'positive',
+      message: productId ? '更新成功' : '創建成功',
+      position: 'top'
+    })
+
+    // 9. 重置圖片上傳欄位
+    productImage.value = null
+
     loadProducts()
   } catch (error) {
     console.error(error) // 建議印出錯誤以便除錯
@@ -659,9 +733,36 @@ const loadAlbums = async () => {
     const response = await albumApi.getAlbums({ page: 0, size: 100 })
     if (response.success && response.data) {
       albums.value = response.data.content || []
+      // 查找或創建預設相冊（用於儲存直接上傳的商品圖片）
+      await ensureDefaultAlbum()
     }
   } catch (error) {
     console.error('Failed to load albums:', error)
+  }
+}
+
+// 確保預設相冊存在
+const ensureDefaultAlbum = async () => {
+  try {
+    // 查找名為「商品圖片」的相冊
+    const defaultAlbumName = '商品圖片'
+    const existingAlbum = albums.value.find(album => album.name === defaultAlbumName)
+    
+    if (existingAlbum && existingAlbum.id) {
+      defaultAlbumId.value = existingAlbum.id
+    } else {
+      // 如果不存在，創建一個
+      const response = await albumApi.createAlbum({
+        name: defaultAlbumName,
+        description: '用於儲存商品圖片的預設相冊'
+      })
+      if (response.success && response.data && response.data.id) {
+        defaultAlbumId.value = response.data.id
+        albums.value.push(response.data)
+      }
+    }
+  } catch (error) {
+    console.error('Failed to ensure default album:', error)
   }
 }
 
@@ -756,8 +857,55 @@ const getStatusLabel = (status: string) => {
   }
 }
 
+// 獲取商品圖片 URL（獲取第一張圖片）
+const getProductImageUrl = (product: Product): string | null => {
+  if (!product.images || product.images.length === 0) {
+    return null
+  }
+  
+  let imageUrl: string | null = null
+  
+  // 如果 images 是字符串數組
+  if (typeof product.images[0] === 'string') {
+    imageUrl = product.images[0] as string
+  } else if (typeof product.images[0] === 'object' && product.images[0] !== null) {
+    // 如果 images 是對象數組
+    const firstImage = product.images[0] as { imageUrl?: string; albumImageId?: number }
+    imageUrl = firstImage?.imageUrl || null
+  }
+  
+  if (!imageUrl) {
+    return null
+  }
+  
+  // 如果 URL 已經是完整 URL（http/https），直接返回
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl
+  }
+  
+  // 如果 URL 已經以 /api 開頭，直接返回
+  if (imageUrl.startsWith('/api')) {
+    return imageUrl
+  }
+  
+  // 否則加上 /api 前綴
+  return `/api${imageUrl}`
+}
+
+const loadCategories = async () => {
+  try {
+    const response = await categoryApi.getEnabledCategories()
+    if (response.success && response.data) {
+      categories.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+  }
+}
+
 onMounted(() => {
   loadProducts()
   loadAlbums()
+  loadCategories()
 })
 </script>

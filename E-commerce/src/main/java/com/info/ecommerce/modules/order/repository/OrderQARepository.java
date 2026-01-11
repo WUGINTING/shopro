@@ -4,6 +4,7 @@ import com.info.ecommerce.modules.order.entity.OrderQA;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,4 +17,7 @@ public interface OrderQARepository extends JpaRepository<OrderQA, Long> {
     Page<OrderQA> findByOrderId(Long orderId, Pageable pageable);
     
     List<OrderQA> findByAskerId(Long askerId);
+    
+    @Query("SELECT qa FROM OrderQA qa ORDER BY qa.createdAt DESC")
+    List<OrderQA> findAllOrderByCreatedAtDesc();
 }

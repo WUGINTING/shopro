@@ -98,6 +98,10 @@ public class PointService {
         return pointRecordRepository.findByMemberId(memberId, pageable).map(this::toDTO);
     }
 
+    public Page<PointRecordDTO> listAllPointRecords(Pageable pageable) {
+        return pointRecordRepository.findAll(pageable).map(this::toDTO);
+    }
+
     public PointRecordDTO getPointRecord(Long id) {
         PointRecord record = pointRecordRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("積點紀錄不存在"));

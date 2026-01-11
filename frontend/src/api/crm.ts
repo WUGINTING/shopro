@@ -38,6 +38,13 @@ export const crmApi = {
     return axios.get<any, ApiResponse<Customer[]>>('/crm/members', { params })
   },
   
+  // 搜索客戶
+  searchCustomers: (keyword: string, params?: { page?: number; size?: number }) => {
+    return axios.get<any, ApiResponse<Customer[]>>('/crm/members/search', {
+      params: { keyword, ...params }
+    })
+  },
+  
   // 獲取客戶詳情
   getCustomer: (id: number) => {
     return axios.get<any, ApiResponse<Customer>>(`/crm/members/${id}`)

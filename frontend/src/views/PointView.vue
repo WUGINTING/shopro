@@ -63,12 +63,17 @@
       <q-card-section>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-sm-6">
-            <q-input
-              v-model.number="searchForm.memberId"
-              label="會員 ID"
+            <q-select
+              v-model="searchForm.memberId"
+              label="選擇會員（留空顯示全部）"
+              :options="memberOptions"
+              option-label="label"
+              option-value="value"
               outlined
               dense
-              type="number"
+              clearable
+              map-options
+              emit-value
               @update:model-value="onSearch"
             />
           </div>
@@ -76,10 +81,14 @@
             <q-select
               v-model="searchForm.pointType"
               label="積點類型"
-              :options="['EARN', 'PURCHASE', 'REWARD', 'REDEEM', 'EXPIRE']"
+              :options="pointTypeOptions"
+              option-label="label"
+              option-value="value"
               outlined
               dense
               clearable
+              map-options
+              emit-value
               @update:model-value="onSearch"
             />
           </div>
@@ -106,8 +115,9 @@
         :rows="records"
         :columns="columns"
         row-key="id"
-        :pagination.sync="pagination"
+        v-model:pagination="pagination"
         :loading="loading"
+        @request="onRequest"
         flat
         bordered
       >
@@ -121,7 +131,7 @@
 
         <template #body-cell-pointType="props">
           <q-td :props="props">
-            <q-badge :label="props.row.pointType" :color="getTypeColor(props.row.pointType)" />
+            <q-badge :label="getTypeLabel(props.row.pointType)" :color="getTypeColor(props.row.pointType)" />
           </q-td>
         </template>
 
@@ -158,17 +168,32 @@
 
         <q-card-section class="q-pt-none">
           <q-form ref="batchForm" @submit="executeBatchGrant">
-            <p class="text-caption text-grey-7 q-mb-md">
-              選擇要發放的會員（可複選）
-            </p>
-
-            <q-option-group
+            <q-select
               v-model="batchData.memberIds"
               :options="memberOptions"
-              color="primary"
-              inline
+              option-label="label"
+              option-value="value"
+              label="選擇會員（可複選） *"
+              outlined
+              dense
+              multiple
+              use-chips
+              use-input
+              input-debounce="0"
+              map-options
+              emit-value
+              @filter="filterMembers"
               class="q-mb-md"
-            />
+              :rules="[val => val && val.length > 0 || '請至少選擇一個會員']"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    無會員資料
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
 
             <q-input
               v-model.number="batchData.points"
@@ -213,7 +238,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { pointApi, type PointRecord } from '@/api/point'
+import { pointApi, memberApi, type PointRecord } from '@/api'
 
 const $q = useQuasar()
 const batchForm = ref()
@@ -242,6 +267,16 @@ const searchForm = ref({
   pointType: undefined as string | undefined
 })
 
+// 積點類型選項
+const pointTypeOptions = [
+  { label: '獲得', value: 'EARN' },
+  { label: '購買', value: 'PURCHASE' },
+  { label: '獎勵', value: 'REWARD' },
+  { label: '兌換', value: 'REDEEM' },
+  { label: '過期', value: 'EXPIRE' },
+  { label: '調整', value: 'ADJUST' }
+]
+
 // 對話框
 const showBatchGrantDialog = ref(false)
 
@@ -253,11 +288,44 @@ const batchData = ref({
 })
 
 // 會員選項
-const memberOptions = computed(() => [
-  { label: '會員 1', value: 1 },
-  { label: '會員 2', value: 2 },
-  { label: '會員 3', value: 3 }
-])
+const memberOptions = ref<Array<{ label: string; value: number }>>([])
+const allMembers = ref<Array<{ label: string; value: number }>>([])
+
+// 載入會員列表
+const loadMembers = async () => {
+  try {
+    const result = await memberApi.getMembers({ page: 0, size: 100 })
+    allMembers.value = (result.content || []).map((member: { id?: number; name: string }) => ({
+      label: `${member.name} (ID: ${member.id})`,
+      value: member.id!
+    }))
+    memberOptions.value = allMembers.value
+  } catch (error) {
+    console.error('載入會員列表失敗', error)
+    $q.notify({
+      type: 'negative',
+      message: '載入會員列表失敗',
+      position: 'top'
+    })
+  }
+}
+
+// 篩選會員
+const filterMembers = (val: string, update: (callback: () => void) => void) => {
+  if (val === '') {
+    update(() => {
+      memberOptions.value = allMembers.value
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    memberOptions.value = allMembers.value.filter(
+      v => v.label.toLowerCase().indexOf(needle) > -1
+    )
+  })
+}
 
 // 表格列定義
 const columns = [
@@ -289,9 +357,23 @@ const getTypeColor = (type: string) => {
     PURCHASE: 'blue',
     REWARD: 'orange',
     REDEEM: 'red',
-    EXPIRE: 'grey'
+    EXPIRE: 'grey',
+    ADJUST: 'purple'
   }
   return colors[type] || 'grey'
+}
+
+// 獲取類型中文標籤
+const getTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    EARN: '獲得',
+    PURCHASE: '購買',
+    REWARD: '獎勵',
+    REDEEM: '兌換',
+    EXPIRE: '過期',
+    ADJUST: '調整'
+  }
+  return labels[type] || type
 }
 
 // 格式化日期
@@ -304,26 +386,67 @@ const formatDate = (date?: string) => {
 const loadRecords = async () => {
   loading.value = true
   try {
-    const result = await pointApi.searchPoints(
-      searchForm.value.memberId,
-      searchForm.value.pointType,
-      pagination.value.page,
-      pagination.value.rowsPerPage
-    )
-    records.value = result?.content || []
-    pagination.value.rowsNumber = result?.totalElements || 0
+    let result
+    // 如果有選擇會員，查詢該會員的積點紀錄；否則查詢所有積點紀錄
+    if (searchForm.value.memberId) {
+      result = await pointApi.getMemberPoints(
+        searchForm.value.memberId,
+        pagination.value.page,
+        pagination.value.rowsPerPage
+      )
+    } else {
+      result = await pointApi.getAllPoints(
+        pagination.value.page,
+        pagination.value.rowsPerPage
+      )
+    }
+    
+    // 處理 Spring Data Page 格式或自定義 PageResponse 格式
+    const content = result?.content || []
+    const totalElements = result?.totalElements || 0
+    
+    // 如果指定了積點類型，進行前端篩選
+    let filteredRecords = content
+    if (searchForm.value.pointType) {
+      filteredRecords = content.filter(
+        record => record.pointType === searchForm.value.pointType
+      )
+    }
+    
+    records.value = filteredRecords
+    pagination.value.rowsNumber = totalElements
     
     // 更新統計資料
-    stats.value.totalRecords = result?.totalElements || 0
-  } catch (error) {
+    stats.value.totalRecords = totalElements
+    
+    // 計算統計資料（使用所有記錄，不只是當前頁）
+    if (content.length > 0) {
+      stats.value.totalEarned = content
+        .filter(r => ['EARN', 'PURCHASE', 'REWARD', 'BATCH_GRANT'].includes(r.pointType))
+        .reduce((sum, r) => sum + (r.points || 0), 0)
+      stats.value.totalRedeemed = content
+        .filter(r => r.pointType === 'REDEEM')
+        .reduce((sum, r) => sum + Math.abs(r.points || 0), 0)
+    }
+  } catch (error: any) {
+    console.error('載入積點紀錄錯誤:', error)
     $q.notify({
       type: 'negative',
-      message: '載入積點紀錄失敗',
+      message: error?.response?.data?.message || error?.message || '載入積點紀錄失敗',
       position: 'top'
     })
+    records.value = []
+    pagination.value.rowsNumber = 0
   } finally {
     loading.value = false
   }
+}
+
+// 表格分頁請求處理
+const onRequest = (props: any) => {
+  pagination.value.page = props.pagination.page
+  pagination.value.rowsPerPage = props.pagination.rowsPerPage
+  loadRecords()
 }
 
 // 搜尋
@@ -372,7 +495,16 @@ const executeBatchGrant = async () => {
   }
 }
 
-onMounted(() => {
-  loadRecords()
+onMounted(async () => {
+  // 確保初始狀態：沒有選擇會員
+  searchForm.value.memberId = undefined
+  searchForm.value.pointType = undefined
+  pagination.value.page = 0
+  
+  // 載入會員列表
+  await loadMembers()
+  
+  // 自動載入所有積點紀錄
+  await loadRecords()
 })
 </script>

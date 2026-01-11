@@ -29,6 +29,12 @@ public class OrderDiscountController {
         return ApiResponse.success("折扣已新增", orderDiscountService.addDiscount(dto));
     }
 
+    @GetMapping
+    @Operation(summary = "取得所有折扣", description = "取得所有折扣記錄，按創建時間倒序排列")
+    public ApiResponse<List<OrderDiscountDTO>> getAllDiscounts() {
+        return ApiResponse.success(orderDiscountService.getAllDiscounts());
+    }
+
     @GetMapping("/order/{orderId}")
     @Operation(summary = "取得訂單的所有折扣")
     public ApiResponse<List<OrderDiscountDTO>> getDiscountsByOrderId(
@@ -41,6 +47,14 @@ public class OrderDiscountController {
     public ApiResponse<List<OrderDiscountDTO>> findByDiscountCode(
             @Parameter(description = "折扣代碼") @PathVariable String discountCode) {
         return ApiResponse.success(orderDiscountService.findByDiscountCode(discountCode));
+    }
+
+    @PutMapping("/{discountId}")
+    @Operation(summary = "更新訂單折扣", description = "更新指定折扣記錄的資訊")
+    public ApiResponse<OrderDiscountDTO> updateDiscount(
+            @Parameter(description = "折扣記錄 ID") @PathVariable Long discountId,
+            @Valid @RequestBody OrderDiscountDTO dto) {
+        return ApiResponse.success("折扣已更新", orderDiscountService.updateDiscount(discountId, dto));
     }
 
     @DeleteMapping("/{discountId}")

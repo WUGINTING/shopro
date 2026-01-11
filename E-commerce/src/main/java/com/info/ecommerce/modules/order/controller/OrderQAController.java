@@ -60,6 +60,12 @@ public class OrderQAController {
         return ApiResponse.success(orderQAService.getQAByOrderIdPage(orderId, pageable));
     }
 
+    @GetMapping
+    @Operation(summary = "取得所有問答", description = "取得所有問答記錄，按創建時間倒序排列")
+    public ApiResponse<List<OrderQADTO>> getAllQA() {
+        return ApiResponse.success(orderQAService.getAllQA());
+    }
+
     @GetMapping("/asker/{askerId}")
     @Operation(summary = "取得客戶的所有提問")
     public ApiResponse<List<OrderQADTO>> getQAByAskerId(

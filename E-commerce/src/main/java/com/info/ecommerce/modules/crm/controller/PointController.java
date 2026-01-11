@@ -54,6 +54,15 @@ public class PointController {
         return ApiResponse.success("積點批次發放完成", pointService.batchGrantPoints(batchDTO));
     }
 
+    @GetMapping
+    @Operation(summary = "分頁查詢所有積點紀錄")
+    public ApiResponse<Page<PointRecordDTO>> listAllPointRecords(
+            @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ApiResponse.success(pointService.listAllPointRecords(pageable));
+    }
+
     @GetMapping("/member/{memberId}")
     @Operation(summary = "取得會員積點紀錄")
     public ApiResponse<Page<PointRecordDTO>> listPointRecords(

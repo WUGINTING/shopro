@@ -44,6 +44,18 @@ export const orderDiscountApi = {
   },
   
   /**
+   * 取得所有折扣
+   * @description 取得所有折扣記錄
+   * @returns {Promise<ApiResponse<OrderDiscount[]>>} 折扣列表
+   * @swagger GET /api/orders/discounts
+   * @example
+   * const discounts = await orderDiscountApi.getAllDiscounts()
+   */
+  getAllDiscounts: () => {
+    return axios.get<any, ApiResponse<OrderDiscount[]>>('/orders/discounts')
+  },
+  
+  /**
    * 取得訂單的所有折扣
    * @description 查詢指定訂單的所有折扣記錄
    * @param {number} orderId - 訂單 ID
@@ -67,6 +79,24 @@ export const orderDiscountApi = {
    */
   findByDiscountCode: (discountCode: string) => {
     return axios.get<any, ApiResponse<OrderDiscount[]>>(`/orders/discounts/code/${discountCode}`)
+  },
+  
+  /**
+   * 更新訂單折扣
+   * @description 更新指定折扣記錄的資訊
+   * @param {number} discountId - 折扣記錄 ID
+   * @param {OrderDiscount} data - 折扣資料
+   * @returns {Promise<ApiResponse<OrderDiscount>>} 更新後的折扣資料
+   * @swagger PUT /api/orders/discounts/{discountId}
+   * @example
+   * const discount = await orderDiscountApi.updateDiscount(456, {
+   *   orderId: 123,
+   *   discountType: 'COUPON',
+   *   discountAmount: 150
+   * })
+   */
+  updateDiscount: (discountId: number, data: OrderDiscount) => {
+    return axios.put<any, ApiResponse<OrderDiscount>>(`/orders/discounts/${discountId}`, data)
   },
   
   /**

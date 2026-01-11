@@ -3,7 +3,8 @@
  * @module MemberAPI
  */
 
-import axios from 'axios'
+import axiosInstance from './axios'
+import type { ApiResponse } from './types'
 
 export interface Member {
   id?: number
@@ -61,8 +62,8 @@ export const memberApi = {
       size: query?.size || 20,
       ...query
     }
-    const { data } = await axios.get<any>(`${API_BASE}`, { params })
-    return data.data as PageResponse<Member>
+    const response = await axiosInstance.get<any, ApiResponse<PageResponse<Member>>>('/crm/members', { params })
+    return response.data
   },
 
   /**
@@ -75,8 +76,8 @@ export const memberApi = {
    * const member = await memberApi.getMember(123)
    */
   getMember: async (id: number) => {
-    const { data } = await axios.get<any>(`${API_BASE}/${id}`)
-    return data.data as Member
+    const response = await axiosInstance.get<any, ApiResponse<Member>>(`/crm/members/${id}`)
+    return response.data
   },
 
   /**
@@ -98,8 +99,8 @@ export const memberApi = {
    * })
    */
   createMember: async (member: Member) => {
-    const { data } = await axios.post<any>(`${API_BASE}`, member)
-    return data.data as Member
+    const response = await axiosInstance.post<any, ApiResponse<Member>>('/crm/members', member)
+    return response.data
   },
 
   /**
@@ -113,8 +114,8 @@ export const memberApi = {
    * const updated = await memberApi.updateMember(123, { phone: '0912345678' })
    */
   updateMember: async (id: number, member: Partial<Member>) => {
-    const { data } = await axios.put<any>(`${API_BASE}/${id}`, member)
-    return data.data as Member
+    const response = await axiosInstance.put<any, ApiResponse<Member>>(`/crm/members/${id}`, member)
+    return response.data
   },
 
   /**
@@ -127,8 +128,8 @@ export const memberApi = {
    * const success = await memberApi.deleteMember(123)
    */
   deleteMember: async (id: number) => {
-    const { data } = await axios.delete<any>(`${API_BASE}/${id}`)
-    return data.success
+    const response = await axiosInstance.delete<any, ApiResponse<boolean>>(`/crm/members/${id}`)
+    return response.data
   },
 
   /**
@@ -141,10 +142,10 @@ export const memberApi = {
    * const success = await memberApi.deleteMembers([123, 456, 789])
    */
   deleteMembers: async (ids: number[]) => {
-    const { data } = await axios.delete<any>(`${API_BASE}/batch`, {
+    const response = await axiosInstance.delete<any, ApiResponse<boolean>>('/crm/members/batch', {
       data: { ids }
     })
-    return data.success
+    return response.data
   },
 
   /**
@@ -157,8 +158,8 @@ export const memberApi = {
    * const suspended = await memberApi.suspendMember(123)
    */
   suspendMember: async (id: number) => {
-    const { data } = await axios.patch<any>(`${API_BASE}/${id}/suspend`)
-    return data.data as Member
+    const response = await axiosInstance.patch<any, ApiResponse<Member>>(`/crm/members/${id}/suspend`)
+    return response.data
   },
 
   /**
@@ -171,8 +172,8 @@ export const memberApi = {
    * const activated = await memberApi.activateMember(123)
    */
   activateMember: async (id: number) => {
-    const { data } = await axios.patch<any>(`${API_BASE}/${id}/activate`)
-    return data.data as Member
+    const response = await axiosInstance.patch<any, ApiResponse<Member>>(`/crm/members/${id}/activate`)
+    return response.data
   },
 
   /**
@@ -186,9 +187,9 @@ export const memberApi = {
    * const results = await memberApi.searchMembers('王', 0)
    */
   searchMembers: async (keyword: string, page = 0) => {
-    const { data } = await axios.get<any>(`${API_BASE}/search`, {
+    const response = await axiosInstance.get<any, ApiResponse<PageResponse<Member>>>('/crm/members/search', {
       params: { keyword, page, size: 20 }
     })
-    return data.data as PageResponse<Member>
+    return response.data
   }
 }

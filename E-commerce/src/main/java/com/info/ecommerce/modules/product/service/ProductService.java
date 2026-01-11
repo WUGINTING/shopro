@@ -4,6 +4,7 @@ import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.album.entity.AlbumImage;
 import com.info.ecommerce.modules.album.repository.AlbumImageRepository;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
+import com.info.ecommerce.modules.product.dto.ProductImageDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.repository.ProductCategoryRepository;
@@ -217,7 +218,23 @@ public class ProductService {
 
     private ProductDTO toDTO(Product entity) {
         ProductDTO dto = new ProductDTO();
-        BeanUtils.copyProperties(entity, dto);
+        BeanUtils.copyProperties(entity, dto, "images");
+        
+        // 將 imageUrls 轉換為 images
+        if (entity.getImageUrls() != null && !entity.getImageUrls().isEmpty()) {
+            List<ProductImageDTO> imageDTOs = new ArrayList<>();
+            for (int i = 0; i < entity.getImageUrls().size(); i++) {
+                String imageUrl = entity.getImageUrls().get(i);
+                ProductImageDTO imageDTO = new ProductImageDTO();
+                imageDTO.setProductId(entity.getId());
+                imageDTO.setImageUrl(imageUrl);
+                imageDTO.setSortOrder(i);
+                imageDTO.setIsPrimary(i == 0); // 第一張圖片設為主圖
+                imageDTOs.add(imageDTO);
+            }
+            dto.setImages(imageDTOs);
+        }
+        
         return dto;
     }
 }

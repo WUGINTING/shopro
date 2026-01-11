@@ -8,6 +8,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,47 @@ public class OrderDiscountService {
             .stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * 取得所有折扣
+     */
+    @Transactional(readOnly = true)
+    public List<OrderDiscountDTO> getAllDiscounts() {
+        return orderDiscountRepository.findAllOrderByCreatedAtDesc()
+            .stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 更新訂單折扣
+     */
+    @Transactional
+    public OrderDiscountDTO updateDiscount(Long discountId, OrderDiscountDTO dto) {
+        OrderDiscount discount = orderDiscountRepository.findById(discountId)
+            .orElseThrow(() -> new RuntimeException("折扣記錄不存在"));
+        
+        String oldDiscountType = discount.getDiscountType();
+        BigDecimal oldDiscountAmount = discount.getDiscountAmount();
+        
+        // 更新字段
+        discount.setOrderId(dto.getOrderId());
+        discount.setDiscountType(dto.getDiscountType());
+        discount.setDiscountCode(dto.getDiscountCode());
+        discount.setDiscountAmount(dto.getDiscountAmount());
+        discount.setDiscountPercentage(dto.getDiscountPercentage());
+        discount.setDescription(dto.getDescription());
+        
+        discount = orderDiscountRepository.save(discount);
+        
+        // 記錄歷史
+        orderHistoryService.recordHistory(dto.getOrderId(), "UPDATE_DISCOUNT", 
+            "更新折扣: " + oldDiscountType + " - " + oldDiscountAmount + " -> " + 
+            dto.getDiscountType() + " - " + dto.getDiscountAmount(), 
+            null, null, null, null);
+        
+        return convertToDTO(discount);
     }
 
     /**

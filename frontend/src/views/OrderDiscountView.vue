@@ -12,7 +12,7 @@
           icon="add_circle"
           label="新增折扣"
           unelevated
-          @click="showDialog = true; resetForm()"
+          @click="handleOpenDialog"
         />
       </div>
 
@@ -81,13 +81,16 @@
           <template v-slot:body-cell-discountType="props">
             <q-td :props="props">
               <q-badge :color="getDiscountTypeColor(props.row.discountType)">
-                {{ props.row.discountType }}
+                {{ getDiscountTypeLabel(props.row.discountType) }}
               </q-badge>
             </q-td>
           </template>
 
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
+              <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
+                <q-tooltip>編輯</q-tooltip>
+              </q-btn>
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
                 <q-tooltip>刪除</q-tooltip>
               </q-btn>
@@ -96,31 +99,52 @@
         </q-table>
       </q-card>
 
-      <!-- Add Discount Dialog -->
+      <!-- Add/Edit Discount Dialog -->
       <q-dialog v-model="showDialog" persistent>
         <q-card style="min-width: 500px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">新增訂單折扣</div>
+            <div class="text-h6">{{ currentDiscount ? '編輯訂單折扣' : '新增訂單折扣' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
           <q-card-section>
             <q-form @submit="handleSubmit">
-              <q-input
-                v-model.number="form.orderId"
+              <q-select
+                v-model="form.orderId"
                 label="訂單ID *"
                 outlined
-                type="number"
+                use-input
+                input-debounce="300"
+                :options="filteredOrderOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                filterable
+                :loading="ordersLoading"
                 class="q-mb-md"
                 :rules="[val => !!val || '請輸入訂單ID']"
-              />
+                @filter="filterOrders"
+              >
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey">
+                      {{ ordersLoading ? '載入中...' : '無訂單資料' }}
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
 
               <q-select
                 v-model="form.discountType"
                 label="折扣類型 *"
                 outlined
                 :options="discountTypeOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
                 class="q-mb-md"
                 :rules="[val => !!val || '請選擇折扣類型']"
               />
@@ -168,7 +192,7 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn unelevated label="儲存" color="primary" @click="handleSubmit" />
+            <q-btn unelevated :label="currentDiscount ? '更新' : '儲存'" color="primary" @click="handleSubmit" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -177,17 +201,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { orderDiscountApi, type OrderDiscount } from '@/api'
+import { orderDiscountApi, orderApi, type OrderDiscount, type Order } from '@/api'
 
 const $q = useQuasar()
 
 const discounts = ref<OrderDiscount[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
+const currentDiscount = ref<OrderDiscount | null>(null)
 const searchOrderId = ref('')
 const searchDiscountCode = ref('')
+const orders = ref<Order[]>([])
+const ordersLoading = ref(false)
 
 const form = ref<OrderDiscount>({
   orderId: 0,
@@ -215,9 +242,78 @@ const columns = [
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
-const discountTypeOptions = ['COUPON', 'PROMOTION', 'MEMBER_DISCOUNT', 'SEASONAL', 'BULK_ORDER', 'OTHER']
+const discountTypeOptions = [
+  { label: '優惠券', value: 'COUPON' },
+  { label: '促銷活動', value: 'PROMOTION' },
+  { label: '會員折扣', value: 'MEMBER_DISCOUNT' },
+  { label: '季節性折扣', value: 'SEASONAL' },
+  { label: '批量訂單', value: 'BULK_ORDER' },
+  { label: '其他', value: 'OTHER' }
+]
+
+const getDiscountTypeLabel = (type: string) => {
+  const typeMap: Record<string, string> = {
+    COUPON: '優惠券',
+    PROMOTION: '促銷活動',
+    MEMBER_DISCOUNT: '會員折扣',
+    SEASONAL: '季節性折扣',
+    BULK_ORDER: '批量訂單',
+    OTHER: '其他'
+  }
+  return typeMap[type] || type
+}
+
+const orderOptions = computed(() => {
+  return orders.value.map(order => ({
+    label: `${order.orderNumber || `訂單 #${order.id}`} - ${order.customerName || '未知客戶'}`,
+    value: order.id,
+    order: order
+  }))
+})
+
+const filteredOrderOptions = ref<Array<{ label: string; value: number; order: Order }>>([])
+
+const loadOrders = async () => {
+  ordersLoading.value = true
+  try {
+    const response = await orderApi.getOrders()
+    const data = response.data as any
+    let orderList: Order[] = []
+    if (Array.isArray(data)) {
+      orderList = data
+    } else if (data && 'content' in data) {
+      orderList = data.content
+    }
+    orders.value = orderList
+    filteredOrderOptions.value = orderOptions.value
+  } catch (error) {
+    console.error('Failed to load orders:', error)
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+watch(orderOptions, (newVal) => {
+  filteredOrderOptions.value = newVal
+}, { immediate: true })
+
+const filterOrders = (val: string, update: (callback: () => void) => void) => {
+  update(() => {
+    if (val === '') {
+      filteredOrderOptions.value = orderOptions.value
+    } else {
+      const needle = val.toLowerCase()
+      filteredOrderOptions.value = orderOptions.value.filter(
+        option => 
+          option.label.toLowerCase().indexOf(needle) > -1 ||
+          String(option.value).indexOf(needle) > -1
+      )
+    }
+  })
+}
 
 const resetForm = () => {
+  currentDiscount.value = null
   form.value = {
     orderId: 0,
     discountType: '',
@@ -226,6 +322,7 @@ const resetForm = () => {
     discountPercentage: 0,
     description: ''
   }
+  filteredOrderOptions.value = orderOptions.value
 }
 
 const searchByOrderId = async () => {
@@ -262,10 +359,22 @@ const searchByDiscountCode = async () => {
   }
 }
 
+const loadAllDiscounts = async () => {
+  loading.value = true
+  try {
+    const response = await orderDiscountApi.getAllDiscounts()
+    discounts.value = response.data
+  } catch (error) {
+    console.error('Failed to load discounts:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 const clearFilters = () => {
   searchOrderId.value = ''
   searchDiscountCode.value = ''
-  discounts.value = []
+  loadAllDiscounts()
 }
 
 const getDiscountTypeColor = (type: string) => {
@@ -280,6 +389,22 @@ const getDiscountTypeColor = (type: string) => {
   return colorMap[type] || 'grey'
 }
 
+const handleEdit = (discount: OrderDiscount) => {
+  currentDiscount.value = discount
+  form.value = {
+    orderId: discount.orderId,
+    discountType: discount.discountType,
+    discountCode: discount.discountCode || '',
+    discountAmount: discount.discountAmount,
+    discountPercentage: discount.discountPercentage || 0,
+    description: discount.description || ''
+  }
+  if (orders.value.length === 0) {
+    loadOrders()
+  }
+  showDialog.value = true
+}
+
 const handleSubmit = async () => {
   if (!form.value.orderId || !form.value.discountType || form.value.discountAmount === undefined) {
     $q.notify({
@@ -291,22 +416,35 @@ const handleSubmit = async () => {
   }
 
   try {
-    await orderDiscountApi.addDiscount(form.value)
-    $q.notify({
-      type: 'positive',
-      message: '折扣添加成功',
-      position: 'top'
-    })
+    const submittedOrderId = form.value.orderId
+    
+    if (currentDiscount.value?.id) {
+      // 編輯模式
+      await orderDiscountApi.updateDiscount(currentDiscount.value.id, form.value)
+      $q.notify({
+        type: 'positive',
+        message: '折扣更新成功',
+        position: 'top'
+      })
+    } else {
+      // 新增模式
+      await orderDiscountApi.addDiscount(form.value)
+      $q.notify({
+        type: 'positive',
+        message: '折扣添加成功',
+        position: 'top'
+      })
+    }
+    
     showDialog.value = false
     resetForm()
-    // Refresh list if we have a search active
-    if (searchOrderId.value) {
-      searchByOrderId()
-    }
+    // 使用訂單ID來刷新列表
+    searchOrderId.value = String(submittedOrderId)
+    await searchByOrderId()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '添加失敗',
+      message: currentDiscount.value ? '更新失敗' : '添加失敗',
       position: 'top'
     })
   }
@@ -333,6 +471,8 @@ const handleDelete = (id?: number) => {
         searchByOrderId()
       } else if (searchDiscountCode.value) {
         searchByDiscountCode()
+      } else {
+        loadAllDiscounts()
       }
     } catch (error) {
       $q.notify({
@@ -343,4 +483,17 @@ const handleDelete = (id?: number) => {
     }
   })
 }
+
+const handleOpenDialog = () => {
+  resetForm()
+  if (orders.value.length === 0) {
+    loadOrders()
+  }
+  showDialog.value = true
+}
+
+onMounted(() => {
+  loadOrders()
+  loadAllDiscounts()
+})
 </script>

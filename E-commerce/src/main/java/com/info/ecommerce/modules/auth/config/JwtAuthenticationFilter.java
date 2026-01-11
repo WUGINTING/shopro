@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,6 +21,7 @@ import java.io.IOException;
 /**
  * JWT authentication filter that processes JWT tokens
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -64,7 +66,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             // 「全過」模式下的核心：即便報錯（如資料庫查無此人、Token過期），也不要報 500，直接讓它過
-            logger.error("JWT Auth failed, but continuing for 'all-pass' mode: " + e.getMessage());
+            // 在 all-pass 模式下，JWT 過期是預期的行為，使用 DEBUG 級別減少日誌噪音
+            log.debug("JWT Auth failed, but continuing for 'all-pass' mode: {}", e.getMessage());
         }
 
         // 務必確保這行在 try-catch 外面或是最後一定會執行

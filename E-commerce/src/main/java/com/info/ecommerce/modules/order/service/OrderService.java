@@ -141,6 +141,17 @@ public class OrderService {
         order.setOrderNumber(orderNumber);
         order.setStatus(dto.getStatus() != null ? dto.getStatus() : OrderStatus.PENDING_PAYMENT);
         order.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
+        
+        // 確保客戶信息被正確設置（即使有 customerId，也保存客戶信息用於顯示）
+        if (dto.getCustomerName() != null) {
+            order.setCustomerName(dto.getCustomerName());
+        }
+        if (dto.getCustomerPhone() != null) {
+            order.setCustomerPhone(dto.getCustomerPhone());
+        }
+        if (dto.getCustomerEmail() != null) {
+            order.setCustomerEmail(dto.getCustomerEmail());
+        }
 
         // 保存訂單項目
         List<OrderItem> items = dto.getItems() != null ?
@@ -178,6 +189,9 @@ public class OrderService {
         OrderStatus oldStatus = order.getStatus();
 
         // 更新訂單基本資料
+        if (dto.getCustomerId() != null) {
+            order.setCustomerId(dto.getCustomerId());
+        }
         order.setCustomerName(dto.getCustomerName());
         order.setCustomerPhone(dto.getCustomerPhone());
         order.setCustomerEmail(dto.getCustomerEmail());

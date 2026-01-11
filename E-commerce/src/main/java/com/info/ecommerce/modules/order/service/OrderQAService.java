@@ -82,6 +82,17 @@ public class OrderQAService {
     }
 
     /**
+     * 取得所有問答
+     */
+    @Transactional(readOnly = true)
+    public List<OrderQADTO> getAllQA() {
+        return orderQARepository.findAllOrderByCreatedAtDesc()
+            .stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+
+    /**
      * 刪除問答
      */
     @Transactional
@@ -95,6 +106,10 @@ public class OrderQAService {
     private OrderQA convertToEntity(OrderQADTO dto) {
         OrderQA qa = new OrderQA();
         BeanUtils.copyProperties(dto, qa);
+        // 如果 askerId 為 null，設置默認值 0
+        if (qa.getAskerId() == null) {
+            qa.setAskerId(0L);
+        }
         return qa;
     }
 

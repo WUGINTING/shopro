@@ -64,6 +64,10 @@ export interface ProductSpecification {
  * 商品分類介面
  * @interface ProductCategory
  */
+/**
+ * 商品分類介面
+ * @interface ProductCategory
+ */
 export interface ProductCategory {
   /** 分類 ID */
   id?: number
@@ -72,7 +76,13 @@ export interface ProductCategory {
   /** 分類描述 */
   description?: string
   /** 父分類 ID */
-  parentId?: number
+  parentId?: number | null
+  /** 分類圖片 */
+  image?: string
+  /** 排序 */
+  sortOrder?: number
+  /** 是否啟用 */
+  enabled?: boolean
 }
 
 /**
@@ -220,6 +230,125 @@ export const productApi = {
    */
   getCategories: () => {
     return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
+  }
+}
+
+/**
+ * 分類 API 服務
+ * @namespace categoryApi
+ */
+export const categoryApi = {
+  /**
+   * 取得所有分類
+   * @description 獲取所有商品分類列表
+   * @returns {Promise<ApiResponse<ProductCategory[]>>} 商品分類列表
+   * @swagger GET /api/product-categories
+   * @example
+   * const categories = await categoryApi.getAllCategories()
+   */
+  getAllCategories: () => {
+    return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories')
+  },
+
+  /**
+   * 取得已啟用的分類
+   * @description 獲取已啟用的商品分類列表
+   * @returns {Promise<ApiResponse<ProductCategory[]>>} 已啟用的分類列表
+   * @swagger GET /api/product-categories/enabled
+   * @example
+   * const categories = await categoryApi.getEnabledCategories()
+   */
+  getEnabledCategories: () => {
+    return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories/enabled')
+  },
+
+  /**
+   * 取得頂層分類
+   * @description 獲取所有頂層分類（無父分類）
+   * @returns {Promise<ApiResponse<ProductCategory[]>>} 頂層分類列表
+   * @swagger GET /api/product-categories/top
+   * @example
+   * const topCategories = await categoryApi.getTopCategories()
+   */
+  getTopCategories: () => {
+    return axios.get<any, ApiResponse<ProductCategory[]>>('/product-categories/top')
+  },
+
+  /**
+   * 取得子分類
+   * @description 獲取指定父分類的子分類列表
+   * @param {number} parentId - 父分類 ID
+   * @returns {Promise<ApiResponse<ProductCategory[]>>} 子分類列表
+   * @swagger GET /api/product-categories/{parentId}/children
+   * @example
+   * const subCategories = await categoryApi.getSubCategories(1)
+   */
+  getSubCategories: (parentId: number) => {
+    return axios.get<any, ApiResponse<ProductCategory[]>>(`/product-categories/${parentId}/children`)
+  },
+
+  /**
+   * 取得分類詳情
+   * @description 根據分類 ID 獲取分類詳情
+   * @param {number} id - 分類 ID
+   * @returns {Promise<ApiResponse<ProductCategory>>} 分類詳情
+   * @swagger GET /api/product-categories/{id}
+   * @example
+   * const category = await categoryApi.getCategory(1)
+   */
+  getCategory: (id: number) => {
+    return axios.get<any, ApiResponse<ProductCategory>>(`/product-categories/${id}`)
+  },
+
+  /**
+   * 創建分類
+   * @description 創建新的商品分類
+   * @param {ProductCategory} data - 分類資料
+   * @param {string} data.name - 分類名稱（必填）
+   * @param {number} [data.parentId] - 父分類 ID
+   * @param {string} [data.description] - 分類描述
+   * @returns {Promise<ApiResponse<ProductCategory>>} 創建成功的分類資料
+   * @swagger POST /api/product-categories
+   * @example
+   * const newCategory = await categoryApi.createCategory({
+   *   name: '新分類',
+   *   description: '分類描述',
+   *   parentId: null
+   * })
+   */
+  createCategory: (data: ProductCategory) => {
+    return axios.post<any, ApiResponse<ProductCategory>>('/product-categories', data)
+  },
+
+  /**
+   * 更新分類
+   * @description 更新指定分類的資料
+   * @param {number} id - 分類 ID
+   * @param {ProductCategory} data - 更新的分類資料
+   * @returns {Promise<ApiResponse<ProductCategory>>} 更新後的分類資料
+   * @swagger PUT /api/product-categories/{id}
+   * @example
+   * const updated = await categoryApi.updateCategory(1, {
+   *   name: '更新後的分類名稱',
+   *   description: '更新後的描述'
+   * })
+   */
+  updateCategory: (id: number, data: ProductCategory) => {
+    return axios.put<any, ApiResponse<ProductCategory>>(`/product-categories/${id}`, data)
+  },
+
+  /**
+   * 刪除分類
+   * @description 永久刪除指定分類
+   * @param {number} id - 分類 ID
+   * @returns {Promise<ApiResponse<void>>} 刪除結果
+   * @swagger DELETE /api/product-categories/{id}
+   * @warning 此操作無法復原
+   * @example
+   * await categoryApi.deleteCategory(1)
+   */
+  deleteCategory: (id: number) => {
+    return axios.delete<any, ApiResponse<void>>(`/product-categories/${id}`)
   }
 }
 

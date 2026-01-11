@@ -12,7 +12,7 @@
           icon="add_circle"
           label="新增問題"
           unelevated
-          @click="showDialog = true; resetForm()"
+          @click="handleOpenDialog"
         />
       </div>
 
@@ -98,16 +98,15 @@
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
               <q-btn 
-                v-if="!props.row.answer" 
                 flat 
                 dense 
                 round 
-                icon="reply" 
+                :icon="props.row.answer ? 'edit' : 'reply'" 
                 color="primary" 
                 size="sm" 
                 @click="handleAnswer(props.row)"
               >
-                <q-tooltip>回答</q-tooltip>
+                <q-tooltip>{{ props.row.answer ? '編輯回答' : '回答' }}</q-tooltip>
               </q-btn>
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
                 <q-tooltip>刪除</q-tooltip>
@@ -128,14 +127,31 @@
 
           <q-card-section>
             <q-form>
-              <q-input
-                v-model.number="form.orderId"
+              <q-select
+                v-model="form.orderId"
                 label="訂單ID *"
                 outlined
-                type="number"
+                use-input
+                input-debounce="300"
+                :options="filteredOrderOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                filterable
+                :loading="ordersLoading"
                 class="q-mb-md"
                 :rules="[val => !!val || '請輸入訂單ID']"
-              />
+                @filter="filterOrders"
+              >
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey">
+                      {{ ordersLoading ? '載入中...' : '無訂單資料' }}
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
 
               <q-select
                 v-model="form.askerType"
@@ -180,7 +196,7 @@
       <q-dialog v-model="showAnswerDialog" persistent>
         <q-card style="min-width: 500px">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">回答問題</div>
+            <div class="text-h6">{{ currentQA?.answer ? '編輯回答' : '回答問題' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
@@ -221,7 +237,7 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn unelevated label="提交回答" color="primary" @click="handleAnswerSubmit" />
+            <q-btn unelevated :label="currentQA?.answer ? '更新回答' : '提交回答'" color="primary" @click="handleAnswerSubmit" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -230,9 +246,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { orderQAApi, type OrderQA } from '@/api'
+import { orderQAApi, orderApi, type OrderQA, type Order } from '@/api'
 
 const $q = useQuasar()
 
@@ -243,6 +259,8 @@ const showAnswerDialog = ref(false)
 const searchOrderId = ref('')
 const filterAnswered = ref('all')
 const currentQA = ref<OrderQA | null>(null)
+const orders = ref<Order[]>([])
+const ordersLoading = ref(false)
 
 const form = ref<OrderQA>({
   orderId: 0,
@@ -286,7 +304,58 @@ const resetForm = () => {
     askerName: '',
     question: ''
   }
+  filteredOrderOptions.value = orderOptions.value
 }
+
+const orderOptions = computed(() => {
+  return orders.value.map(order => ({
+    label: `${order.orderNumber || `訂單 #${order.id}`} - ${order.customerName || '未知客戶'}`,
+    value: order.id,
+    order: order
+  }))
+})
+
+const filteredOrderOptions = ref<Array<{ label: string; value: number; order: Order }>>([])
+
+const loadOrders = async () => {
+  ordersLoading.value = true
+  try {
+    const response = await orderApi.getOrders()
+    const data = response.data as any
+    let orderList: Order[] = []
+    if (Array.isArray(data)) {
+      orderList = data
+    } else if (data && 'content' in data) {
+      orderList = data.content
+    }
+    orders.value = orderList
+    filteredOrderOptions.value = orderOptions.value
+  } catch (error) {
+    console.error('Failed to load orders:', error)
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+watch(orderOptions, (newVal) => {
+  filteredOrderOptions.value = newVal
+}, { immediate: true })
+
+const filterOrders = (val: string, update: (callback: () => void) => void) => {
+  update(() => {
+    if (val === '') {
+      filteredOrderOptions.value = orderOptions.value
+    } else {
+      const needle = val.toLowerCase()
+      filteredOrderOptions.value = orderOptions.value.filter(
+        option => 
+          option.label.toLowerCase().indexOf(needle) > -1 ||
+          String(option.value).indexOf(needle) > -1
+      )
+    }
+  })
+}
+
 
 const searchByOrderId = async () => {
   if (!searchOrderId.value) {
@@ -316,7 +385,7 @@ const searchByOrderId = async () => {
 const clearFilters = () => {
   searchOrderId.value = ''
   filterAnswered.value = 'all'
-  qas.value = []
+  loadAllQAs()
 }
 
 const handleSubmit = async () => {
@@ -330,7 +399,18 @@ const handleSubmit = async () => {
   }
 
   try {
-    await orderQAApi.askQuestion(form.value)
+    // 找到選中的訂單
+    const selectedOrder = orders.value.find(o => o.id === form.value.orderId)
+    const submittedOrderId = Number(form.value.orderId)
+    
+    // 確保 orderId 是數字類型，並設置 askerId
+    const submitData = {
+      ...form.value,
+      orderId: submittedOrderId,
+      askerId: selectedOrder?.customerId || 0
+    }
+    
+    await orderQAApi.askQuestion(submitData)
     $q.notify({
       type: 'positive',
       message: '問題提交成功',
@@ -338,15 +418,17 @@ const handleSubmit = async () => {
     })
     showDialog.value = false
     resetForm()
-    // Refresh list if we have a search active
-    if (searchOrderId.value) {
-      searchByOrderId()
-    }
-  } catch (error) {
+    // 使用剛才提交的訂單ID來刷新列表
+    searchOrderId.value = String(submittedOrderId)
+    await searchByOrderId()
+  } catch (error: any) {
+    console.error('提交失敗:', error)
+    const errorMessage = error?.response?.data?.message || error?.message || '提交失敗'
     $q.notify({
       type: 'negative',
-      message: '提交失敗',
-      position: 'top'
+      message: errorMessage,
+      position: 'top',
+      timeout: 5000
     })
   }
 }
@@ -354,9 +436,9 @@ const handleSubmit = async () => {
 const handleAnswer = (qa: OrderQA) => {
   currentQA.value = qa
   answerForm.value = {
-    answer: '',
-    answererId: 0,
-    answererName: ''
+    answer: qa.answer || '',
+    answererId: qa.answererId || 0,
+    answererName: qa.answererName || ''
   }
   showAnswerDialog.value = true
 }
@@ -380,13 +462,15 @@ const handleAnswerSubmit = async () => {
     )
     $q.notify({
       type: 'positive',
-      message: '回答提交成功',
+      message: currentQA.value?.answer ? '回答更新成功' : '回答提交成功',
       position: 'top'
     })
     showAnswerDialog.value = false
-    // Refresh list if we have a search active
-    if (searchOrderId.value) {
-      searchByOrderId()
+    // 使用當前問題的訂單ID來刷新列表
+    const orderIdToRefresh = currentQA.value.orderId
+    if (orderIdToRefresh) {
+      searchOrderId.value = String(orderIdToRefresh)
+      await searchByOrderId()
     }
   } catch (error) {
     $q.notify({
@@ -395,6 +479,31 @@ const handleAnswerSubmit = async () => {
       position: 'top'
     })
   }
+}
+
+const loadAllQAs = async () => {
+  loading.value = true
+  try {
+    const response = await orderQAApi.getAllQA()
+    qas.value = response.data
+  } catch (error) {
+    console.error('Failed to load QAs:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadOrders()
+  loadAllQAs()
+})
+
+const handleOpenDialog = () => {
+  resetForm()
+  if (orders.value.length === 0) {
+    loadOrders()
+  }
+  showDialog.value = true
 }
 
 const handleDelete = (id?: number) => {
@@ -413,9 +522,11 @@ const handleDelete = (id?: number) => {
         message: '刪除成功',
         position: 'top'
       })
-      // Refresh list if we have a search active
+      // Refresh list
       if (searchOrderId.value) {
         searchByOrderId()
+      } else {
+        loadAllQAs()
       }
     } catch (error) {
       $q.notify({

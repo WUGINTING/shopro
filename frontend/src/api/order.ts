@@ -22,7 +22,7 @@ export interface Order {
   /** 訂單總金額 */
   totalAmount: number
   /** 訂單狀態 */
-  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  status: 'PENDING' | 'PENDING_PAYMENT' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
   /** 配送地址 */
   shippingAddress?: string
   /** 訂單項目 */
@@ -48,10 +48,14 @@ export interface OrderItem {
   productName?: string
   /** 購買數量 */
   quantity: number
-  /** 商品價格 */
-  price: number
+  /** 商品單價 */
+  unitPrice: number
+  /** 商品價格（兼容舊版） */
+  price?: number
   /** 小計金額 */
   subtotal?: number
+  /** 小計金額（後端字段） */
+  subtotalAmount?: number
 }
 
 /**
@@ -112,6 +116,25 @@ export const orderApi = {
   },
   
   /**
+   * 更新訂單
+   * @description 更新訂單資料（包含訂單項目）
+   * @param {number} id - 訂單 ID
+   * @param {Order} data - 訂單資料
+   * @returns {Promise<ApiResponse<Order>>} 更新後的訂單資料
+   * @swagger PUT /api/orders/{id}
+   * @example
+   * const updated = await orderApi.updateOrder(123, {
+   *   customerId: 1,
+   *   totalAmount: 1000,
+   *   status: 'PROCESSING',
+   *   items: [{ productId: 1, quantity: 2, unitPrice: 500 }]
+   * })
+   */
+  updateOrder: (id: number, data: Order) => {
+    return axios.put<any, ApiResponse<Order>>(`/orders/${id}`, data)
+  },
+  
+  /**
    * 更新訂單狀態
    * @description 更新指定訂單的狀態（PENDING → PROCESSING → SHIPPED → DELIVERED）
    * @param {number} id - 訂單 ID
@@ -136,9 +159,9 @@ export const orderApi = {
    * @swagger DELETE /api/orders/{id}
    * @warning 此操作無法復原
    * @example
-   * await orderApi.cancelOrder(123)
+   * await orderApi.deleteOrder(123)
    */
-  cancelOrder: (id: number) => {
+  deleteOrder: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/orders/${id}`)
   }
 }

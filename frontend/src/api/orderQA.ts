@@ -65,6 +65,18 @@ export const orderQAApi = {
   },
   
   /**
+   * 取得所有問答
+   * @description 取得所有問答記錄，按創建時間倒序排列
+   * @returns {Promise<ApiResponse<OrderQA[]>>} 問答列表
+   * @swagger GET /api/orders/qa
+   * @example
+   * const qaList = await orderQAApi.getAllQA()
+   */
+  getAllQA: () => {
+    return axios.get<any, ApiResponse<OrderQA[]>>('/orders/qa')
+  },
+  
+  /**
    * 取得訂單的所有問答
    * @description 查詢指定訂單的所有問答記錄
    * @param {number} orderId - 訂單 ID
