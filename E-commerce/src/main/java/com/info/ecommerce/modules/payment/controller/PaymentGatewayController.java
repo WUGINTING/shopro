@@ -6,6 +6,7 @@ import com.info.ecommerce.modules.payment.dto.PaymentRequestDTO;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
 import com.info.ecommerce.modules.payment.enums.PaymentGateway;
 import com.info.ecommerce.modules.payment.service.EcPayService;
+import com.info.ecommerce.modules.payment.service.PaymentCallbackService;
 import com.info.ecommerce.modules.payment.service.PaymentGatewayFactory;
 import com.info.ecommerce.modules.payment.service.PaymentGatewayService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,8 @@ public class PaymentGatewayController {
 
     private final PaymentGatewayFactory paymentGatewayFactory;
     private final EcPayService ecPayService;
+    private final PaymentCallbackService paymentCallbackService;
+    private final com.info.ecommerce.modules.payment.service.PaymentCallbackLogService paymentCallbackLogService;
 
     @PostMapping("/create")
     @Operation(summary = "創建支付請求", description = "透過指定的支付閘道創建支付請求，返回支付 URL")
@@ -118,23 +121,110 @@ public class PaymentGatewayController {
     @Operation(summary = "ECPay 支付回調", description = "接收 ECPay 的支付結果通知")
     public ResponseEntity<String> ecpayCallback(@RequestParam Map<String, String> params) {
         
+        long startTime = System.currentTimeMillis();
+        String status = "ERROR";
+        String processResult = "";
+        String errorMessage = null;
+        PaymentResponseDTO response = null;
+        
+        log.info("=== ECPay Callback Received ===");
         log.info("Received ECPay callback with params: {}", params);
         
         try {
-            PaymentResponseDTO response = ecPayService.parseCallback(params);
+            // 解析回調參數
+            response = ecPayService.parseCallback(params);
+            log.info("Parsed callback response - Status: {}, OrderNumber: {}, TransactionId: {}, ErrorMessage: {}", 
+                    response.getStatus(), response.getOrderNumber(), response.getTransactionId(), response.getErrorMessage());
             
-            // TODO: 更新訂單支付狀態
-            // 根據 response.getOrderNumber() 找到訂單並更新狀態
-            
+            // 處理支付回調
+            boolean success = false;
             if (response.getStatus() == com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.SUCCESS) {
-                log.info("ECPay payment successful for order: {}", response.getOrderNumber());
-                return ResponseEntity.ok("1|OK");
+                log.info("Payment status is SUCCESS, calling handlePaymentSuccess...");
+                success = paymentCallbackService.handlePaymentSuccess(response);
+                log.info("handlePaymentSuccess returned: {}", success);
+                
+                if (success) {
+                    status = "SUCCESS";
+                    processResult = "支付成功，訂單狀態已更新";
+                    log.info("ECPay payment successful for order: {}", response.getOrderNumber());
+                    
+                    // 記錄回調
+                    long processTime = System.currentTimeMillis() - startTime;
+                    paymentCallbackLogService.logCallback(
+                            "ECPAY",
+                            params,
+                            response,
+                            status,
+                            processResult,
+                            null,
+                            processTime
+                    );
+                    
+                    return ResponseEntity.ok("1|OK");
+                } else {
+                    status = "FAILED";
+                    processResult = "支付成功但處理失敗";
+                    errorMessage = "處理失敗";
+                    log.error("Failed to process successful payment for order: {}", response.getOrderNumber());
+                    
+                    // 記錄回調
+                    long processTime = System.currentTimeMillis() - startTime;
+                    paymentCallbackLogService.logCallback(
+                            "ECPAY",
+                            params,
+                            response,
+                            status,
+                            processResult,
+                            errorMessage,
+                            processTime
+                    );
+                    
+                    return ResponseEntity.ok("0|處理失敗");
+                }
             } else {
+                status = "FAILED";
+                processResult = "支付失敗";
+                errorMessage = response.getErrorMessage();
+                log.warn("Payment status is NOT SUCCESS: {}, ErrorMessage: {}", response.getStatus(), response.getErrorMessage());
+                success = paymentCallbackService.handlePaymentFailure(response);
                 log.error("ECPay payment failed: {}", response.getErrorMessage());
+                
+                // 記錄回調
+                long processTime = System.currentTimeMillis() - startTime;
+                paymentCallbackLogService.logCallback(
+                        "ECPAY",
+                        params,
+                        response,
+                        status,
+                        processResult,
+                        errorMessage,
+                        processTime
+                );
+                
                 return ResponseEntity.ok("0|" + response.getErrorMessage());
             }
         } catch (Exception e) {
-            log.error("Failed to process ECPay callback", e);
+            status = "ERROR";
+            errorMessage = e.getMessage();
+            processResult = "處理異常";
+            log.error("Exception occurred while processing ECPay callback", e);
+            
+            // 記錄回調（即使發生異常也要記錄）
+            try {
+                long processTime = System.currentTimeMillis() - startTime;
+                paymentCallbackLogService.logCallback(
+                        "ECPAY",
+                        params,
+                        response,
+                        status,
+                        processResult,
+                        errorMessage,
+                        processTime
+                );
+            } catch (Exception logException) {
+                log.error("Failed to log callback after exception", logException);
+            }
+            
             return ResponseEntity.ok("0|處理失敗");
         }
     }
@@ -156,7 +246,12 @@ public class PaymentGatewayController {
             PaymentGatewayService service = paymentGatewayFactory.getPaymentGatewayService(PaymentGateway.LINE_PAY);
             PaymentResponseDTO response = service.confirmPayment(confirm);
             
-            // TODO: 更新訂單支付狀態
+            // 處理支付確認結果
+            if (response.getStatus() == com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.SUCCESS) {
+                paymentCallbackService.handlePaymentSuccess(response);
+            } else {
+                paymentCallbackService.handlePaymentFailure(response);
+            }
             
             return ApiResponse.success("支付確認成功", response);
         } catch (Exception e) {
@@ -171,7 +266,8 @@ public class PaymentGatewayController {
         
         log.info("Received LINE PAY cancel callback for orderId: {}", orderId);
         
-        // TODO: 更新訂單狀態為已取消
+        // 處理支付取消
+        paymentCallbackService.handlePaymentCancellation(orderId);
         
         return ApiResponse.success("支付已取消", orderId);
     }

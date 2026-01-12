@@ -6,6 +6,7 @@ package com.info.ecommerce.modules.order.enums;
 public enum PaymentStatus {
     PENDING("待付款"),
     PAID("已付款"),
+    FAILED("失敗"),
     REFUNDING("退款中"),
     REFUNDED("已退款");
 

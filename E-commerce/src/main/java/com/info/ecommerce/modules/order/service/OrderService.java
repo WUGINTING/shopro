@@ -36,10 +36,14 @@ public class OrderService {
 
     /**
      * 生成訂單編號
+     * 格式：ORD + yyyyMMddHHmm + xxxx (總共19字元，符合ECPay的20字元限制)
+     * 注意：ECPay 要求 MerchantTradeNo 最多20字元
      */
     private String generateOrderNumber() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        // 使用 yyyyMMddHHmm (12位) 而不是 yyyyMMddHHmmss (14位) 以符合ECPay的20字元限制
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
         String random = String.format("%04d", (int)(Math.random() * 10000));
+        // 總長度：3(ORD) + 12(時間戳) + 4(隨機數) = 19字元
         return "ORD" + timestamp + random;
     }
 

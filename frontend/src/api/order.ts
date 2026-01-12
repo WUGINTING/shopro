@@ -19,6 +19,10 @@ export interface Order {
   customerId?: number
   /** 客戶名稱 */
   customerName?: string
+  /** 客戶電話 */
+  customerPhone?: string
+  /** 客戶電子郵件 */
+  customerEmail?: string
   /** 訂單總金額 */
   totalAmount: number
   /** 訂單狀態 */
@@ -163,7 +167,61 @@ export const orderApi = {
    */
   deleteOrder: (id: number) => {
     return axios.delete<any, ApiResponse<void>>(`/orders/${id}`)
+  },
+
+  /**
+   * 多條件搜索訂單
+   * @description 根據多條件篩選訂單（訂單編號、客戶、狀態、日期、金額範圍等）
+   * @param {OrderQueryParams} params - 查詢參數
+   * @returns {Promise<ApiResponse<PageResponse<Order>>>} 訂單列表回應
+   * @swagger POST /api/orders/search
+   * @example
+   * const response = await orderApi.searchOrders({
+   *   orderNumber: 'ORD20260112',
+   *   status: 'PAID',
+   *   startDate: '2026-01-01',
+   *   endDate: '2026-01-31',
+   *   minAmount: 100,
+   *   maxAmount: 1000,
+   *   page: 0,
+   *   size: 20
+   * })
+   */
+  searchOrders: (params: OrderQueryParams) => {
+    return axios.post<any, ApiResponse<PageResponse<Order>>>('/orders/search', params)
   }
+}
+
+/**
+ * 訂單查詢參數接口
+ */
+export interface OrderQueryParams {
+  /** 訂單 ID */
+  orderId?: number
+  /** 訂單編號 */
+  orderNumber?: string
+  /** 客戶 ID */
+  customerId?: number
+  /** 客戶姓名 */
+  customerName?: string
+  /** 訂單狀態 */
+  status?: Order['status']
+  /** 開始日期 */
+  startDate?: string
+  /** 結束日期 */
+  endDate?: string
+  /** 最小金額 */
+  minAmount?: number
+  /** 最大金額 */
+  maxAmount?: number
+  /** 是否暫存訂單 */
+  isDraft?: boolean
+  /** 門市 ID */
+  storeId?: number
+  /** 頁碼 */
+  page?: number
+  /** 每頁數量 */
+  size?: number
 }
 
 export default orderApi

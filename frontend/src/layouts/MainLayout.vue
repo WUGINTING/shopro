@@ -345,7 +345,7 @@
           <q-expansion-item
             icon="payment"
             label="支付管理"
-            :default-opened="isMenuActive(['paymentDashboard', 'paymentTransactions', 'paymentSettings'])"
+            :default-opened="isMenuActive(['paymentDashboard', 'paymentTransactions', 'paymentSettings', 'ecpayConfig', 'paymentCallbackLogs'])"
           >
             <q-item
               clickable
@@ -387,6 +387,34 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>支付設定</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('ecpayConfig')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('ecpayConfig')"
+            >
+              <q-item-section avatar>
+                <q-icon name="account_balance" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>ECPay 配置</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('paymentCallbackLogs')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('paymentCallbackLogs')"
+            >
+              <q-item-section avatar>
+                <q-icon name="history" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>回調記錄</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
