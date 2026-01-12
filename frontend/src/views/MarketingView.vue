@@ -88,7 +88,7 @@
           <template #body-cell-discount="props">
             <q-td :props="props">
               <div v-if="props.row.discountAmount">
-                ¥{{ props.row.discountAmount }}
+                ${{ props.row.discountAmount }}
               </div>
               <div v-else-if="props.row.discountRate">
                 {{ props.row.discountRate }}%

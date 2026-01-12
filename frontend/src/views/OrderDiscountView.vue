@@ -67,7 +67,7 @@
         >
           <template v-slot:body-cell-discountAmount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ props.row.discountAmount?.toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">${{ props.row.discountAmount?.toFixed(2) }}</span>
             </q-td>
           </template>
 
@@ -163,7 +163,7 @@
                 type="number"
                 step="0.01"
                 class="q-mb-md"
-                prefix="¥"
+                prefix="$"
                 :rules="[val => val >= 0 || '折扣金額不能小於0']"
               />
 

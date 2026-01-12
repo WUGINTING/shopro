@@ -103,7 +103,7 @@
           <template v-slot:body-cell-price="props">
             <q-td :props="props">
     <span class="text-weight-bold text-primary">
-      ¥{{ (props.row.price || 0).toFixed(2) }}
+      ${{ (props.row.price || 0).toFixed(2) }}
     </span>
             </q-td>
           </template>
@@ -178,7 +178,7 @@
                     label="價格 *"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     :rules="[val => val >= 0 || '價格不能為負數']"
                   />
                 </div>

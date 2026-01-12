@@ -43,7 +43,7 @@
 
           <template v-slot:body-cell-minSpendAmount="props">
             <q-td :props="props">
-              <span v-if="props.row.minSpendAmount">¥{{ props.row.minSpendAmount.toFixed(2) }}</span>
+              <span v-if="props.row.minSpendAmount">${{ props.row.minSpendAmount.toFixed(2) }}</span>
               <span v-else class="text-grey-6">-</span>
             </q-td>
           </template>
@@ -123,7 +123,7 @@
                     outlined
                     type="number"
                     step="0.01"
-                    prefix="¥"
+                    prefix="$"
                   />
                 </div>
 

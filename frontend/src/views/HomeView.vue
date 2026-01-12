@@ -88,7 +88,7 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="attach_money" size="40px" color="green" />
                 <div>
-                  <div class="text-h4 text-weight-bold">¥{{ formatCurrency(stats.monthlySales) }}</div>
+                  <div class="text-h4 text-weight-bold">${{ formatCurrency(stats.monthlySales) }}</div>
                   <div class="text-caption text-grey-7">本月銷售額</div>
                 </div>
               </div>
@@ -149,7 +149,7 @@
                   :color="getStatusColor(order.status)"
                 >
                   <div>客戶: {{ order.customerName }}</div>
-                  <div class="text-weight-bold">金額: ¥{{ order.totalAmount }}</div>
+                  <div class="text-weight-bold">金額: ${{ order.totalAmount }}</div>
                 </q-timeline-entry>
               </q-timeline>
               <div v-else class="text-center text-grey-7 q-py-md">暫無訂單資料</div>
@@ -179,7 +179,7 @@
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label class="text-primary text-weight-bold">
-                      ¥{{ product.price }}
+                      ${{ product.price }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>

@@ -36,7 +36,7 @@
 
           <template v-slot:body-cell-totalAmount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ props.row.totalAmount.toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">${{ props.row.totalAmount.toFixed(2) }}</span>
             </q-td>
           </template>
 
@@ -246,7 +246,7 @@
                           outlined
                           dense
                           type="number"
-                          prefix="¥"
+                          prefix="$"
                           step="0.01"
                           @update:model-value="calculateItemSubtotal(props.row)"
                         />
@@ -255,7 +255,7 @@
 
                     <template v-slot:body-cell-subtotal="props">
                       <q-td :props="props">
-                        <span class="text-weight-bold">¥{{ (props.row.subtotal || 0).toFixed(2) }}</span>
+                        <span class="text-weight-bold">${{ (props.row.subtotal || 0).toFixed(2) }}</span>
                       </q-td>
                     </template>
 
@@ -292,7 +292,7 @@
                     label="折扣金額"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     min="0"
                     @update:model-value="calculateTotal"
@@ -306,7 +306,7 @@
                     label="運費"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     min="0"
                     @update:model-value="calculateTotal"
@@ -320,7 +320,7 @@
                     label="訂單總金額"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     readonly
                     class="text-h6 text-weight-bold"
@@ -388,7 +388,7 @@
               >
                 <template v-slot:body-cell-discountAmount="props">
                   <q-td :props="props">
-                    <span class="text-weight-bold text-primary">¥{{ props.row.discountAmount?.toFixed(2) }}</span>
+                    <span class="text-weight-bold text-primary">${{ props.row.discountAmount?.toFixed(2) }}</span>
                   </q-td>
                 </template>
                 <template v-slot:body-cell-discountType="props">
@@ -410,7 +410,7 @@
                 </template>
               </q-table>
               <div class="text-caption text-grey-7 q-mt-sm">
-                總折扣金額：<span class="text-weight-bold text-primary">¥{{ totalDiscountAmount.toFixed(2) }}</span>
+                總折扣金額：<span class="text-weight-bold text-primary">${{ totalDiscountAmount.toFixed(2) }}</span>
               </div>
             </div>
 
@@ -445,7 +445,7 @@
                     dense
                     type="number"
                     step="0.01"
-                    prefix="¥"
+                    prefix="$"
                     :rules="[val => val >= 0 || '折扣金額不能小於0']"
                   />
                 </div>
