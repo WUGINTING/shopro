@@ -334,13 +334,16 @@ const fetchProducts = async () => {
 
     if (categoryId.value && categoryId.value !== 'all') {
       // 根據分類查詢
+      console.log('查詢分類商品:', { categoryId: categoryId.value, params });
       response = await getProductsByCategory(categoryId.value, params);
     } else {
-      // 查詢所有上架商品
-      response = await getProductsByStatus('ACTIVE', params);
+      // 查詢所有商品（不限制狀態，使用 getProductList 而非 getProductsByStatus）
+      console.log('查詢所有商品:', { params });
+      response = await getProductList(params);
     }
 
     console.log('商品列表 API 回應:', response);
+    console.log('商品數據:', response?.data?.content);
 
     // 根據 PRODUCT_PUBLIC_API.md 規範處理回應
     // 注意：axios 攔截器已經返回 response.data，所以這裡直接使用 response
@@ -349,7 +352,10 @@ const fetchProducts = async () => {
       
       // 處理分頁資料
       if (data.content && Array.isArray(data.content)) {
-        products.value = data.content.map(item => ({
+        // 過濾掉非 ACTIVE 狀態的商品（確保一致性）
+        const filteredContent = data.content.filter(item => item.status === 'ACTIVE');
+        
+        products.value = filteredContent.map(item => ({
           id: item.id,
           name: item.name,
           category: item.categoryId,
@@ -369,8 +375,9 @@ const fetchProducts = async () => {
           createdAt: item.createdAt,
         }));
         
-        totalPages.value = data.totalPages || 0;
-        totalElements.value = data.totalElements || 0;
+        // 更新總數為過濾後的數量
+        totalPages.value = Math.ceil(products.value.length / pageSize);
+        totalElements.value = products.value.length;
       } else {
         products.value = [];
         totalPages.value = 0;
