@@ -7,7 +7,7 @@
         
         <q-toolbar-title>
           <q-icon name="shopping_cart" size="sm" class="q-mr-sm" />
-          遇日小舖 - 管理系統
+          {{ appTitle }}
         </q-toolbar-title>
 
         <q-space />
@@ -492,20 +492,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import { useQuasar } from 'quasar'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const settingsStore = useSettingsStore()
 const $q = useQuasar()
 
 const leftDrawerOpen = ref(true)
 
 const userName = computed(() => authStore.user?.username || '管理員')
 const userRole = computed(() => authStore.user?.role || 'ADMIN')
+const appTitle = computed(() => settingsStore.appTitle)
+
+// 初始化設置
+onMounted(() => {
+  settingsStore.initialize()
+})
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
