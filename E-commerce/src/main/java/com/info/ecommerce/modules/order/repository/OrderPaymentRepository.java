@@ -16,4 +16,6 @@ public interface OrderPaymentRepository extends JpaRepository<OrderPayment, Long
     Optional<OrderPayment> findByTransactionId(String transactionId);
     
     List<OrderPayment> findByPaymentStatus(PaymentStatus paymentStatus);
+    
+    Optional<OrderPayment> findByOrderIdAndGatewayTransactionId(Long orderId, String gatewayTransactionId);
 }

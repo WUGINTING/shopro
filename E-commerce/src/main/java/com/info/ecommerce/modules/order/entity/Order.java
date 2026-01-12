@@ -106,6 +106,10 @@ public class Order {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    // 付款時間
+    @Column(name = "payment_time")
+    private LocalDateTime paymentTime;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

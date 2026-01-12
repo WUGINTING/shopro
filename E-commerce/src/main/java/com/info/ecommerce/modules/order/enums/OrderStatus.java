@@ -5,6 +5,7 @@ package com.info.ecommerce.modules.order.enums;
  */
 public enum OrderStatus {
     PENDING_PAYMENT("待付款"),
+    PAID("已付款"),
     PROCESSING("處理中"),
     COMPLETED("已完成"),
     CANCELLED("已取消"),
