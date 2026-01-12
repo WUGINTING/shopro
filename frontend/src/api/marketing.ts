@@ -4,6 +4,7 @@
  */
 
 import axiosInstance from './axios'
+import type { ApiResponse } from './types'
 
 export interface MarketingCampaign {
   id?: number
@@ -44,9 +45,10 @@ const marketingApi = {
    * const response = await marketingApi.getAllCampaigns(1, 20)
    */
   getAllCampaigns: async (page: number = 1, pageSize: number = 10) => {
-    return axiosInstance.get<any, MarketingResponse>('/marketing/campaigns', {
+    const response = await axiosInstance.get<any, ApiResponse<MarketingResponse>>('/marketing/campaigns', {
       params: { page, pageSize }
     })
+    return response.data
   },
 
   /**
@@ -59,7 +61,8 @@ const marketingApi = {
    * const response = await marketingApi.getCampaignById(123)
    */
   getCampaignById: async (id: number) => {
-    return axiosInstance.get<any, { data: MarketingCampaign }>(`/marketing/campaigns/${id}`)
+    const response = await axiosInstance.get<any, ApiResponse<MarketingCampaign>>(`/marketing/campaigns/${id}`)
+    return response.data
   },
 
   /**
@@ -74,9 +77,10 @@ const marketingApi = {
    * const active = await marketingApi.getCampaignsByStatus('ACTIVE', 1, 20)
    */
   getCampaignsByStatus: async (status: string, page: number = 1, pageSize: number = 10) => {
-    return axiosInstance.get<any, MarketingResponse>('/marketing/campaigns', {
+    const response = await axiosInstance.get<any, ApiResponse<MarketingResponse>>('/marketing/campaigns', {
       params: { status, page, pageSize }
     })
+    return response.data
   },
 
   /**
@@ -91,9 +95,10 @@ const marketingApi = {
    * const discounts = await marketingApi.getCampaignsByType('DISCOUNT', 1, 20)
    */
   getCampaignsByType: async (type: string, page: number = 1, pageSize: number = 10) => {
-    return axiosInstance.get<any, MarketingResponse>('/marketing/campaigns', {
+    const response = await axiosInstance.get<any, ApiResponse<MarketingResponse>>('/marketing/campaigns', {
       params: { type, page, pageSize }
     })
+    return response.data
   },
 
   /**
@@ -118,7 +123,8 @@ const marketingApi = {
    * })
    */
   createCampaign: async (campaign: MarketingCampaign) => {
-    return axiosInstance.post<any, { data: MarketingCampaign }>('/marketing/campaigns', campaign)
+    const response = await axiosInstance.post<any, ApiResponse<MarketingCampaign>>('/marketing/campaigns', campaign)
+    return response.data
   },
 
   /**
@@ -132,7 +138,8 @@ const marketingApi = {
    * const updated = await marketingApi.updateCampaign(123, { name: '新名稱' })
    */
   updateCampaign: async (id: number, campaign: MarketingCampaign) => {
-    return axiosInstance.put<any, { data: MarketingCampaign }>(`/marketing/campaigns/${id}`, campaign)
+    const response = await axiosInstance.put<any, ApiResponse<MarketingCampaign>>(`/marketing/campaigns/${id}`, campaign)
+    return response.data
   },
 
   /**
@@ -145,7 +152,7 @@ const marketingApi = {
    * await marketingApi.deleteCampaign(123)
    */
   deleteCampaign: async (id: number) => {
-    return axiosInstance.delete(`/marketing/campaigns/${id}`)
+    await axiosInstance.delete<any, ApiResponse<void>>(`/marketing/campaigns/${id}`)
   },
 
   /**
@@ -159,7 +166,7 @@ const marketingApi = {
    * await marketingApi.updateCampaignStatus(123, 'ACTIVE')
    */
   updateCampaignStatus: async (id: number, status: string) => {
-    return axiosInstance.patch(`/marketing/campaigns/${id}/status`, { status })
+    await axiosInstance.patch<any, ApiResponse<void>>(`/marketing/campaigns/${id}/status`, { status })
   }
 }
 

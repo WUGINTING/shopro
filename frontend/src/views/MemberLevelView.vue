@@ -150,7 +150,7 @@
                     step="0.1"
                     hint="例如: 1.5 表示1.5倍積分"
                     :rules="[
-                      val => val === undefined || val === null || (val > 0 && val <= 10) || '積分倍率必須在0到10之間'
+                      val => val === undefined || val === null || (val > 0 && val <= 9.99) || '積分倍率必須在0到9.99之間'
                     ]"
                   />
                 </div>
@@ -235,8 +235,7 @@ const columns = [
 const loadLevels = async () => {
   loading.value = true
   try {
-    const response = await memberLevelApi.listMemberLevels()
-    const data = response.data as PageResponse<MemberLevel> | MemberLevel[]
+    const data = await memberLevelApi.listMemberLevels()
     if (Array.isArray(data)) {
       levels.value = data
     } else if (data && 'content' in data) {

@@ -88,7 +88,7 @@
         <template #body-cell-totalSpent="props">
           <q-td :props="props">
             <span class="text-weight-bold">
-              NT${{ props.row.totalSpent.toLocaleString() }}
+              NT${{ formatCurrency(props.row.totalSpent) }}
             </span>
           </q-td>
         </template>
@@ -348,6 +348,14 @@ const getStatusColor = (status: string) => {
     SUSPENDED: 'red'
   }
   return colors[status] || 'grey'
+}
+
+// 格式化金額
+const formatCurrency = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '0'
+  }
+  return amount.toLocaleString('zh-TW')
 }
 
 // 載入會員列表

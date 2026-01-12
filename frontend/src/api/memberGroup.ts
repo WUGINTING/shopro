@@ -3,7 +3,8 @@
  * @module MemberGroupAPI
  */
 
-import axios from 'axios'
+import axiosInstance from './axios'
+import type { ApiResponse, PageResponse as ApiPageResponse } from './types'
 
 export interface MemberGroup {
   id?: number
@@ -15,13 +16,9 @@ export interface MemberGroup {
   updatedAt?: string
 }
 
-export interface PageResponse<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  currentPage: number
-  pageSize: number
-}
+// Use unified PageResponse type (imported from types.ts)
+// But for backward compatibility, keep this alias
+export type PageResponse<T> = ApiPageResponse<T>
 
 /**
  * 會員群組 API 服務
@@ -39,10 +36,22 @@ export const memberGroupApi = {
    * const groups = await memberGroupApi.getGroups(0, 20)
    */
   getGroups: async (page = 0, size = 20) => {
-    const { data } = await axios.get<any>(`${API_BASE}`, {
-      params: { page, size }
-    })
-    return data.data as PageResponse<MemberGroup>
+    const response = await axiosInstance.get<any, ApiResponse<any>>(
+      '/crm/member-groups',
+      { params: { page, size } }
+    )
+    // 處理 Spring Data Page 格式
+    const pageData = response.data
+    if (pageData && typeof pageData === 'object') {
+      return {
+        content: pageData.content || [],
+        totalElements: pageData.totalElements || 0,
+        totalPages: pageData.totalPages || 0,
+        currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
+        pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
+      } as PageResponse<MemberGroup>
+    }
+    return pageData as PageResponse<MemberGroup>
   },
 
   /**
@@ -54,8 +63,10 @@ export const memberGroupApi = {
    * const enabledGroups = await memberGroupApi.getEnabledGroups()
    */
   getEnabledGroups: async () => {
-    const { data } = await axios.get<any>(`${API_BASE}/enabled`)
-    return data.data as MemberGroup[]
+    const response = await axiosInstance.get<any, ApiResponse<MemberGroup[]>>(
+      '/crm/member-groups/enabled'
+    )
+    return response.data
   },
 
   /**
@@ -68,8 +79,10 @@ export const memberGroupApi = {
    * const group = await memberGroupApi.getGroup(123)
    */
   getGroup: async (id: number) => {
-    const { data } = await axios.get<any>(`${API_BASE}/${id}`)
-    return data.data as MemberGroup
+    const response = await axiosInstance.get<any, ApiResponse<MemberGroup>>(
+      `/crm/member-groups/${id}`
+    )
+    return response.data
   },
 
   /**
@@ -88,8 +101,11 @@ export const memberGroupApi = {
    * })
    */
   createGroup: async (group: MemberGroup) => {
-    const { data } = await axios.post<any>(`${API_BASE}`, group)
-    return data.data as MemberGroup
+    const response = await axiosInstance.post<any, ApiResponse<MemberGroup>>(
+      '/crm/member-groups',
+      group
+    )
+    return response.data
   },
 
   /**
@@ -103,8 +119,11 @@ export const memberGroupApi = {
    * const updated = await memberGroupApi.updateGroup(123, { name: '超級VIP' })
    */
   updateGroup: async (id: number, group: Partial<MemberGroup>) => {
-    const { data } = await axios.put<any>(`${API_BASE}/${id}`, group)
-    return data.data as MemberGroup
+    const response = await axiosInstance.put<any, ApiResponse<MemberGroup>>(
+      `/crm/member-groups/${id}`,
+      group
+    )
+    return response.data
   },
 
   /**
@@ -117,8 +136,10 @@ export const memberGroupApi = {
    * const success = await memberGroupApi.deleteGroup(123)
    */
   deleteGroup: async (id: number) => {
-    const { data } = await axios.delete<any>(`${API_BASE}/${id}`)
-    return data.success
+    const response = await axiosInstance.delete<any, ApiResponse<void>>(
+      `/crm/member-groups/${id}`
+    )
+    return response.success || true
   },
 
   /**
@@ -132,10 +153,10 @@ export const memberGroupApi = {
    * const success = await memberGroupApi.addMemberToGroup(123, 456)
    */
   addMemberToGroup: async (groupId: number, memberId: number) => {
-    const { data } = await axios.post<any>(
-      `${API_BASE}/${groupId}/members/${memberId}`
+    const response = await axiosInstance.post<any, ApiResponse<void>>(
+      `/crm/member-groups/${groupId}/members/${memberId}`
     )
-    return data.success
+    return response.success || true
   },
 
   /**
@@ -149,10 +170,10 @@ export const memberGroupApi = {
    * const success = await memberGroupApi.removeMemberFromGroup(123, 456)
    */
   removeMemberFromGroup: async (groupId: number, memberId: number) => {
-    const { data } = await axios.delete<any>(
-      `${API_BASE}/${groupId}/members/${memberId}`
+    const response = await axiosInstance.delete<any, ApiResponse<void>>(
+      `/crm/member-groups/${groupId}/members/${memberId}`
     )
-    return data.success
+    return response.success || true
   },
 
   /**
@@ -167,11 +188,11 @@ export const memberGroupApi = {
    * const memberIds = await memberGroupApi.getGroupMembers(123, 0, 50)
    */
   getGroupMembers: async (groupId: number, page = 0, size = 50) => {
-    const { data } = await axios.get<any>(
-      `${API_BASE}/${groupId}/members`,
+    const response = await axiosInstance.get<any, ApiResponse<number[]>>(
+      `/crm/member-groups/${groupId}/members`,
       { params: { page, size } }
     )
-    return data.data as number[]
+    return response.data
   },
 
   /**
@@ -184,9 +205,9 @@ export const memberGroupApi = {
    * const groupIds = await memberGroupApi.getMemberGroups(456)
    */
   getMemberGroups: async (memberId: number) => {
-    const { data } = await axios.get<any>(
-      `${API_BASE}/member/${memberId}`
+    const response = await axiosInstance.get<any, ApiResponse<number[]>>(
+      `/crm/member-groups/member/${memberId}`
     )
-    return data.data as number[]
+    return response.data
   }
 }

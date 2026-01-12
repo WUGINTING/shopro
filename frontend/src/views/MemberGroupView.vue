@@ -197,19 +197,67 @@
         <q-separator />
 
         <q-card-section>
-          <p class="text-caption text-grey-7 q-mb-md">
-            該群組共有 {{ groupMembers.length }} 位成員
-          </p>
+          <div class="row q-mb-md">
+            <div class="col">
+              <p class="text-caption text-grey-7">
+                該群組共有 {{ groupMemberDetails.length }} 位成員
+              </p>
+            </div>
+          </div>
 
+          <!-- 添加成員 -->
+          <div class="row q-col-gutter-md q-mb-md">
+            <div class="col">
+              <q-select
+                v-model="selectedMemberId"
+                :options="memberOptions"
+                option-label="label"
+                option-value="value"
+                label="選擇會員"
+                outlined
+                dense
+                use-input
+                input-debounce="0"
+                map-options
+                emit-value
+                @filter="filterMembers"
+                clearable
+              >
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey">
+                      無會員資料
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+            <div class="col-auto">
+              <q-btn
+                color="primary"
+                label="添加"
+                :loading="addingMember"
+                :disable="!selectedMemberId"
+                @click="addMemberToGroup"
+              />
+            </div>
+          </div>
+
+          <q-separator class="q-mb-md" />
+
+          <!-- 成員列表 -->
           <q-virtual-scroll
-            :items="groupMembers"
-            virtual-scroll-item-size="50"
+            :items="groupMemberDetails"
+            virtual-scroll-item-size="70"
+            style="max-height: 400px"
           >
             <template #default="{ item, index }">
               <div class="q-pa-md border-bottom">
                 <div class="row items-center">
                   <div class="col">
-                    <p class="q-my-none">會員 ID: {{ item }}</p>
+                    <p class="q-my-none text-weight-medium">{{ item.name }}</p>
+                    <p class="q-my-none text-caption text-grey-7">{{ item.email }}</p>
+                    <p class="q-my-none text-caption text-grey-6">ID: {{ item.id }}</p>
                   </div>
                   <div class="col-auto">
                     <q-btn
@@ -219,7 +267,7 @@
                       icon="close"
                       color="negative"
                       size="sm"
-                      @click="removeMemberFromGroup(item)"
+                      @click="removeMemberFromGroup(item.id)"
                     />
                   </div>
                 </div>
@@ -246,6 +294,7 @@
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberGroupApi, type MemberGroup } from '@/api/memberGroup'
+import { memberApi } from '@/api/member'
 
 const $q = useQuasar()
 const groupForm = ref()
@@ -253,9 +302,16 @@ const groupForm = ref()
 // 資料
 const groups = ref<MemberGroup[]>([])
 const groupMembers = ref<number[]>([])
+const groupMemberDetails = ref<Array<{ id: number; name: string; email: string }>>([])
 const loading = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const addingMember = ref(false)
+
+// 會員選項
+const allMembers = ref<Array<{ label: string; value: number }>>([])
+const memberOptions = ref<Array<{ label: string; value: number }>>([])
+const selectedMemberId = ref<number | undefined>(undefined)
 
 // 對話框
 const showDialog = ref(false)
@@ -369,11 +425,50 @@ const deleteGroup = async () => {
   }
 }
 
+// 載入會員列表
+const loadMembers = async () => {
+  try {
+    const result = await memberApi.getMembers({ page: 0, size: 100 })
+    allMembers.value = (result.content || []).map((member: { id?: number; name: string }) => ({
+      label: `${member.name} (ID: ${member.id})`,
+      value: member.id!
+    }))
+    memberOptions.value = allMembers.value
+  } catch (error) {
+    console.error('載入會員列表失敗', error)
+  }
+}
+
+// 篩選會員
+const filterMembers = (val: string, update: (callback: () => void) => void) => {
+  if (val === '') {
+    update(() => {
+      memberOptions.value = allMembers.value.filter(
+        m => !groupMembers.value.includes(m.value)
+      )
+    })
+    return
+  }
+  update(() => {
+    const needle = val.toLowerCase()
+    memberOptions.value = allMembers.value.filter(
+      m => m.label.toLowerCase().indexOf(needle) > -1 && !groupMembers.value.includes(m.value)
+    )
+  })
+}
+
 // 顯示成員管理對話框
 const showMembersDialog = async (groupId: number) => {
   currentGroupId.value = groupId
+  selectedMemberId.value = undefined
   try {
     groupMembers.value = await memberGroupApi.getGroupMembers(groupId)
+    // 載入會員詳細資訊
+    await loadMemberDetails()
+    // 過濾掉已在群組中的會員
+    memberOptions.value = allMembers.value.filter(
+      m => !groupMembers.value.includes(m.value)
+    )
     showMembersDialogFlag.value = true
   } catch (error) {
     $q.notify({
@@ -381,6 +476,85 @@ const showMembersDialog = async (groupId: number) => {
       message: '載入成員失敗',
       position: 'top'
     })
+  }
+}
+
+// 載入會員詳細資訊
+const loadMemberDetails = async () => {
+  groupMemberDetails.value = []
+  for (const memberId of groupMembers.value) {
+    try {
+      const member = await memberApi.getMember(memberId)
+      groupMemberDetails.value.push({
+        id: member.id!,
+        name: member.name,
+        email: member.email
+      })
+    } catch (error) {
+      // 如果獲取失敗，至少顯示ID
+      groupMemberDetails.value.push({
+        id: memberId,
+        name: `會員 ID: ${memberId}`,
+        email: ''
+      })
+    }
+  }
+}
+
+// 添加成員到群組
+const addMemberToGroup = async () => {
+  if (!currentGroupId.value || !selectedMemberId.value) return
+  
+  // 檢查是否已在群組中
+  if (groupMembers.value.includes(selectedMemberId.value)) {
+    $q.notify({
+      type: 'warning',
+      message: '該會員已在群組中',
+      position: 'top'
+    })
+    return
+  }
+
+  addingMember.value = true
+  try {
+    await memberGroupApi.addMemberToGroup(currentGroupId.value, selectedMemberId.value)
+    groupMembers.value.push(selectedMemberId.value)
+    
+    // 獲取新添加會員的詳細資訊
+    try {
+      const member = await memberApi.getMember(selectedMemberId.value)
+      groupMemberDetails.value.push({
+        id: member.id!,
+        name: member.name,
+        email: member.email
+      })
+    } catch (error) {
+      // 如果獲取失敗，至少顯示ID
+      groupMemberDetails.value.push({
+        id: selectedMemberId.value,
+        name: `會員 ID: ${selectedMemberId.value}`,
+        email: ''
+      })
+    }
+    
+    // 從選項中移除已添加的會員
+    memberOptions.value = memberOptions.value.filter(
+      m => m.value !== selectedMemberId.value
+    )
+    selectedMemberId.value = undefined
+    $q.notify({
+      type: 'positive',
+      message: '成員已添加',
+      position: 'top'
+    })
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: error?.response?.data?.message || '添加失敗',
+      position: 'top'
+    })
+  } finally {
+    addingMember.value = false
   }
 }
 
@@ -393,6 +567,14 @@ const removeMemberFromGroup = async (memberId: number) => {
       memberId
     )
     groupMembers.value = groupMembers.value.filter(id => id !== memberId)
+    groupMemberDetails.value = groupMemberDetails.value.filter(m => m.id !== memberId)
+    
+    // 將移除的會員重新加入選項
+    const removedMember = allMembers.value.find(m => m.value === memberId)
+    if (removedMember && !memberOptions.value.find(m => m.value === memberId)) {
+      memberOptions.value.push(removedMember)
+    }
+    
     $q.notify({
       type: 'positive',
       message: '成員已移除',
@@ -409,6 +591,7 @@ const removeMemberFromGroup = async (memberId: number) => {
 
 onMounted(() => {
   loadGroups()
+  loadMembers()
 })
 </script>
 

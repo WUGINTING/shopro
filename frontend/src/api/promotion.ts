@@ -4,6 +4,7 @@
  */
 
 import axiosInstance from './axios'
+import type { ApiResponse } from './types'
 
 export interface Promotion {
   id?: number
@@ -55,69 +56,124 @@ const COUPON_API = '/marketing/coupons'
 export const promotionApi = {
   // 促銷活動 API
   getPromotions: async (page = 0, size = 20) => {
-    return axiosInstance.get<any, PageResponse<Promotion>>(`${PROMOTION_API}`, {
+    const response = await axiosInstance.get<any, ApiResponse<any>>(`${PROMOTION_API}`, {
       params: { page, size }
     })
+    // 處理 Spring Data Page 格式或自定義格式
+    const pageData = response.data
+    if (pageData && typeof pageData === 'object') {
+      // 如果是 Spring Data Page 格式
+      if (pageData.content !== undefined) {
+        return {
+          content: pageData.content || [],
+          totalElements: pageData.totalElements || 0,
+          totalPages: pageData.totalPages || 0,
+          currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
+          pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
+        } as PageResponse<Promotion>
+      }
+      // 如果是自定義格式（包含 data 字段）
+      if (pageData.data !== undefined) {
+        return {
+          content: pageData.data || [],
+          totalElements: pageData.total || 0,
+          totalPages: Math.ceil((pageData.total || 0) / size),
+          currentPage: pageData.page || page,
+          pageSize: pageData.pageSize || size
+        } as PageResponse<Promotion>
+      }
+    }
+    return pageData as PageResponse<Promotion>
   },
 
   getPromotion: async (id: number) => {
-    return axiosInstance.get<any, Promotion>(`${PROMOTION_API}/${id}`)
+    const response = await axiosInstance.get<any, ApiResponse<Promotion>>(`${PROMOTION_API}/${id}`)
+    return response.data
   },
 
   createPromotion: async (promotion: Promotion) => {
-    return axiosInstance.post<any, Promotion>(`${PROMOTION_API}`, promotion)
+    const response = await axiosInstance.post<any, ApiResponse<Promotion>>(`${PROMOTION_API}`, promotion)
+    return response.data
   },
 
   updatePromotion: async (id: number, promotion: Partial<Promotion>) => {
-    return axiosInstance.put<any, Promotion>(`${PROMOTION_API}/${id}`, promotion)
+    const response = await axiosInstance.put<any, ApiResponse<Promotion>>(`${PROMOTION_API}/${id}`, promotion)
+    return response.data
   },
 
   deletePromotion: async (id: number) => {
-    return axiosInstance.delete<any, boolean>(`${PROMOTION_API}/${id}`)
+    await axiosInstance.delete<any, ApiResponse<void>>(`${PROMOTION_API}/${id}`)
   },
 
   enablePromotion: async (id: number) => {
-    return axiosInstance.patch<any, boolean>(`${PROMOTION_API}/${id}/enable`)
+    await axiosInstance.patch<any, ApiResponse<void>>(`${PROMOTION_API}/${id}/enable`)
   },
 
   disablePromotion: async (id: number) => {
-    return axiosInstance.patch<any, boolean>(`${PROMOTION_API}/${id}/disable`)
+    await axiosInstance.patch<any, ApiResponse<void>>(`${PROMOTION_API}/${id}/disable`)
   }
 }
 
 export const couponApi = {
   // 優惠券 API
   getCoupons: async (page = 0, size = 20) => {
-    return axiosInstance.get<any, PageResponse<Coupon>>(`${COUPON_API}`, {
+    const response = await axiosInstance.get<any, ApiResponse<any>>(`${COUPON_API}`, {
       params: { page, size }
     })
+    // 處理 Spring Data Page 格式或自定義格式
+    const pageData = response.data
+    if (pageData && typeof pageData === 'object') {
+      if (pageData.content !== undefined) {
+        return {
+          content: pageData.content || [],
+          totalElements: pageData.totalElements || 0,
+          totalPages: pageData.totalPages || 0,
+          currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
+          pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
+        } as PageResponse<Coupon>
+      }
+      if (pageData.data !== undefined) {
+        return {
+          content: pageData.data || [],
+          totalElements: pageData.total || 0,
+          totalPages: Math.ceil((pageData.total || 0) / size),
+          currentPage: pageData.page || page,
+          pageSize: pageData.pageSize || size
+        } as PageResponse<Coupon>
+      }
+    }
+    return pageData as PageResponse<Coupon>
   },
 
   getCoupon: async (id: number) => {
-    return axiosInstance.get<any, Coupon>(`${COUPON_API}/${id}`)
+    const response = await axiosInstance.get<any, ApiResponse<Coupon>>(`${COUPON_API}/${id}`)
+    return response.data
   },
 
   createCoupon: async (coupon: Coupon) => {
-    return axiosInstance.post<any, Coupon>(`${COUPON_API}`, coupon)
+    const response = await axiosInstance.post<any, ApiResponse<Coupon>>(`${COUPON_API}`, coupon)
+    return response.data
   },
 
   updateCoupon: async (id: number, coupon: Partial<Coupon>) => {
-    return axiosInstance.put<any, Coupon>(`${COUPON_API}/${id}`, coupon)
+    const response = await axiosInstance.put<any, ApiResponse<Coupon>>(`${COUPON_API}/${id}`, coupon)
+    return response.data
   },
 
   deleteCoupon: async (id: number) => {
-    return axiosInstance.delete<any, boolean>(`${COUPON_API}/${id}`)
+    await axiosInstance.delete<any, ApiResponse<void>>(`${COUPON_API}/${id}`)
   },
 
   enableCoupon: async (id: number) => {
-    return axiosInstance.patch<any, boolean>(`${COUPON_API}/${id}/enable`)
+    await axiosInstance.patch<any, ApiResponse<void>>(`${COUPON_API}/${id}/enable`)
   },
 
   disableCoupon: async (id: number) => {
-    return axiosInstance.patch<any, boolean>(`${COUPON_API}/${id}/disable`)
+    await axiosInstance.patch<any, ApiResponse<void>>(`${COUPON_API}/${id}/disable`)
   },
 
   validateCoupon: async (code: string) => {
-    return axiosInstance.get<any, Coupon>(`${COUPON_API}/validate/${code}`)
+    const response = await axiosInstance.get<any, ApiResponse<Coupon>>(`${COUPON_API}/validate/${code}`)
+    return response.data
   }
 }
