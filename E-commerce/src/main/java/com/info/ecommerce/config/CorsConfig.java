@@ -13,7 +13,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) { // 修正點：方法名應為 addCorsMappings
                 registry.addMapping("/**")             // 允許所有 API 路徑
-                        .allowedOrigins("http://localhost:5173") // 允許前端來源
+                        .allowedOrigins("http://localhost:5173", "http://localhost:5174")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
