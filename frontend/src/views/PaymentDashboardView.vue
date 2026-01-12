@@ -11,10 +11,10 @@
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日成交金額</div>
               <div class="text-h5 text-primary q-mt-sm">
-                $ {{ formatCurrency(statistics.todayAmount) }}
+                $ {{ formatCurrency(statistics.todayAmount || 0) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
-                {{ statistics.todayCount }} 筆交易
+                {{ statistics.todayCount || 0 }} 筆交易
               </div>
             </q-card-section>
           </q-card>
@@ -26,7 +26,7 @@
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日成功率</div>
               <div class="text-h5 text-positive q-mt-sm">
-                {{ statistics.todaySuccessRate.toFixed(2) }}%
+                {{ (statistics.todaySuccessRate || 0).toFixed(2) }}%
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
                 支付成功率
@@ -41,10 +41,10 @@
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">本月成交金額</div>
               <div class="text-h5 text-info q-mt-sm">
-                $ {{ formatCurrency(statistics.monthAmount) }}
+                $ {{ formatCurrency(statistics.monthAmount || 0) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
-                {{ statistics.monthCount }} 筆交易
+                {{ statistics.monthCount || 0 }} 筆交易
               </div>
             </q-card-section>
           </q-card>
@@ -56,10 +56,10 @@
             <q-card-section>
               <div class="text-grey-7 text-subtitle2">今日退款</div>
               <div class="text-h5 text-negative q-mt-sm">
-                {{ statistics.refundStatistics.todayRefundCount }}
+                {{ statistics.refundStatistics?.todayRefundCount || 0 }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
-                本月 {{ statistics.refundStatistics.monthRefundCount }} 筆
+                本月 {{ statistics.refundStatistics?.monthRefundCount || 0 }} 筆
               </div>
             </q-card-section>
           </q-card>
@@ -73,7 +73,13 @@
             <q-card-section>
               <div class="text-h6">支付管道佔比</div>
               <div class="q-mt-md" style="height: 300px">
-                <canvas ref="gatewayChart"></canvas>
+                <canvas v-if="Object.keys(statistics.gatewayShares || {}).length > 0" ref="gatewayChart"></canvas>
+                <div v-else class="flex flex-center" style="height: 100%">
+                  <div class="text-center text-grey-6">
+                    <q-icon name="pie_chart" size="48px" class="q-mb-sm" />
+                    <div>暫無支付數據</div>
+                  </div>
+                </div>
               </div>
             </q-card-section>
           </q-card>
@@ -83,7 +89,7 @@
           <q-card>
             <q-card-section>
               <div class="text-h6">支付管道統計</div>
-              <q-list class="q-mt-md">
+              <q-list v-if="Object.keys(statistics.gatewayShares || {}).length > 0" class="q-mt-md">
                 <q-item v-for="(share, key) in statistics.gatewayShares" :key="key">
                   <q-item-section avatar>
                     <q-avatar :color="getGatewayColor(key)" text-color="white">
@@ -93,16 +99,20 @@
                   <q-item-section>
                     <q-item-label>{{ share.gateway }}</q-item-label>
                     <q-item-label caption>
-                      {{ share.count }} 筆 | $ {{ formatCurrency(share.amount) }}
+                      {{ share.count || 0 }} 筆 | $ {{ formatCurrency(share.amount || 0) }}
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <q-badge :color="getGatewayColor(key)">
-                      {{ share.percentage.toFixed(1) }}%
+                      {{ (share.percentage || 0).toFixed(1) }}%
                     </q-badge>
                   </q-item-section>
                 </q-item>
               </q-list>
+              <div v-else class="q-mt-md text-center text-grey-6">
+                <q-icon name="info" size="24px" class="q-mb-sm" />
+                <div>暫無支付數據</div>
+              </div>
             </q-card-section>
           </q-card>
         </div>
@@ -164,15 +174,54 @@ const loadStatistics = async () => {
   try {
     const response = await getPaymentStatistics()
     if (response.success && response.data) {
-      statistics.value = response.data
+      // 轉換 BigDecimal 為 number
+      const data = response.data
+      statistics.value = {
+        todayAmount: typeof data.todayAmount === 'number' ? data.todayAmount : parseFloat(data.todayAmount || '0'),
+        todayCount: typeof data.todayCount === 'number' ? data.todayCount : parseInt(data.todayCount || '0', 10),
+        todaySuccessRate: typeof data.todaySuccessRate === 'number' ? data.todaySuccessRate : parseFloat(data.todaySuccessRate || '0'),
+        monthAmount: typeof data.monthAmount === 'number' ? data.monthAmount : parseFloat(data.monthAmount || '0'),
+        monthCount: typeof data.monthCount === 'number' ? data.monthCount : parseInt(data.monthCount || '0', 10),
+        refundStatistics: {
+          todayRefundCount: typeof data.refundStatistics?.todayRefundCount === 'number' 
+            ? data.refundStatistics.todayRefundCount 
+            : parseInt(data.refundStatistics?.todayRefundCount || '0', 10),
+          todayRefundAmount: typeof data.refundStatistics?.todayRefundAmount === 'number' 
+            ? data.refundStatistics.todayRefundAmount 
+            : parseFloat(data.refundStatistics?.todayRefundAmount || '0'),
+          monthRefundCount: typeof data.refundStatistics?.monthRefundCount === 'number' 
+            ? data.refundStatistics.monthRefundCount 
+            : parseInt(data.refundStatistics?.monthRefundCount || '0', 10),
+          monthRefundAmount: typeof data.refundStatistics?.monthRefundAmount === 'number' 
+            ? data.refundStatistics.monthRefundAmount 
+            : parseFloat(data.refundStatistics?.monthRefundAmount || '0')
+        },
+        gatewayShares: data.gatewayShares || {}
+      }
+      
+      // 轉換 gatewayShares 中的 BigDecimal 為 number
+      if (statistics.value.gatewayShares) {
+        Object.keys(statistics.value.gatewayShares).forEach(key => {
+          const share = statistics.value.gatewayShares[key]
+          if (share) {
+            share.amount = typeof share.amount === 'number' ? share.amount : parseFloat(share.amount || '0')
+            share.count = typeof share.count === 'number' ? share.count : parseInt(share.count || '0', 10)
+            share.percentage = typeof share.percentage === 'number' ? share.percentage : parseFloat(share.percentage || '0')
+          }
+        })
+      }
+      
       await nextTick()
       renderChart()
+    } else {
+      console.warn('Failed to load statistics:', response.message)
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to load statistics:', error)
     Notify.create({
       type: 'negative',
-      message: '載入統計資料失敗'
+      message: '載入統計資料失敗：' + (error.response?.data?.message || error.message || '未知錯誤'),
+      position: 'top'
     })
   }
 }
@@ -180,9 +229,19 @@ const loadStatistics = async () => {
 const renderChart = () => {
   if (!gatewayChart.value) return
 
-  const shares = Object.values(statistics.value.gatewayShares)
+  const shares = Object.values(statistics.value.gatewayShares || {})
+  
+  // 如果沒有數據，顯示空狀態
+  if (shares.length === 0) {
+    if (chartInstance) {
+      chartInstance.destroy()
+      chartInstance = null
+    }
+    return
+  }
+
   const labels = shares.map(s => s.gateway)
-  const data = shares.map(s => s.amount)
+  const data = shares.map(s => s.amount || 0)
   const colors = Object.keys(statistics.value.gatewayShares).map(key => {
     const colorMap: Record<string, string> = {
       LINE_PAY: '#00B900',
@@ -211,6 +270,17 @@ const renderChart = () => {
       plugins: {
         legend: {
           position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.label || ''
+              const value = context.parsed || 0
+              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
+              return `${label}: $${formatCurrency(value)} (${percentage}%)`
+            }
+          }
         }
       }
     }

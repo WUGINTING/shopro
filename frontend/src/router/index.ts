@@ -107,6 +107,16 @@ const router = createRouter({
           component: () => import('../views/PaymentSettingsView.vue')
         },
         {
+          path: 'ecpay-config',
+          name: 'ecpayConfig',
+          component: () => import('../views/EcPayConfigView.vue')
+        },
+        {
+          path: 'payment-callback-logs',
+          name: 'paymentCallbackLogs',
+          component: () => import('../views/PaymentCallbackLogView.vue')
+        },
+        {
           path: 'marketing',
           name: 'marketing',
           component: () => import('../views/MarketingView.vue')

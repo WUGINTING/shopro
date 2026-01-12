@@ -8,7 +8,9 @@ import com.info.ecommerce.modules.order.repository.OrderPaymentRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.order.service.OrderHistoryService;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
+import com.info.ecommerce.modules.payment.entity.PaymentGatewayTransaction;
 import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
+import com.info.ecommerce.modules.payment.repository.PaymentGatewayTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class PaymentCallbackService {
     private final OrderRepository orderRepository;
     private final OrderPaymentRepository orderPaymentRepository;
     private final OrderHistoryService orderHistoryService;
+    private final PaymentGatewayTransactionRepository transactionRepository;
 
     /**
      * 處理支付成功回調
@@ -110,6 +113,9 @@ public class PaymentCallbackService {
             // 建立或更新付款記錄
             OrderPayment payment = createOrUpdatePayment(order, response);
             
+            // 建立或更新支付閘道交易記錄（用於統計）
+            createOrUpdateTransaction(order, response, PaymentGatewayStatus.SUCCESS);
+            
             // 記錄歷史
             orderHistoryService.recordHistory(
                     order.getId(),
@@ -165,6 +171,9 @@ public class PaymentCallbackService {
                     .notes("支付失敗: " + response.getErrorMessage())
                     .build();
             orderPaymentRepository.save(payment);
+            
+            // 建立支付閘道交易記錄（用於統計）
+            createOrUpdateTransaction(order, response, PaymentGatewayStatus.FAILED);
             
             // 記錄歷史
             orderHistoryService.recordHistory(
@@ -263,5 +272,40 @@ public class PaymentCallbackService {
         payment.setPaymentTime(LocalDateTime.now());
         
         return orderPaymentRepository.save(payment);
+    }
+
+    /**
+     * 建立或更新支付閘道交易記錄（用於統計）
+     */
+    private PaymentGatewayTransaction createOrUpdateTransaction(Order order, PaymentResponseDTO response, PaymentGatewayStatus status) {
+        // 查找是否已存在該交易的記錄
+        Optional<PaymentGatewayTransaction> existingTransaction = transactionRepository
+                .findByTransactionId(response.getTransactionId());
+        
+        PaymentGatewayTransaction transaction;
+        if (existingTransaction.isPresent()) {
+            transaction = existingTransaction.get();
+            transaction.setStatus(status);
+            transaction.setUpdatedAt(LocalDateTime.now());
+            if (response.getErrorMessage() != null) {
+                transaction.setErrorMessage(response.getErrorMessage());
+            }
+        } else {
+            // 建立新記錄
+            transaction = PaymentGatewayTransaction.builder()
+                    .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
+                    .gateway(response.getGateway())
+                    .transactionId(response.getTransactionId())
+                    .status(status)
+                    .amount(response.getAmount())
+                    .currency("TWD") // 預設為台幣
+                    .paymentUrl(response.getPaymentUrl())
+                    .errorMessage(response.getErrorMessage())
+                    .rawResponse(response.getRawResponse())
+                    .build();
+        }
+        
+        return transactionRepository.save(transaction);
     }
 }
