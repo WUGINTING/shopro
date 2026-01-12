@@ -120,15 +120,20 @@ public class PaymentGatewayController {
     @Operation(summary = "ECPay 支付回調", description = "接收 ECPay 的支付結果通知")
     public ResponseEntity<String> ecpayCallback(@RequestParam Map<String, String> params) {
         
+        log.info("=== ECPay Callback Received ===");
         log.info("Received ECPay callback with params: {}", params);
         
         try {
             PaymentResponseDTO response = ecPayService.parseCallback(params);
+            log.info("Parsed callback response - Status: {}, OrderNumber: {}, TransactionId: {}, ErrorMessage: {}", 
+                    response.getStatus(), response.getOrderNumber(), response.getTransactionId(), response.getErrorMessage());
             
             // 處理支付回調
             boolean success = false;
             if (response.getStatus() == com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.SUCCESS) {
+                log.info("Payment status is SUCCESS, calling handlePaymentSuccess...");
                 success = paymentCallbackService.handlePaymentSuccess(response);
+                log.info("handlePaymentSuccess returned: {}", success);
                 if (success) {
                     log.info("ECPay payment successful for order: {}", response.getOrderNumber());
                     return ResponseEntity.ok("1|OK");
@@ -137,12 +142,13 @@ public class PaymentGatewayController {
                     return ResponseEntity.ok("0|處理失敗");
                 }
             } else {
+                log.warn("Payment status is NOT SUCCESS: {}, ErrorMessage: {}", response.getStatus(), response.getErrorMessage());
                 success = paymentCallbackService.handlePaymentFailure(response);
                 log.error("ECPay payment failed: {}", response.getErrorMessage());
                 return ResponseEntity.ok("0|" + response.getErrorMessage());
             }
         } catch (Exception e) {
-            log.error("Failed to process ECPay callback", e);
+            log.error("Exception occurred while processing ECPay callback", e);
             return ResponseEntity.ok("0|處理失敗");
         }
     }

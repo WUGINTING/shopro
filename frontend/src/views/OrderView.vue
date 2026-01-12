@@ -7,7 +7,14 @@
           <div class="text-h5 text-weight-bold">訂單管理</div>
           <div class="text-caption text-grey-7">管理訂單狀態和發貨資訊</div>
         </div>
-        <div>
+        <div class="row q-gutter-sm">
+          <q-btn
+            color="grey-7"
+            icon="info"
+            label="狀態說明"
+            flat
+            @click="showStatusModal = true"
+          />
           <q-btn
             color="primary"
             icon="add"
@@ -17,6 +24,249 @@
           />
         </div>
       </div>
+
+      <!-- Filter Panel -->
+      <q-card class="q-mb-md">
+        <q-card-section>
+          <div class="row items-center justify-between">
+            <div class="text-h6">篩選條件</div>
+            <div class="row q-gutter-sm">
+              <q-btn
+                flat
+                dense
+                icon="filter_list"
+                :label="showFilterPanel ? '收起篩選' : '展開篩選'"
+                @click="showFilterPanel = !showFilterPanel"
+              />
+              <q-btn
+                flat
+                dense
+                icon="refresh"
+                label="重置"
+                @click="resetFilters"
+              />
+              <q-btn
+                flat
+                dense
+                icon="search"
+                label="搜尋"
+                color="primary"
+                @click="applyFilters"
+              />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-slide-transition>
+          <div v-show="showFilterPanel">
+            <q-separator />
+            <q-card-section>
+              <div class="row q-col-gutter-md">
+                <!-- 訂單編號 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model="filterForm.orderNumber"
+                    label="訂單編號"
+                    outlined
+                    dense
+                    clearable
+                    placeholder="輸入訂單編號"
+                  />
+                </div>
+
+                <!-- 客戶姓名 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model="filterForm.customerName"
+                    label="客戶姓名"
+                    outlined
+                    dense
+                    clearable
+                    placeholder="輸入客戶姓名"
+                  />
+                </div>
+
+                <!-- 訂單狀態 -->
+                <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filterForm.status"
+                    label="訂單狀態"
+                    outlined
+                    dense
+                    clearable
+                    :options="statusFilterOptions"
+                    option-value="value"
+                    option-label="label"
+                    emit-value
+                    map-options
+                  />
+                </div>
+
+                <!-- 客戶選擇 -->
+                <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filterForm.customerId"
+                    label="客戶"
+                    outlined
+                    dense
+                    clearable
+                    use-input
+                    input-debounce="300"
+                    :options="customerOptions"
+                    option-value="id"
+                    option-label="name"
+                    emit-value
+                    map-options
+                    @filter="filterCustomers"
+                    placeholder="選擇或搜索客戶"
+                  >
+                    <template v-slot:no-option>
+                      <q-item>
+                        <q-item-section class="text-grey">
+                          沒有找到客戶
+                        </q-item-section>
+                      </q-item>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- 開始日期 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model="filterForm.startDate"
+                    label="開始日期"
+                    outlined
+                    dense
+                    clearable
+                    type="date"
+                  />
+                </div>
+
+                <!-- 結束日期 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model="filterForm.endDate"
+                    label="結束日期"
+                    outlined
+                    dense
+                    clearable
+                    type="date"
+                  />
+                </div>
+
+                <!-- 最小金額 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model.number="filterForm.minAmount"
+                    label="最小金額"
+                    outlined
+                    dense
+                    clearable
+                    type="number"
+                    prefix="¥"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+
+                <!-- 最大金額 -->
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model.number="filterForm.maxAmount"
+                    label="最大金額"
+                    outlined
+                    dense
+                    clearable
+                    type="number"
+                    prefix="¥"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <!-- 已選篩選條件標籤 -->
+              <div v-if="hasActiveFilters" class="q-mt-md">
+                <div class="text-caption text-grey-7 q-mb-sm">已選條件：</div>
+                <div class="row q-gutter-xs">
+                  <q-chip
+                    v-if="filterForm.orderNumber"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.orderNumber = ''"
+                  >
+                    訂單編號: {{ filterForm.orderNumber }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.customerName"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.customerName = ''"
+                  >
+                    客戶姓名: {{ filterForm.customerName }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.status"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.status = null"
+                  >
+                    狀態: {{ getStatusLabel(filterForm.status) }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.customerId"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.customerId = null"
+                  >
+                    客戶ID: {{ filterForm.customerId }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.startDate"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.startDate = ''"
+                  >
+                    開始: {{ filterForm.startDate }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.endDate"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.endDate = ''"
+                  >
+                    結束: {{ filterForm.endDate }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.minAmount"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.minAmount = null"
+                  >
+                    最小金額: ¥{{ filterForm.minAmount }}
+                  </q-chip>
+                  <q-chip
+                    v-if="filterForm.maxAmount"
+                    removable
+                    color="primary"
+                    text-color="white"
+                    @remove="filterForm.maxAmount = null"
+                  >
+                    最大金額: ¥{{ filterForm.maxAmount }}
+                  </q-chip>
+                </div>
+              </div>
+            </q-card-section>
+          </div>
+        </q-slide-transition>
+      </q-card>
 
       <!-- Orders Table -->
       <q-card>
@@ -30,25 +280,26 @@
         >
           <template v-slot:body-cell-orderNumber="props">
             <q-td :props="props">
-              <span class="text-weight-bold">{{ props.row.orderNumber }}</span>
+              <span class="text-weight-bold">{{ props.row?.orderNumber || '-' }}</span>
             </q-td>
           </template>
 
           <template v-slot:body-cell-totalAmount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ props.row.totalAmount.toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">¥{{ (props.row?.totalAmount || 0).toFixed(2) }}</span>
             </q-td>
           </template>
 
           <template v-slot:body-cell-customerName="props">
             <q-td :props="props">
-              {{ props.row.customerName || `客戶 #${props.row.customerId}` || '-' }}
+              {{ props.row?.customerName || (props.row?.customerId ? `客戶 #${props.row.customerId}` : '-') }}
             </q-td>
           </template>
 
           <template v-slot:body-cell-status="props">
             <q-td :props="props">
-              <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+              <q-badge v-if="props.row?.status" :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+              <span v-else>-</span>
             </q-td>
           </template>
 
@@ -75,10 +326,36 @@
                 </q-list>
               </q-btn-dropdown>
               
+              <q-btn 
+                v-if="props.row.status === 'PENDING_PAYMENT'"
+                flat 
+                dense 
+                round 
+                icon="payment" 
+                color="positive" 
+                size="sm" 
+                @click="handlePayment(props.row)"
+              >
+                <q-tooltip>前往付款</q-tooltip>
+              </q-btn>
+              
+              <q-btn 
+                v-if="props.row.status === 'PAID'"
+                flat 
+                dense 
+                round 
+                icon="local_shipping" 
+                color="info" 
+                size="sm" 
+                @click="handleShipment(props.row)"
+              >
+                <q-tooltip>已出貨</q-tooltip>
+              </q-btn>
+              
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
                 <q-tooltip>編輯訂單</q-tooltip>
               </q-btn>
-              <q-btn flat dense round icon="visibility" color="primary" size="sm">
+              <q-btn flat dense round icon="visibility" color="primary" size="sm" @click="handleViewDetail(props.row)">
                 <q-tooltip>查看詳情</q-tooltip>
               </q-btn>
               <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row)">
@@ -480,6 +757,414 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Status Info Modal -->
+      <q-dialog v-model="showStatusModal">
+        <q-card style="min-width: 600px; max-width: 700px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">訂單狀態說明</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body2 text-grey-7 q-mb-md">
+              以下是系統中所有可用的訂單狀態及其說明：
+            </div>
+
+            <q-list bordered separator>
+              <q-item v-for="status in orderStatusList" :key="status.value">
+                <q-item-section avatar>
+                  <q-badge :color="getStatusColor(status.value)" :label="getStatusLabel(status.value)" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">{{ getStatusLabel(status.value) }}</q-item-label>
+                  <q-item-label caption>{{ status.description }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-chip :color="getStatusColor(status.value)" text-color="white" size="sm">
+                    {{ status.value }}
+                  </q-chip>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <q-separator class="q-my-md" />
+
+            <div class="text-body2 text-grey-8">
+              <div class="text-weight-bold q-mb-sm">狀態流程：</div>
+              <div class="q-pl-sm">
+                <div>待付款 → 已付款 → 處理中 → 已完成</div>
+                <div class="text-grey-6 text-caption q-mt-xs">
+                  * 訂單也可能直接變更為「已取消」或「已退款」狀態
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat label="關閉" color="grey-7" v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Payment Dialog -->
+      <q-dialog v-model="showPaymentDialog">
+        <q-card style="min-width: 500px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">前往付款</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <div class="q-mb-md">
+              <div class="text-subtitle2 q-mb-sm">訂單資訊</div>
+              <q-list bordered>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>訂單編號</q-item-label>
+                    <q-item-label caption>{{ paymentOrder?.orderNumber }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>付款金額</q-item-label>
+                    <q-item-label caption class="text-h6 text-positive">
+                      ¥{{ paymentOrder?.totalAmount?.toFixed(2) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+
+            <div class="q-mb-md">
+              <div class="text-subtitle2 q-mb-sm">選擇支付方式</div>
+              <q-option-group
+                v-model="selectedGateway"
+                :options="paymentGatewayOptions"
+                color="primary"
+              />
+            </div>
+
+            <q-banner v-if="paymentError" class="bg-negative text-white q-mb-md">
+              {{ paymentError }}
+            </q-banner>
+
+            <q-banner v-if="showTestInfo" class="bg-info text-white q-mb-md">
+              <template v-slot:avatar>
+                <q-icon name="info" />
+              </template>
+              <div class="text-subtitle2 q-mb-sm">測試環境資訊</div>
+              <div class="text-caption">
+                <div>測試信用卡號：4311-9522-2222-2222</div>
+                <div>有效期限：任何未來日期</div>
+                <div>安全碼：222</div>
+              </div>
+            </q-banner>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn 
+              unelevated 
+              label="前往付款" 
+              color="primary" 
+              :loading="paymentLoading"
+              @click="processPayment"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Shipment Dialog -->
+      <q-dialog v-model="showShipmentDialog">
+        <q-card style="min-width: 600px; max-width: 700px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">設定已出貨</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <div class="q-mb-md">
+              <div class="text-subtitle2 q-mb-sm">訂單資訊</div>
+              <q-list bordered>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>訂單編號</q-item-label>
+                    <q-item-label caption>{{ shipmentOrder?.orderNumber }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>客戶</q-item-label>
+                    <q-item-label caption>{{ shipmentOrder?.customerName || `客戶 #${shipmentOrder?.customerId}` }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+
+            <q-form @submit="handleShipmentSubmit">
+              <div class="row q-col-gutter-md">
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.shippingCompany"
+                    label="物流公司 *"
+                    outlined
+                    dense
+                    :rules="[val => !!val || '請輸入物流公司']"
+                    placeholder="例如：順豐速運、中通快遞等"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.trackingNumber"
+                    label="物流單號 *"
+                    outlined
+                    dense
+                    :rules="[val => !!val || '請輸入物流單號']"
+                    placeholder="請輸入物流追蹤單號"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.recipientName"
+                    label="收件人姓名"
+                    outlined
+                    dense
+                    :hint="shipmentOrder?.customerName ? `預設：${shipmentOrder.customerName}` : ''"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.recipientPhone"
+                    label="收件人電話"
+                    outlined
+                    dense
+                    :hint="shipmentOrder?.customerPhone ? `預設：${shipmentOrder.customerPhone}` : ''"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.recipientAddress"
+                    label="收件地址"
+                    outlined
+                    dense
+                    type="textarea"
+                    rows="2"
+                    :hint="shipmentOrder?.shippingAddress ? `預設：${shipmentOrder.shippingAddress}` : ''"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="shipmentForm.notes"
+                    label="備註"
+                    outlined
+                    dense
+                    type="textarea"
+                    rows="2"
+                    placeholder="可選：添加其他備註資訊"
+                  />
+                </div>
+              </div>
+
+              <div class="q-mt-md">
+                <q-banner class="bg-info text-white">
+                  <template v-slot:avatar>
+                    <q-icon name="info" />
+                  </template>
+                  <div class="text-caption">
+                    設定為已出貨後，訂單狀態將自動更新為「處理中」。
+                  </div>
+                </q-banner>
+              </div>
+            </q-form>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn 
+              unelevated 
+              label="確認出貨" 
+              color="primary" 
+              :loading="shipmentLoading"
+              @click="handleShipmentSubmit"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Order Detail Dialog -->
+      <q-dialog v-model="showDetailDialog" maximized>
+        <q-card>
+          <q-card-section class="row items-center q-pb-none bg-primary text-white">
+            <div class="text-h6">訂單詳情</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
+          </q-card-section>
+
+          <q-card-section v-if="selectedOrder" class="q-pa-lg">
+            <div class="row q-col-gutter-lg">
+              <!-- 左側：訂單基本資訊 -->
+              <div class="col-12 col-md-6">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="text-h6 q-mb-md">訂單資訊</div>
+                    <q-list bordered separator>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>訂單編號</q-item-label>
+                          <q-item-label class="text-weight-bold">{{ selectedOrder.orderNumber }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>訂單狀態</q-item-label>
+                          <q-item-label>
+                            <q-badge :color="getStatusColor(selectedOrder.status)" :label="getStatusLabel(selectedOrder.status)" />
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>客戶姓名</q-item-label>
+                          <q-item-label>{{ selectedOrder.customerName || `客戶 #${selectedOrder.customerId}` }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>客戶電話</q-item-label>
+                          <q-item-label>{{ selectedOrder.customerPhone || '-' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>客戶郵箱</q-item-label>
+                          <q-item-label>{{ selectedOrder.customerEmail || '-' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>配送地址</q-item-label>
+                          <q-item-label>{{ selectedOrder.shippingAddress || '-' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>訂單總金額</q-item-label>
+                          <q-item-label class="text-h6 text-primary">¥{{ selectedOrder.totalAmount?.toFixed(2) }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item>
+                        <q-item-section>
+                          <q-item-label caption>創建時間</q-item-label>
+                          <q-item-label>{{ selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString('zh-TW') : '-' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
+
+                <!-- 訂單項目 -->
+                <q-card flat bordered class="q-mt-md">
+                  <q-card-section>
+                    <div class="text-h6 q-mb-md">訂單項目</div>
+                    <q-list bordered separator v-if="getOrderItems(selectedOrder) && getOrderItems(selectedOrder).length > 0">
+                      <q-item v-for="item in getOrderItems(selectedOrder)" :key="item.id">
+                        <q-item-section>
+                          <q-item-label>{{ item.productName || `商品 #${item.productId}` }}</q-item-label>
+                          <q-item-label caption>
+                            數量：{{ item.quantity }} × ¥{{ (item.unitPrice || item.price || 0).toFixed(2) }} = 
+                            ¥{{ (item.subtotal || item.subtotalAmount || 0).toFixed(2) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                    <div v-else class="text-grey-6 text-center q-pa-md">暫無訂單項目</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
+              <!-- 右側：物流記錄 -->
+              <div class="col-12 col-md-6">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="row items-center justify-between q-mb-md">
+                      <div class="text-h6">物流記錄</div>
+                      <q-btn 
+                        v-if="selectedOrder.status === 'PAID'"
+                        flat 
+                        dense 
+                        icon="add" 
+                        label="新增物流" 
+                        color="primary" 
+                        size="sm"
+                        @click="handleShipmentFromDetail"
+                      />
+                    </div>
+                    
+                    <q-inner-loading :showing="shipmentsLoading" />
+                    
+                    <q-list bordered separator v-if="shipments.length > 0">
+                      <q-item v-for="shipment in shipments" :key="shipment.id">
+                        <q-item-section>
+                          <q-item-label class="text-weight-bold">
+                            {{ shipment.shippingCompany || '未指定物流公司' }}
+                          </q-item-label>
+                          <q-item-label caption>
+                            <div>物流單號：{{ shipment.trackingNumber || '-' }}</div>
+                            <div>狀態：{{ getShippingStatusLabel(shipment.shippingStatus) }}</div>
+                            <div v-if="shipment.shippedAt">
+                              出貨時間：{{ new Date(shipment.shippedAt).toLocaleString('zh-TW') }}
+                            </div>
+                            <div v-if="shipment.deliveredAt">
+                              送達時間：{{ new Date(shipment.deliveredAt).toLocaleString('zh-TW') }}
+                            </div>
+                            <div v-if="shipment.recipientName">
+                              收件人：{{ shipment.recipientName }}
+                              <span v-if="shipment.recipientPhone"> ({{ shipment.recipientPhone }})</span>
+                            </div>
+                            <div v-if="shipment.recipientAddress">
+                              收件地址：{{ shipment.recipientAddress }}
+                            </div>
+                            <div v-if="shipment.notes" class="q-mt-xs text-grey-7">
+                              備註：{{ shipment.notes }}
+                            </div>
+                          </q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-badge :color="getShippingStatusColor(shipment.shippingStatus)">
+                            {{ getShippingStatusLabel(shipment.shippingStatus) }}
+                          </q-badge>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                    <div v-else class="text-grey-6 text-center q-pa-md">
+                      暫無物流記錄
+                      <div v-if="selectedOrder.status === 'PAID'" class="q-mt-sm">
+                        <q-btn 
+                          flat 
+                          dense 
+                          icon="add" 
+                          label="新增物流記錄" 
+                          color="primary" 
+                          size="sm"
+                          @click="handleShipmentFromDetail"
+                        />
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-lg q-pb-lg">
+            <q-btn flat label="關閉" color="grey-7" v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -487,10 +1172,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { orderApi, type Order, type OrderItem, type PageResponse } from '@/api'
+import { orderApi, type Order, type OrderItem, type PageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
 import { productApi, type Product } from '@/api/product'
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
+import { createPayment, type PaymentRequest } from '@/api/payment'
+import { shipmentApi, type OrderShipment } from '@/api/shipment'
 
 const $q = useQuasar()
 
@@ -511,9 +1198,93 @@ const discountForm = ref<OrderDiscount>({
   description: ''
 })
 
+// 狀態說明 Modal
+const showStatusModal = ref(false)
+
+// 訂單狀態列表
+const orderStatusList = [
+  { value: 'PENDING_PAYMENT', description: '訂單已建立，等待客戶付款' },
+  { value: 'PAID', description: '客戶已成功付款，等待處理' },
+  { value: 'PROCESSING', description: '訂單正在處理中（已發貨或正在準備）' },
+  { value: 'COMPLETED', description: '訂單已完成所有流程' },
+  { value: 'CANCELLED', description: '訂單已被取消' },
+  { value: 'REFUNDED', description: '訂單已退款' }
+] as const
+
+// 支付相關
+const showPaymentDialog = ref(false)
+const paymentOrder = ref<Order | null>(null)
+const selectedGateway = ref('ECPAY')
+const paymentLoading = ref(false)
+const paymentError = ref('')
+const showTestInfo = ref(true) // 測試環境顯示測試資訊
+
+// 出貨相關
+const showShipmentDialog = ref(false)
+const shipmentOrder = ref<Order | null>(null)
+const shipmentLoading = ref(false)
+const shipmentForm = ref<Partial<OrderShipment>>({
+  orderId: 0,
+  shippingStatus: 'SHIPPED',
+  shippingCompany: '',
+  trackingNumber: '',
+  recipientName: '',
+  recipientPhone: '',
+  recipientAddress: '',
+  notes: ''
+})
+
+// 訂單詳情相關
+const showDetailDialog = ref(false)
+const selectedOrder = ref<Order | null>(null)
+const shipments = ref<OrderShipment[]>([])
+const shipmentsLoading = ref(false)
+
+// 篩選相關
+const showFilterPanel = ref(false)
+const filterForm = ref({
+  orderNumber: '',
+  customerName: '',
+  customerId: null as number | null,
+  status: null as Order['status'] | null,
+  startDate: '',
+  endDate: '',
+  minAmount: null as number | null,
+  maxAmount: null as number | null,
+  isDraft: null as boolean | null,
+  storeId: null as number | null
+})
+
+const statusFilterOptions = [
+  { label: '待付款', value: 'PENDING_PAYMENT' },
+  { label: '已付款', value: 'PAID' },
+  { label: '處理中', value: 'PROCESSING' },
+  { label: '已完成', value: 'COMPLETED' },
+  { label: '已取消', value: 'CANCELLED' },
+  { label: '已退款', value: 'REFUNDED' }
+]
+
+const hasActiveFilters = computed(() => {
+  return !!(
+    filterForm.value.orderNumber ||
+    filterForm.value.customerName ||
+    filterForm.value.customerId ||
+    filterForm.value.status ||
+    filterForm.value.startDate ||
+    filterForm.value.endDate ||
+    filterForm.value.minAmount ||
+    filterForm.value.maxAmount
+  )
+})
+
+const paymentGatewayOptions = [
+  { label: '綠界 ECPay', value: 'ECPAY' }
+]
+
 const pagination = ref({
   page: 1,
-  rowsPerPage: 10
+  rowsPerPage: 20,
+  rowsNumber: 0
 })
 
 // 訂單表單
@@ -690,16 +1461,68 @@ const getDiscountTypeColor = (type: string) => {
   return colorMap[type] || 'grey'
 }
 
-const loadOrders = async () => {
+const loadOrders = async (useFilter = false) => {
   loading.value = true
   try {
-    const response = await orderApi.getOrders()
+    let response
+    
+    if (useFilter && hasActiveFilters.value) {
+      // 使用篩選條件搜索
+      const queryParams: any = {
+        page: pagination.value.page - 1, // 後端從0開始
+        size: pagination.value.rowsPerPage
+      }
+      
+      if (filterForm.value.orderNumber) {
+        queryParams.orderNumber = filterForm.value.orderNumber
+      }
+      if (filterForm.value.customerName) {
+        queryParams.customerName = filterForm.value.customerName
+      }
+      if (filterForm.value.customerId) {
+        queryParams.customerId = filterForm.value.customerId
+      }
+      if (filterForm.value.status) {
+        queryParams.status = filterForm.value.status
+      }
+      if (filterForm.value.startDate) {
+        queryParams.startDate = filterForm.value.startDate + 'T00:00:00'
+      }
+      if (filterForm.value.endDate) {
+        queryParams.endDate = filterForm.value.endDate + 'T23:59:59'
+      }
+      if (filterForm.value.minAmount !== null && filterForm.value.minAmount !== undefined) {
+        queryParams.minAmount = filterForm.value.minAmount
+      }
+      if (filterForm.value.maxAmount !== null && filterForm.value.maxAmount !== undefined) {
+        queryParams.maxAmount = filterForm.value.maxAmount
+      }
+      if (filterForm.value.isDraft !== null && filterForm.value.isDraft !== undefined) {
+        queryParams.isDraft = filterForm.value.isDraft
+      }
+      if (filterForm.value.storeId) {
+        queryParams.storeId = filterForm.value.storeId
+      }
+      
+      response = await orderApi.searchOrders(queryParams)
+    } else {
+      // 使用普通查詢
+      response = await orderApi.getOrders({
+        page: pagination.value.page - 1,
+        size: pagination.value.rowsPerPage
+      })
+    }
+    
     const data = response.data as PageResponse<Order> | Order[]
     let orderList: Order[] = []
+    let totalCount = 0
+    
     if (Array.isArray(data)) {
       orderList = data
+      totalCount = data.length
     } else if (data && 'content' in data) {
       orderList = data.content
+      totalCount = data.totalElements || data.total || 0
     } else {
       orderList = []
     }
@@ -715,6 +1538,11 @@ const loadOrders = async () => {
     })
     
     orders.value = orderList
+    
+    // 更新分頁資訊
+    if (data && 'totalElements' in data) {
+      pagination.value.rowsNumber = totalCount
+    }
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -727,10 +1555,33 @@ const loadOrders = async () => {
   }
 }
 
+const applyFilters = () => {
+  pagination.value.page = 1 // 重置到第一頁
+  loadOrders(true)
+}
+
+const resetFilters = () => {
+  filterForm.value = {
+    orderNumber: '',
+    customerName: '',
+    customerId: null,
+    status: null,
+    startDate: '',
+    endDate: '',
+    minAmount: null,
+    maxAmount: null,
+    isDraft: null,
+    storeId: null
+  }
+  pagination.value.page = 1
+  loadOrders(false)
+}
+
 const getStatusColor = (status: Order['status']) => {
   const colorMap: Record<string, string> = {
     PENDING: 'grey',
     PENDING_PAYMENT: 'grey',
+    PAID: 'blue',
     PROCESSING: 'warning',
     SHIPPED: 'info',
     DELIVERED: 'positive',
@@ -745,6 +1596,7 @@ const getStatusLabel = (status: Order['status']) => {
   const labelMap: Record<string, string> = {
     PENDING: '待處理',
     PENDING_PAYMENT: '待付款',
+    PAID: '已付款',
     PROCESSING: '處理中',
     SHIPPED: '已發貨',
     DELIVERED: '已送達',
@@ -884,6 +1736,317 @@ const handleDelete = (order: Order) => {
       console.error('Failed to delete order:', error)
     }
   })
+}
+
+const handlePayment = async (order: Order) => {
+  if (!order.id) return
+  
+  try {
+    // 載入完整的訂單資訊（如果需要）
+    const response = await orderApi.getOrder(order.id)
+    if (response.success && response.data) {
+      paymentOrder.value = response.data
+      paymentError.value = ''
+      showPaymentDialog.value = true
+      selectedGateway.value = 'ECPAY' // 預設選擇 ECPay
+    } else {
+      paymentOrder.value = order
+      showPaymentDialog.value = true
+      selectedGateway.value = 'ECPAY'
+    }
+  } catch (error: any) {
+    // 如果載入失敗，使用現有的訂單資料
+    paymentOrder.value = order
+    showPaymentDialog.value = true
+    selectedGateway.value = 'ECPAY'
+  }
+}
+
+const handleShipment = async (order: Order) => {
+  if (!order.id) return
+  
+  try {
+    // 載入完整的訂單資訊
+    const response = await orderApi.getOrder(order.id)
+    if (response.success && response.data) {
+      shipmentOrder.value = response.data
+    } else {
+      shipmentOrder.value = order
+    }
+    
+    // 重置表單並填充預設值
+    shipmentForm.value = {
+      orderId: order.id!,
+      shippingStatus: 'SHIPPED',
+      shippingCompany: '',
+      trackingNumber: '',
+      recipientName: order.customerName || '',
+      recipientPhone: order.customerPhone || '',
+      recipientAddress: order.shippingAddress || '',
+      notes: ''
+    }
+    
+    showShipmentDialog.value = true
+  } catch (error: any) {
+    console.error('Failed to load order:', error)
+    shipmentOrder.value = order
+    shipmentForm.value = {
+      orderId: order.id!,
+      shippingStatus: 'SHIPPED',
+      shippingCompany: '',
+      trackingNumber: '',
+      recipientName: order.customerName || '',
+      recipientPhone: order.customerPhone || '',
+      recipientAddress: order.shippingAddress || '',
+      notes: ''
+    }
+    showShipmentDialog.value = true
+  }
+}
+
+const handleShipmentFromDetail = () => {
+  if (selectedOrder.value) {
+    handleShipment(selectedOrder.value)
+  }
+}
+
+const handleViewDetail = async (order: Order) => {
+  if (!order.id) return
+  
+  try {
+    // 載入完整的訂單資訊
+    const response = await orderApi.getOrder(order.id)
+    if (response.success && response.data) {
+      // 後端返回的字段是 items，需要映射為 orderItems
+      const orderData = response.data as any
+      if (orderData.items && !orderData.orderItems) {
+        orderData.orderItems = orderData.items
+      }
+      selectedOrder.value = orderData
+    } else {
+      selectedOrder.value = order
+    }
+    
+    // 載入物流記錄
+    await loadShipments(order.id)
+    
+    showDetailDialog.value = true
+  } catch (error: any) {
+    console.error('Failed to load order detail:', error)
+    selectedOrder.value = order
+    await loadShipments(order.id)
+    showDetailDialog.value = true
+  }
+}
+
+const loadShipments = async (orderId: number) => {
+  shipmentsLoading.value = true
+  try {
+    const response = await shipmentApi.getShipmentsByOrderId(orderId)
+    if (response.success && response.data) {
+      shipments.value = Array.isArray(response.data) ? response.data : []
+    } else {
+      shipments.value = []
+    }
+  } catch (error: any) {
+    console.error('Failed to load shipments:', error)
+    shipments.value = []
+  } finally {
+    shipmentsLoading.value = false
+  }
+}
+
+const getShippingStatusLabel = (status: OrderShipment['shippingStatus']) => {
+  const labelMap: Record<string, string> = {
+    PENDING: '待出貨',
+    SHIPPED: '已出貨',
+    DELIVERED: '已送達',
+    RETURNED: '已退貨'
+  }
+  return labelMap[status] || status
+}
+
+const getShippingStatusColor = (status: OrderShipment['shippingStatus']) => {
+  const colorMap: Record<string, string> = {
+    PENDING: 'grey',
+    SHIPPED: 'info',
+    DELIVERED: 'positive',
+    RETURNED: 'negative'
+  }
+  return colorMap[status] || 'grey'
+}
+
+// 獲取訂單項目（兼容後端的 items 和前端的 orderItems）
+const getOrderItems = (order: Order | null): OrderItem[] => {
+  if (!order) return []
+  const orderData = order as any
+  // 後端返回的是 items，前端接口定義的是 orderItems
+  return orderData.items || orderData.orderItems || []
+}
+
+const handleShipmentSubmit = async () => {
+  if (!shipmentForm.value.orderId) {
+    $q.notify({
+      type: 'negative',
+      message: '訂單資訊不完整',
+      position: 'top'
+    })
+    return
+  }
+
+  if (!shipmentForm.value.shippingCompany || !shipmentForm.value.trackingNumber) {
+    $q.notify({
+      type: 'negative',
+      message: '請填寫物流公司和物流單號',
+      position: 'top'
+    })
+    return
+  }
+
+  shipmentLoading.value = true
+
+  try {
+    // 創建物流記錄
+    const shipmentData: OrderShipment = {
+      orderId: shipmentForm.value.orderId,
+      shippingStatus: 'SHIPPED',
+      shippingCompany: shipmentForm.value.shippingCompany,
+      trackingNumber: shipmentForm.value.trackingNumber,
+      recipientName: shipmentForm.value.recipientName || undefined,
+      recipientPhone: shipmentForm.value.recipientPhone || undefined,
+      recipientAddress: shipmentForm.value.recipientAddress || undefined,
+      notes: shipmentForm.value.notes || undefined
+    }
+
+    const response = await shipmentApi.createShipment(shipmentData)
+
+    if (response.success) {
+      $q.notify({
+        type: 'positive',
+        message: '已出貨設定成功！訂單狀態已更新為「處理中」',
+        position: 'top'
+      })
+      
+      showShipmentDialog.value = false
+      loadOrders() // 重新載入訂單列表
+      
+      // 如果訂單詳情 dialog 是打開的，重新載入物流記錄
+      if (showDetailDialog.value && selectedOrder.value?.id) {
+        await loadShipments(selectedOrder.value.id)
+      }
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: response.message || '設定已出貨失敗',
+        position: 'top'
+      })
+    }
+  } catch (error: any) {
+    console.error('Failed to create shipment:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || '設定已出貨失敗：' + (error.message || '未知錯誤'),
+      position: 'top'
+    })
+  } finally {
+    shipmentLoading.value = false
+  }
+}
+
+const processPayment = async () => {
+  if (!paymentOrder.value || !paymentOrder.value.orderNumber) {
+    paymentError.value = '訂單資訊不完整'
+    return
+  }
+
+  paymentLoading.value = true
+  paymentError.value = ''
+
+  try {
+    // 準備支付請求
+    const paymentRequest: PaymentRequest = {
+      orderId: paymentOrder.value.id,
+      orderNumber: paymentOrder.value.orderNumber,
+      amount: paymentOrder.value.totalAmount,
+      productName: `訂單 ${paymentOrder.value.orderNumber}`,
+      customerName: paymentOrder.value.customerName || '',
+      customerEmail: paymentOrder.value.customerEmail || '',
+      customerPhone: paymentOrder.value.customerPhone || ''
+    }
+
+    // 創建支付請求
+    const response = await createPayment(selectedGateway.value, paymentRequest)
+    
+    if (response.success && response.data) {
+      const paymentData = response.data
+      
+      if (paymentData.paymentUrl) {
+        // ECPay 需要使用 POST 表單提交
+        if (selectedGateway.value === 'ECPAY') {
+          submitECPayForm(paymentData.paymentUrl)
+        } else {
+          // 其他支付方式直接跳轉
+          window.location.href = paymentData.paymentUrl
+        }
+      } else {
+        paymentError.value = '未獲取到支付連結'
+      }
+    } else {
+      paymentError.value = response.message || '創建支付請求失敗'
+    }
+  } catch (error: any) {
+    console.error('Payment error:', error)
+    paymentError.value = error.response?.data?.message || '支付處理失敗，請稍後再試'
+  } finally {
+    paymentLoading.value = false
+  }
+}
+
+// 提交 ECPay 表單（使用 POST 方式）
+const submitECPayForm = (paymentUrl: string) => {
+  try {
+    console.log('Submitting ECPay form with URL:', paymentUrl)
+    
+    // 解析 URL 獲取參數
+    const url = new URL(paymentUrl)
+    const params = new URLSearchParams(url.search)
+    
+    // ECPay 的 POST URL（不含參數）
+    const postUrl = `${url.protocol}//${url.host}${url.pathname}`
+    console.log('POST URL:', postUrl)
+    
+    // 創建動態表單
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = postUrl
+    form.target = '_self' // 確保在同一窗口提交
+    form.style.display = 'none'
+    
+    // 添加所有參數作為隱藏 input
+    // URLSearchParams 已經自動解碼，直接使用原始值
+    // 瀏覽器在提交 POST 表單時會自動對表單字段值進行 URL 編碼
+    params.forEach((value, key) => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = key
+      input.value = value // URLSearchParams 已經解碼，使用原始值
+      form.appendChild(input)
+      console.log(`Added form field: ${key} = ${input.value}`)
+    })
+    
+    // 添加到頁面並提交
+    document.body.appendChild(form)
+    console.log('Form created, submitting...')
+    form.submit()
+  } catch (error: any) {
+    console.error('Failed to submit ECPay form:', error)
+    paymentError.value = '提交支付表單失敗：' + error.message
+    $q.notify({
+      type: 'negative',
+      message: '提交支付表單失敗：' + error.message,
+      position: 'top'
+    })
+  }
 }
 
 const handleEdit = async (order: Order) => {
@@ -1236,6 +2399,15 @@ const handleSubmit = async () => {
     console.error('Failed to create order:', error)
   }
 }
+
+// 監聽分頁變化
+watch(() => pagination.value.page, () => {
+  if (hasActiveFilters.value) {
+    loadOrders(true)
+  } else {
+    loadOrders(false)
+  }
+})
 
 onMounted(() => {
   loadOrders()

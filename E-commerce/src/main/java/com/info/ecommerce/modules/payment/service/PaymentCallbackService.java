@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,28 +41,71 @@ public class PaymentCallbackService {
     public boolean handlePaymentSuccess(PaymentResponseDTO response) {
         try {
             String orderNumber = response.getOrderNumber();
+            log.info("Handling payment success for order: {}, transaction: {}", orderNumber, response.getTransactionId());
             
-            // 查找訂單
+            // 查找訂單（先嘗試精確匹配，如果失敗則嘗試前綴匹配）
             Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
+            
+            // 如果精確匹配失敗，可能是因為訂單編號被截取了，嘗試使用前綴匹配
+            if (orderOpt.isEmpty() && orderNumber != null && orderNumber.length() >= 10) {
+                log.warn("Exact match failed for order number: {}, trying prefix match...", orderNumber);
+                // 嘗試匹配以該訂單編號開頭的訂單（用於處理被截取的訂單編號）
+                List<Order> ordersByPrefix = orderRepository.findAll().stream()
+                        .filter(order -> order.getOrderNumber() != null && order.getOrderNumber().startsWith(orderNumber))
+                        .limit(1)
+                        .toList();
+                if (!ordersByPrefix.isEmpty()) {
+                    orderOpt = Optional.of(ordersByPrefix.get(0));
+                    log.info("Found order by prefix match: {} -> {}", orderNumber, orderOpt.get().getOrderNumber());
+                }
+            }
+            
             if (orderOpt.isEmpty()) {
                 log.error("Order not found for payment success: {}", orderNumber);
+                // 記錄一些訂單編號示例用於調試（但不記錄太多以避免性能問題）
+                try {
+                    List<String> sampleOrderNumbers = orderRepository.findAll().stream()
+                            .limit(5)
+                            .map(Order::getOrderNumber)
+                            .toList();
+                    log.error("Sample order numbers in database: {}", sampleOrderNumbers);
+                } catch (Exception e) {
+                    log.error("Failed to fetch sample order numbers", e);
+                }
                 return false;
             }
             
             Order order = orderOpt.get();
+            log.info("Order found: {}, current status: {}", orderNumber, order.getStatus());
             
-            // 檢查訂單狀態
-            if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-                log.warn("Order {} is not in PENDING_PAYMENT status, current status: {}", 
+            // 檢查訂單狀態（只允許待付款或已付款狀態的訂單進行支付成功處理）
+            // 注意：數據庫約束允許：PENDING_PAYMENT, PAID, PROCESSING, COMPLETED, CANCELLED, REFUNDED
+            // 支付成功後更新為 PAID（已付款）狀態
+            if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.PAID) {
+                log.warn("Order {} is not in PENDING_PAYMENT or PROCESSING status, current status: {}", 
                         orderNumber, order.getStatus());
+                // 如果已經是完成、取消或退款狀態，不需要處理
+                if (order.getStatus() == OrderStatus.COMPLETED || 
+                    order.getStatus() == OrderStatus.CANCELLED || 
+                    order.getStatus() == OrderStatus.REFUNDED ||
+                    order.getStatus() == OrderStatus.PROCESSING) {
+                    log.info("Order {} is already in status: {}, skipping payment update", 
+                            orderNumber, order.getStatus());
+                    return true;
+                }
                 return false;
             }
             
             // 更新訂單狀態
+            // 數據庫 CHECK 約束 CK__orders__status__6A30C649 允許以下狀態：
+            // PENDING_PAYMENT, PAID, PROCESSING, COMPLETED, CANCELLED, REFUNDED
+            // 支付成功後更新為 PAID（已付款）狀態
             OrderStatus oldStatus = order.getStatus();
             order.setStatus(OrderStatus.PAID);
             order.setPaymentTime(LocalDateTime.now());
             orderRepository.save(order);
+            
+            log.info("Order status updated from {} to PAID for order: {} (Payment successful)", oldStatus, orderNumber);
             
             // 建立或更新付款記錄
             OrderPayment payment = createOrUpdatePayment(order, response);
