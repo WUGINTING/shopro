@@ -83,4 +83,7 @@ public class ProductDTO {
 
     @Schema(description = "商品規格列表")
     private List<ProductSpecificationDTO> specifications;
+
+    @Schema(description = "商品描述區塊列表")
+    private List<ProductDescriptionBlockDTO> descriptionBlocks;
 }

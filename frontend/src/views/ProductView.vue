@@ -145,7 +145,7 @@
 
       <!-- Add/Edit Dialog -->
       <q-dialog v-model="showDialog" persistent>
-        <q-card style="min-width: 600px">
+        <q-card style="min-width: 800px; max-width: 90vw">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">{{ form.id ? '編輯商品' : '新增商品' }}</div>
             <q-space />
@@ -153,7 +153,16 @@
           </q-card-section>
 
           <q-card-section>
-            <q-form>
+            <q-tabs v-model="dialogTab" class="text-grey" active-color="primary" indicator-color="primary" align="left">
+              <q-tab name="basic" label="基本資訊" />
+              <q-tab name="specifications" label="商品規格（SKU）" :disable="!form.id" />
+              <q-tab name="description" label="描述區塊" :disable="!form.id" />
+            </q-tabs>
+
+            <q-tab-panels v-model="dialogTab" animated>
+              <!-- 基本資訊標籤頁 -->
+              <q-tab-panel name="basic">
+                <q-form>
               <q-input
                 v-model="form.name"
                 label="商品名稱 *"
@@ -287,13 +296,318 @@
                   </div>
                 </div>
               </div>
-            </q-form>
+                </q-form>
+              </q-tab-panel>
+
+              <!-- 商品規格（SKU）標籤頁 -->
+              <q-tab-panel name="specifications">
+                <div v-if="!form.id" class="text-center text-grey q-pa-xl">
+                  <q-icon name="info" size="48px" />
+                  <div class="q-mt-md">請先保存商品後再添加商品規格</div>
+                </div>
+
+                <div v-else>
+                  <div class="row items-center justify-between q-mb-md">
+                    <div class="text-subtitle1 text-weight-bold">商品規格（SKU）管理</div>
+                    <q-btn
+                      unelevated
+                      color="primary"
+                      icon="add"
+                      label="新增規格"
+                      @click="showSpecDialog = true; specForm = { productId: form.id, specName: '', sku: '', price: 0, cost: 0, stock: 0, enabled: true }"
+                    />
+                  </div>
+
+                  <!-- 規格列表 -->
+                  <q-table
+                    :rows="specifications"
+                    :columns="specColumns"
+                    row-key="id"
+                    :loading="specLoading"
+                    flat
+                    bordered
+                    class="q-mb-md"
+                  >
+                    <template v-slot:body-cell-image="props">
+                      <q-td :props="props">
+                        <q-avatar v-if="props.value" rounded size="50px">
+                          <q-img :src="props.value" :ratio="1" />
+                        </q-avatar>
+                        <q-avatar v-else rounded size="50px" color="grey-3">
+                          <q-icon name="image" />
+                        </q-avatar>
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-price="props">
+                      <q-td :props="props">
+                        <span class="text-weight-bold text-primary">
+                          ¥{{ (props.value || 0).toFixed(2) }}
+                        </span>
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-stock="props">
+                      <q-td :props="props">
+                        <q-badge
+                          :color="props.value > 10 ? 'positive' : props.value > 0 ? 'warning' : 'negative'"
+                          :label="props.value || 0"
+                        />
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-enabled="props">
+                      <q-td :props="props">
+                        <q-toggle
+                          :model-value="props.value"
+                          @update:model-value="toggleSpecEnabled(props.row, $event)"
+                        />
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-actions="props">
+                      <q-td :props="props">
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="edit"
+                          color="primary"
+                          size="sm"
+                          @click="editSpecification(props.row)"
+                        >
+                          <q-tooltip>編輯</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="delete"
+                          color="negative"
+                          size="sm"
+                          @click="deleteSpecification(props.row.id)"
+                        >
+                          <q-tooltip>刪除</q-tooltip>
+                        </q-btn>
+                      </q-td>
+                    </template>
+                  </q-table>
+
+                  <div v-if="specifications.length === 0" class="text-center text-grey q-pa-xl">
+                    <q-icon name="inventory_2" size="64px" />
+                    <div class="q-mt-md">尚未添加商品規格</div>
+                    <div class="text-caption q-mt-xs">點擊「新增規格」按鈕開始添加</div>
+                  </div>
+                </div>
+              </q-tab-panel>
+
+              <!-- 描述區塊標籤頁 -->
+              <q-tab-panel name="description">
+                <div v-if="!form.id" class="text-center text-grey q-pa-xl">
+                  <q-icon name="info" size="48px" />
+                  <div class="q-mt-md">請先保存商品後再編輯描述區塊</div>
+                </div>
+
+                <div v-else>
+                  <!-- 手動區塊（區塊1~3） -->
+                  <div class="q-mb-lg">
+                    <div class="text-subtitle1 q-mb-md text-weight-bold">手動區塊（區塊1~3）</div>
+                    <div v-for="blockNum in 3" :key="`manual-${blockNum}`" class="q-mb-md">
+                      <q-card flat bordered>
+                        <q-card-section>
+                          <div class="text-subtitle2 q-mb-sm">區塊 {{ blockNum }}</div>
+                          <q-input
+                            v-model="manualBlocks[blockNum - 1].title"
+                            label="區塊標題"
+                            outlined
+                            dense
+                            class="q-mb-sm"
+                          />
+                          <q-input
+                            v-model="manualBlocks[blockNum - 1].content"
+                            label="區塊內容"
+                            outlined
+                            type="textarea"
+                            rows="4"
+                            class="q-mb-sm"
+                          />
+                          <q-input
+                            v-model="manualBlocks[blockNum - 1].imageUrl"
+                            label="區塊圖片URL"
+                            outlined
+                            dense
+                          />
+                          <q-toggle
+                            v-model="manualBlocks[blockNum - 1].enabled"
+                            label="啟用此區塊"
+                            class="q-mt-sm"
+                          />
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+
+                  <!-- 自動區塊（區塊1~7） -->
+                  <div class="q-mb-lg">
+                    <div class="row items-center justify-between q-mb-md">
+                      <div class="text-subtitle1 text-weight-bold">自動區塊（區塊1~7）</div>
+                      <q-btn
+                        outline
+                        color="primary"
+                        label="初始化自動區塊"
+                        icon="refresh"
+                        size="sm"
+                        @click="initializeAutoBlocks"
+                      />
+                    </div>
+                    <div v-for="blockNum in 7" :key="`auto-${blockNum}`" class="q-mb-md">
+                      <q-card flat bordered>
+                        <q-card-section>
+                          <div class="row items-center justify-between q-mb-sm">
+                            <div class="text-subtitle2">自動區塊 {{ blockNum }}</div>
+                            <q-badge v-if="autoBlocks[blockNum - 1]?.isAutoGenerated" color="info" label="自動生成" />
+                          </div>
+                          <q-input
+                            v-model="autoBlocks[blockNum - 1].title"
+                            label="區塊標題"
+                            outlined
+                            dense
+                            class="q-mb-sm"
+                          />
+                          <q-input
+                            v-model="autoBlocks[blockNum - 1].content"
+                            label="區塊內容"
+                            outlined
+                            type="textarea"
+                            rows="4"
+                            class="q-mb-sm"
+                          />
+                          <q-input
+                            v-model="autoBlocks[blockNum - 1].imageUrl"
+                            label="區塊圖片URL"
+                            outlined
+                            dense
+                          />
+                          <q-toggle
+                            v-model="autoBlocks[blockNum - 1].enabled"
+                            label="啟用此區塊"
+                            class="q-mt-sm"
+                          />
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+
+                  <q-btn
+                    unelevated
+                    color="primary"
+                    label="保存所有描述區塊"
+                    icon="save"
+                    class="full-width"
+                    @click="saveDescriptionBlocks"
+                  />
+                </div>
+              </q-tab-panel>
+            </q-tab-panels>
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" @click="closeDialog" />
             <q-btn unelevated label="儲存" color="primary" @click="handleSubmit" />
             <q-btn v-if="form.id" unelevated label="完成" color="positive" @click="closeDialog" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Specification Dialog -->
+      <q-dialog v-model="showSpecDialog" persistent>
+        <q-card style="min-width: 600px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">{{ specForm.id ? '編輯規格' : '新增規格' }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <q-form>
+              <q-input
+                v-model="specForm.specName"
+                label="規格名稱 *"
+                outlined
+                class="q-mb-md"
+                hint="例如：顏色:紅色,尺寸:L"
+                :rules="[val => !!val || '請輸入規格名稱']"
+              />
+
+              <q-input
+                v-model="specForm.sku"
+                label="規格 SKU"
+                outlined
+                class="q-mb-md"
+                hint="規格編號，需唯一"
+              />
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-6">
+                  <q-input
+                    v-model.number="specForm.price"
+                    label="規格價格 *"
+                    outlined
+                    type="number"
+                    prefix="¥"
+                    :rules="[val => val >= 0 || '價格不能為負數']"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input
+                    v-model.number="specForm.cost"
+                    label="規格成本"
+                    outlined
+                    type="number"
+                    prefix="¥"
+                  />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-6">
+                  <q-input
+                    v-model.number="specForm.stock"
+                    label="庫存數量 *"
+                    outlined
+                    type="number"
+                    :rules="[val => val >= 0 || '庫存不能為負數']"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input
+                    v-model.number="specForm.weight"
+                    label="重量（克）"
+                    outlined
+                    type="number"
+                  />
+                </div>
+              </div>
+
+              <q-input
+                v-model="specForm.image"
+                label="規格圖片URL"
+                outlined
+                class="q-mb-md"
+                hint="規格專屬圖片"
+              />
+
+              <q-toggle
+                v-model="specForm.enabled"
+                label="啟用此規格"
+                class="q-mb-md"
+              />
+            </q-form>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn unelevated label="儲存" color="primary" @click="saveSpecification" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -391,7 +705,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { productApi, categoryApi, type Product, type ProductCategory, type PageResponse } from '@/api'
+import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
 
 const $q = useQuasar()
@@ -399,10 +713,54 @@ const $q = useQuasar()
 const products = ref<Product[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
+const dialogTab = ref('basic')
 const searchQuery = ref('')
 const statusFilter = ref(null)
 const categoryFilter = ref(null)
 const productImage = ref(null)
+
+// 商品規格相關狀態
+const specifications = ref<ProductSpecification[]>([])
+const specLoading = ref(false)
+const showSpecDialog = ref(false)
+const specForm = ref<ProductSpecification>({
+  productId: undefined,
+  specName: '',
+  sku: '',
+  price: 0,
+  cost: 0,
+  stock: 0,
+  image: '',
+  weight: undefined,
+  enabled: true
+})
+
+const specColumns = [
+  { name: 'specName', label: '規格名稱', align: 'left' as const, field: 'specName', sortable: true },
+  { name: 'sku', label: 'SKU', align: 'left' as const, field: 'sku', sortable: true },
+  { name: 'image', label: '圖片', align: 'center' as const, field: 'image' },
+  { name: 'price', label: '價格', align: 'left' as const, field: 'price', sortable: true },
+  { name: 'cost', label: '成本', align: 'left' as const, field: 'cost', sortable: true },
+  { name: 'stock', label: '庫存', align: 'center' as const, field: 'stock', sortable: true },
+  { name: 'enabled', label: '啟用', align: 'center' as const, field: 'enabled' },
+  { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
+]
+
+// 描述區塊相關狀態
+const manualBlocks = ref<ProductDescriptionBlock[]>([
+  { blockType: 'MANUAL', blockNumber: 1, title: '', content: '', enabled: true },
+  { blockType: 'MANUAL', blockNumber: 2, title: '', content: '', enabled: true },
+  { blockType: 'MANUAL', blockNumber: 3, title: '', content: '', enabled: true }
+])
+const autoBlocks = ref<ProductDescriptionBlock[]>([
+  { blockType: 'AUTO', blockNumber: 1, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 2, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 3, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 4, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 5, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 6, title: '', content: '', enabled: true, isAutoGenerated: true },
+  { blockType: 'AUTO', blockNumber: 7, title: '', content: '', enabled: true, isAutoGenerated: true }
+])
 
 // Album-related state
 const showAlbumSelector = ref(false)
@@ -496,6 +854,13 @@ const handleEdit = async (product: Product) => {
     price: product.salePrice ?? product.basePrice ?? 0
   }
   showDialog.value = true
+  dialogTab.value = 'basic'
+  
+  // 載入商品規格和描述區塊
+  if (product.id) {
+    await loadSpecifications(product.id)
+    await loadDescriptionBlocks(product.id)
+  }
 
   // Load existing album images for this product if it has images
   if (product.id && product.images && product.images.length > 0) {
@@ -722,9 +1087,275 @@ const closeDialog = async () => {
   }
 
   showDialog.value = false
+  dialogTab.value = 'basic'
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
   selectedAlbumImages.value = []
   productImage.value = null
+  // 重置規格和描述區塊
+  specifications.value = []
+  resetDescriptionBlocks()
+}
+
+// 載入商品規格
+const loadSpecifications = async (productId: number) => {
+  specLoading.value = true
+  try {
+    const response = await productSpecificationApi.getProductSpecifications(productId)
+    if (response.success && response.data) {
+      specifications.value = response.data
+    }
+  } catch (error) {
+    console.error('載入商品規格失敗:', error)
+    $q.notify({
+      type: 'negative',
+      message: '載入商品規格失敗',
+      position: 'top'
+    })
+  } finally {
+    specLoading.value = false
+  }
+}
+
+// 保存規格
+const saveSpecification = async () => {
+  try {
+    if (!specForm.value.specName) {
+      $q.notify({
+        type: 'negative',
+        message: '請輸入規格名稱',
+        position: 'top'
+      })
+      return
+    }
+
+    if (!form.value.id) {
+      $q.notify({
+        type: 'negative',
+        message: '請先保存商品',
+        position: 'top'
+      })
+      return
+    }
+
+    specForm.value.productId = form.value.id
+
+    if (specForm.value.id) {
+      // 更新規格
+      await productSpecificationApi.updateSpecification(specForm.value.id, specForm.value)
+      $q.notify({
+        type: 'positive',
+        message: '規格已更新',
+        position: 'top'
+      })
+    } else {
+      // 新增規格
+      await productSpecificationApi.addSpecification(specForm.value)
+      $q.notify({
+        type: 'positive',
+        message: '規格已添加',
+        position: 'top'
+      })
+    }
+
+    showSpecDialog.value = false
+    specForm.value = {
+      productId: form.value.id,
+      specName: '',
+      sku: '',
+      price: 0,
+      cost: 0,
+      stock: 0,
+      image: '',
+      weight: undefined,
+      enabled: true
+    }
+
+    // 重新載入規格列表
+    if (form.value.id) {
+      await loadSpecifications(form.value.id)
+    }
+  } catch (error) {
+    console.error('保存規格失敗:', error)
+    $q.notify({
+      type: 'negative',
+      message: '保存規格失敗',
+      position: 'top'
+    })
+  }
+}
+
+// 編輯規格
+const editSpecification = (spec: ProductSpecification) => {
+  specForm.value = { ...spec }
+  showSpecDialog.value = true
+}
+
+// 刪除規格
+const deleteSpecification = (specId?: number) => {
+  if (!specId) return
+
+  $q.dialog({
+    title: '確認刪除',
+    message: '確定要刪除這個規格嗎？此操作無法復原。',
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await productSpecificationApi.deleteSpecification(specId)
+      $q.notify({
+        type: 'positive',
+        message: '規格已刪除',
+        position: 'top'
+      })
+      if (form.value.id) {
+        await loadSpecifications(form.value.id)
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: '刪除規格失敗',
+        position: 'top'
+      })
+    }
+  })
+}
+
+// 切換規格啟用狀態
+const toggleSpecEnabled = async (spec: ProductSpecification, enabled: boolean) => {
+  try {
+    await productSpecificationApi.updateSpecification(spec.id!, { ...spec, enabled })
+    if (form.value.id) {
+      await loadSpecifications(form.value.id)
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '更新規格狀態失敗',
+      position: 'top'
+    })
+  }
+}
+
+// 載入描述區塊
+const loadDescriptionBlocks = async (productId: number) => {
+  try {
+    const response = await productDescriptionBlockApi.getProductBlocks(productId)
+    if (response.success && response.data) {
+      const blocks = response.data
+      
+      // 分離手動區塊和自動區塊
+      const manual = blocks.filter(b => b.blockType === 'MANUAL').sort((a, b) => (a.blockNumber || 0) - (b.blockNumber || 0))
+      const auto = blocks.filter(b => b.blockType === 'AUTO').sort((a, b) => (a.blockNumber || 0) - (b.blockNumber || 0))
+      
+      // 更新手動區塊
+      for (let i = 0; i < 3; i++) {
+        if (manual[i]) {
+          manualBlocks.value[i] = { ...manualBlocks.value[i], ...manual[i] }
+        } else {
+          manualBlocks.value[i] = {
+            blockType: 'MANUAL',
+            blockNumber: i + 1,
+            title: '',
+            content: '',
+            enabled: true
+          }
+        }
+      }
+      
+      // 更新自動區塊
+      for (let i = 0; i < 7; i++) {
+        if (auto[i]) {
+          autoBlocks.value[i] = { ...autoBlocks.value[i], ...auto[i] }
+        } else {
+          autoBlocks.value[i] = {
+            blockType: 'AUTO',
+            blockNumber: i + 1,
+            title: '',
+            content: '',
+            enabled: true,
+            isAutoGenerated: true
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('載入描述區塊失敗:', error)
+  }
+}
+
+// 初始化自動區塊
+const initializeAutoBlocks = async () => {
+  if (!form.value.id) return
+  
+  try {
+    const response = await productDescriptionBlockApi.initializeAutoBlocks(form.value.id)
+    if (response.success && response.data) {
+      $q.notify({
+        type: 'positive',
+        message: '自動區塊已初始化',
+        position: 'top'
+      })
+      await loadDescriptionBlocks(form.value.id)
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '初始化自動區塊失敗',
+      position: 'top'
+    })
+    console.error('初始化自動區塊失敗:', error)
+  }
+}
+
+// 保存所有描述區塊
+const saveDescriptionBlocks = async () => {
+  if (!form.value.id) return
+  
+  try {
+    // 收集所有區塊
+    const allBlocks: ProductDescriptionBlock[] = [
+      ...manualBlocks.value,
+      ...autoBlocks.value
+    ].map(block => ({
+      ...block,
+      productId: form.value.id
+    }))
+    
+    const response = await productDescriptionBlockApi.saveBlocks(form.value.id, allBlocks)
+    if (response.success) {
+      $q.notify({
+        type: 'positive',
+        message: '描述區塊已保存',
+        position: 'top'
+      })
+      await loadDescriptionBlocks(form.value.id)
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '保存描述區塊失敗',
+      position: 'top'
+    })
+    console.error('保存描述區塊失敗:', error)
+  }
+}
+
+// 重置描述區塊
+const resetDescriptionBlocks = () => {
+  manualBlocks.value = [
+    { blockType: 'MANUAL', blockNumber: 1, title: '', content: '', enabled: true },
+    { blockType: 'MANUAL', blockNumber: 2, title: '', content: '', enabled: true },
+    { blockType: 'MANUAL', blockNumber: 3, title: '', content: '', enabled: true }
+  ]
+  autoBlocks.value = [
+    { blockType: 'AUTO', blockNumber: 1, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 2, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 3, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 4, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 5, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 6, title: '', content: '', enabled: true, isAutoGenerated: true },
+    { blockType: 'AUTO', blockNumber: 7, title: '', content: '', enabled: true, isAutoGenerated: true }
+  ]
 }
 
 // Album-related functions

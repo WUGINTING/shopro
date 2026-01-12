@@ -4,6 +4,7 @@ import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.album.entity.AlbumImage;
 import com.info.ecommerce.modules.album.repository.AlbumImageRepository;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
+import com.info.ecommerce.modules.product.dto.ProductDescriptionBlockDTO;
 import com.info.ecommerce.modules.product.dto.ProductImageDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
@@ -26,6 +27,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final AlbumImageRepository albumImageRepository;
+    private final ProductDescriptionBlockService descriptionBlockService;
 
     /**
      * 驗證並標準化 SKU
@@ -233,6 +235,17 @@ public class ProductService {
                 imageDTOs.add(imageDTO);
             }
             dto.setImages(imageDTOs);
+        }
+        
+        // 添加描述區塊
+        if (entity.getId() != null) {
+            try {
+                List<ProductDescriptionBlockDTO> blocks = descriptionBlockService.getProductBlocks(entity.getId());
+                dto.setDescriptionBlocks(blocks);
+            } catch (Exception e) {
+                // 如果獲取描述區塊失敗，設為空列表
+                dto.setDescriptionBlocks(new ArrayList<>());
+            }
         }
         
         return dto;
