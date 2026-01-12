@@ -9,6 +9,10 @@ import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.CustomerBlacklistRepository;
 import com.info.ecommerce.modules.order.repository.OrderItemRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.entity.ProductSpecification;
+import com.info.ecommerce.modules.product.repository.ProductRepository;
+import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -33,6 +37,8 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final CustomerBlacklistRepository customerBlacklistRepository;
     private final OrderHistoryService orderHistoryService;
+    private final ProductRepository productRepository;
+    private final ProductSpecificationRepository productSpecificationRepository;
 
     /**
      * 生成訂單編號
@@ -114,8 +120,57 @@ public class OrderService {
         BeanUtils.copyProperties(dto, item);
         item.setOrderId(orderId);
         item.setId(null);
+
+        // 如果提供了規格ID，從規格中獲取信息
+        if (dto.getSpecificationId() != null) {
+            ProductSpecification spec = productSpecificationRepository.findById(dto.getSpecificationId())
+                    .orElseThrow(() -> new BusinessException("商品規格不存在: " + dto.getSpecificationId()));
+            
+            // 驗證規格是否屬於該商品
+            if (!spec.getProductId().equals(dto.getProductId())) {
+                throw new BusinessException("商品規格不屬於該商品");
+            }
+            
+            // 從規格中獲取信息
+            if (spec.getSku() != null && !spec.getSku().isEmpty()) {
+                item.setProductSku(spec.getSku());
+            }
+            if (spec.getSpecName() != null && !spec.getSpecName().isEmpty()) {
+                item.setProductSpec(spec.getSpecName());
+            }
+            // 如果DTO中沒有提供單價，使用規格的價格
+            if (dto.getUnitPrice() == null && spec.getPrice() != null) {
+                item.setUnitPrice(spec.getPrice());
+            }
+        }
+
+        // 獲取商品信息
+        Product product = productRepository.findById(dto.getProductId())
+                .orElseThrow(() -> new BusinessException("商品不存在: " + dto.getProductId()));
+        item.setProductName(product.getName());
+
+        // 如果沒有設置SKU，使用商品的SKU
+        if (item.getProductSku() == null || item.getProductSku().isEmpty()) {
+            if (product.getSku() != null && !product.getSku().isEmpty()) {
+                item.setProductSku(product.getSku());
+            }
+        }
+
+        // 確保單價不為空
+        if (item.getUnitPrice() == null) {
+            if (dto.getUnitPrice() != null) {
+                item.setUnitPrice(dto.getUnitPrice());
+            } else if (product.getSalePrice() != null) {
+                item.setUnitPrice(product.getSalePrice());
+            } else if (product.getBasePrice() != null) {
+                item.setUnitPrice(product.getBasePrice());
+            } else {
+                throw new BusinessException("無法確定商品單價，請提供單價或選擇商品規格");
+            }
+        }
+
         // 計算小計
-        BigDecimal subtotal = dto.getUnitPrice().multiply(new BigDecimal(dto.getQuantity()));
+        BigDecimal subtotal = item.getUnitPrice().multiply(new BigDecimal(dto.getQuantity()));
         item.setSubtotalAmount(subtotal);
 
         // 計算實際金額（小計 - 折扣）

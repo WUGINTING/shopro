@@ -28,6 +28,9 @@ public class OrderItemDTO {
     @Schema(description = "商品 ID", required = true)
     private Long productId;
 
+    @Schema(description = "商品規格 ID（關聯到 ProductSpecification）")
+    private Long specificationId;
+
     @Schema(description = "商品名稱")
     private String productName;
 

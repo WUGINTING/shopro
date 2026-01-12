@@ -14,7 +14,8 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "order_items", indexes = {
     @Index(name = "idx_order_id", columnList = "order_id"),
-    @Index(name = "idx_product_id", columnList = "product_id")
+    @Index(name = "idx_product_id", columnList = "product_id"),
+    @Index(name = "idx_specification_id", columnList = "specification_id")
 })
 @Data
 @NoArgsConstructor
@@ -33,6 +34,10 @@ public class OrderItem {
     // 商品 ID
     @Column(name = "product_id", nullable = false)
     private Long productId;
+
+    // 商品規格 ID（關聯到 ProductSpecification）
+    @Column(name = "specification_id")
+    private Long specificationId;
 
     // 商品名稱
     @Column(name = "product_name", nullable = false, columnDefinition = "NVARCHAR(200)")

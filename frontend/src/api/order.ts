@@ -48,8 +48,14 @@ export interface OrderItem {
   orderId?: number
   /** 商品 ID */
   productId: number
+  /** 商品規格 ID（關聯到 ProductSpecification） */
+  specificationId?: number
   /** 商品名稱 */
   productName?: string
+  /** 商品 SKU */
+  productSku?: string
+  /** 商品規格 */
+  productSpec?: string
   /** 購買數量 */
   quantity: number
   /** 商品單價 */
@@ -60,6 +66,10 @@ export interface OrderItem {
   subtotal?: number
   /** 小計金額（後端字段） */
   subtotalAmount?: number
+  /** 折扣金額 */
+  discountAmount?: number
+  /** 實際金額 */
+  actualAmount?: number
 }
 
 /**

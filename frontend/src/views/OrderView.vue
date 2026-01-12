@@ -503,6 +503,35 @@
                       </q-td>
                     </template>
 
+                    <template v-slot:body-cell-specification="props">
+                      <q-td :props="props">
+                        <q-select
+                          v-model="props.row.specificationId"
+                          outlined
+                          dense
+                          :options="getSpecificationOptions(props.row.productId)"
+                          option-value="id"
+                          :option-label="(spec) => spec.specName || spec.sku || '無規格'"
+                          emit-value
+                          map-options
+                          clearable
+                          :disable="!props.row.productId"
+                          @update:model-value="(val) => onSpecificationChange(props.row, val)"
+                        >
+                          <template v-slot:option="scope">
+                            <q-item v-bind="scope.itemProps">
+                              <q-item-section>
+                                <q-item-label>{{ scope.opt.specName || '無規格名稱' }}</q-item-label>
+                                <q-item-label caption v-if="scope.opt.sku">
+                                  SKU: {{ scope.opt.sku }} | 價格: ¥{{ (scope.opt.price || 0).toFixed(2) }} | 庫存: {{ scope.opt.stock || 0 }}
+                                </q-item-label>
+                              </q-item-section>
+                            </q-item>
+                          </template>
+                        </q-select>
+                      </q-td>
+                    </template>
+
                     <template v-slot:body-cell-quantity="props">
                       <q-td :props="props">
                         <q-input
@@ -1174,7 +1203,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { orderApi, type Order, type OrderItem, type PageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
-import { productApi, type Product } from '@/api/product'
+import { productApi, productSpecificationApi, type Product, type ProductSpecification } from '@/api/product'
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
 import { createPayment, type PaymentRequest } from '@/api/payment'
 import { shipmentApi, type OrderShipment } from '@/api/shipment'
@@ -1187,6 +1216,7 @@ const showDialog = ref(false)
 const editingOrderId = ref<number | null>(null)
 const customers = ref<Customer[]>([])
 const products = ref<Product[]>([])
+const productSpecifications = ref<Map<number, ProductSpecification[]>>(new Map())
 const orderDiscounts = ref<OrderDiscount[]>([])
 const showDiscountDialog = ref(false)
 const discountForm = ref<OrderDiscount>({
@@ -1419,6 +1449,7 @@ const pickupTypeOptions = [
 
 const itemColumns = [
   { name: 'product', label: '商品', align: 'left' as const, field: 'productId' },
+  { name: 'specification', label: '規格（SKU）', align: 'left' as const, field: 'specificationId' },
   { name: 'quantity', label: '數量', align: 'center' as const, field: 'quantity' },
   { name: 'unitPrice', label: '單價', align: 'left' as const, field: 'unitPrice' },
   { name: 'subtotal', label: '小計', align: 'right' as const, field: 'subtotal' },
@@ -2110,6 +2141,7 @@ const addOrderItem = () => {
   form.value.items.push({
     tempId: ++tempIdCounter,
     productId: 0,
+    specificationId: undefined,
     quantity: 1,
     unitPrice: 0,
     subtotal: 0
@@ -2121,12 +2153,75 @@ const removeOrderItem = (index: number) => {
   calculateTotal()
 }
 
-const onProductChange = (item: any, productId: number) => {
+const onProductChange = async (item: any, productId: number) => {
   const product = products.value.find(p => p.id === productId)
   if (product) {
-    item.unitPrice = product.salePrice ?? product.basePrice ?? 0
     item.productName = product.name
-    calculateItemSubtotal(item)
+    // 重置規格選擇
+    item.specificationId = undefined
+    
+    // 載入該商品的規格
+    if (productId) {
+      await loadProductSpecifications(productId)
+    }
+    
+    // 如果沒有規格，使用商品價格
+    const specs = productSpecifications.value.get(productId) || []
+    if (specs.length === 0) {
+      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      calculateItemSubtotal(item)
+    }
+  }
+}
+
+const onSpecificationChange = (item: any, specificationId: number | undefined) => {
+  if (specificationId && item.productId) {
+    const specs = productSpecifications.value.get(item.productId) || []
+    const spec = specs.find(s => s.id === specificationId)
+    if (spec) {
+      // 從規格中獲取價格
+      if (spec.price != null) {
+        item.unitPrice = spec.price
+      }
+      // 設置規格信息
+      item.productSku = spec.sku
+      item.productSpec = spec.specName
+      calculateItemSubtotal(item)
+    }
+  } else {
+    // 如果沒有選擇規格，使用商品價格
+    const product = products.value.find(p => p.id === item.productId)
+    if (product) {
+      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      item.productSku = undefined
+      item.productSpec = undefined
+      calculateItemSubtotal(item)
+    }
+  }
+}
+
+const getSpecificationOptions = (productId: number | undefined): ProductSpecification[] => {
+  if (!productId) return []
+  return productSpecifications.value.get(productId) || []
+}
+
+const loadProductSpecifications = async (productId: number) => {
+  // 如果已經載入過，就不重複載入
+  if (productSpecifications.value.has(productId)) {
+    return
+  }
+  
+  try {
+    const response = await productSpecificationApi.getProductSpecifications(productId)
+    if (response.success && response.data) {
+      // 只顯示啟用的規格
+      const enabledSpecs = response.data.filter(spec => spec.enabled !== false)
+      productSpecifications.value.set(productId, enabledSpecs)
+    }
+  } catch (error) {
+    console.error('載入商品規格失敗:', error)
+    // 如果載入失敗，設置為空數組
+    productSpecifications.value.set(productId, [])
   }
 }
 
@@ -2328,6 +2423,7 @@ const handleSubmit = async () => {
       notes: form.value.notes || '',
       items: form.value.items.map(item => ({
         productId: item.productId,
+        specificationId: item.specificationId,
         quantity: item.quantity,
         unitPrice: item.unitPrice
       }))
