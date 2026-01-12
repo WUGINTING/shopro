@@ -286,7 +286,7 @@
 
           <template v-slot:body-cell-totalAmount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ (props.row?.totalAmount || 0).toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">${{ props.row.totalAmount.toFixed(2) }}</span>
             </q-td>
           </template>
 
@@ -325,33 +325,33 @@
                   </q-item>
                 </q-list>
               </q-btn-dropdown>
-              
-              <q-btn 
+
+              <q-btn
                 v-if="props.row.status === 'PENDING_PAYMENT'"
-                flat 
-                dense 
-                round 
-                icon="payment" 
-                color="positive" 
-                size="sm" 
+                flat
+                dense
+                round
+                icon="payment"
+                color="positive"
+                size="sm"
                 @click="handlePayment(props.row)"
               >
                 <q-tooltip>前往付款</q-tooltip>
               </q-btn>
-              
-              <q-btn 
+
+              <q-btn
                 v-if="props.row.status === 'PAID'"
-                flat 
-                dense 
-                round 
-                icon="local_shipping" 
-                color="info" 
-                size="sm" 
+                flat
+                dense
+                round
+                icon="local_shipping"
+                color="info"
+                size="sm"
                 @click="handleShipment(props.row)"
               >
                 <q-tooltip>已出貨</q-tooltip>
               </q-btn>
-              
+
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
                 <q-tooltip>編輯訂單</q-tooltip>
               </q-btn>
@@ -552,7 +552,7 @@
                           outlined
                           dense
                           type="number"
-                          prefix="¥"
+                          prefix="$"
                           step="0.01"
                           @update:model-value="calculateItemSubtotal(props.row)"
                         />
@@ -561,7 +561,7 @@
 
                     <template v-slot:body-cell-subtotal="props">
                       <q-td :props="props">
-                        <span class="text-weight-bold">¥{{ (props.row.subtotal || 0).toFixed(2) }}</span>
+                        <span class="text-weight-bold">${{ (props.row.subtotal || 0).toFixed(2) }}</span>
                       </q-td>
                     </template>
 
@@ -598,7 +598,7 @@
                     label="折扣金額"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     min="0"
                     @update:model-value="calculateTotal"
@@ -612,7 +612,7 @@
                     label="運費"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     min="0"
                     @update:model-value="calculateTotal"
@@ -626,7 +626,7 @@
                     label="訂單總金額"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="$"
                     step="0.01"
                     readonly
                     class="text-h6 text-weight-bold"
@@ -673,7 +673,7 @@
                 訂單ID: <strong>{{ discountForm.orderId }}</strong>
               </q-banner>
             </div>
-            
+
             <q-banner v-else class="bg-warning text-white q-mb-md">
               <template v-slot:avatar>
                 <q-icon name="warning" />
@@ -716,7 +716,7 @@
                 </template>
               </q-table>
               <div class="text-caption text-grey-7 q-mt-sm">
-                總折扣金額：<span class="text-weight-bold text-primary">¥{{ totalDiscountAmount.toFixed(2) }}</span>
+                總折扣金額：<span class="text-weight-bold text-primary">${{ totalDiscountAmount.toFixed(2) }}</span>
               </div>
             </div>
 
@@ -751,7 +751,7 @@
                     dense
                     type="number"
                     step="0.01"
-                    prefix="¥"
+                    prefix="$"
                     :rules="[val => val >= 0 || '折扣金額不能小於0']"
                   />
                 </div>
@@ -895,10 +895,10 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn 
-              unelevated 
-              label="前往付款" 
-              color="primary" 
+            <q-btn
+              unelevated
+              label="前往付款"
+              color="primary"
               :loading="paymentLoading"
               @click="processPayment"
             />
@@ -1013,10 +1013,10 @@
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
-            <q-btn 
-              unelevated 
-              label="確認出貨" 
-              color="primary" 
+            <q-btn
+              unelevated
+              label="確認出貨"
+              color="primary"
               :loading="shipmentLoading"
               @click="handleShipmentSubmit"
             />
@@ -1110,7 +1110,7 @@
                             <!-- <div class="text-caption text-grey-5 q-mb-xs">
                               調試: {{ JSON.stringify(item) }}
                             </div> -->
-                            
+
                             <!-- 規格信息 -->
                             <div v-if="item.productSpec || item.specificationId" class="q-mb-xs">
                               <q-chip v-if="item.productSpec" size="sm" color="primary" text-color="white">
@@ -1120,13 +1120,13 @@
                                 規格ID：{{ item.specificationId }}
                               </q-chip>
                             </div>
-                            
+
                             <!-- SKU信息 -->
                             <div v-if="item.productSku" class="q-mb-xs">
                               <span class="text-grey-7">SKU：</span>
                               <span class="text-weight-medium">{{ item.productSku }}</span>
                             </div>
-                            
+
                             <!-- 價格信息 -->
                             <div class="q-mt-sm">
                               <span class="text-grey-7">數量：</span>
@@ -1136,7 +1136,7 @@
                               <span class="text-grey-7 q-ml-md">小計：</span>
                               <span class="text-weight-bold text-primary">¥{{ (item.subtotal || item.subtotalAmount || 0).toFixed(2) }}</span>
                             </div>
-                            
+
                             <!-- 如果沒有任何規格信息，顯示提示 -->
                             <div v-if="!item.productSpec && !item.productSku && !item.specificationId" class="q-mt-xs text-caption text-grey-6">
                               （無規格信息）
@@ -1156,20 +1156,20 @@
                   <q-card-section>
                     <div class="row items-center justify-between q-mb-md">
                       <div class="text-h6">物流記錄</div>
-                      <q-btn 
+                      <q-btn
                         v-if="selectedOrder.status === 'PAID'"
-                        flat 
-                        dense 
-                        icon="add" 
-                        label="新增物流" 
-                        color="primary" 
+                        flat
+                        dense
+                        icon="add"
+                        label="新增物流"
+                        color="primary"
                         size="sm"
                         @click="handleShipmentFromDetail"
                       />
                     </div>
-                    
+
                     <q-inner-loading :showing="shipmentsLoading" />
-                    
+
                     <q-list bordered separator v-if="shipments.length > 0">
                       <q-item v-for="shipment in shipments" :key="shipment.id">
                         <q-item-section>
@@ -1207,12 +1207,12 @@
                     <div v-else class="text-grey-6 text-center q-pa-md">
                       暫無物流記錄
                       <div v-if="selectedOrder.status === 'PAID'" class="q-mt-sm">
-                        <q-btn 
-                          flat 
-                          dense 
-                          icon="add" 
-                          label="新增物流記錄" 
-                          color="primary" 
+                        <q-btn
+                          flat
+                          dense
+                          icon="add"
+                          label="新增物流記錄"
+                          color="primary"
                           size="sm"
                           @click="handleShipmentFromDetail"
                         />
@@ -1386,7 +1386,7 @@ const customerSearchLoading = ref(false)
 
 const filterCustomers = async (val: string, update: (callback: () => void) => void) => {
   customerInputValue.value = val
-  
+
   if (val === '') {
     update(() => {
       customerOptions.value = allCustomers.value
@@ -1399,7 +1399,7 @@ const filterCustomers = async (val: string, update: (callback: () => void) => vo
     update(() => {
       const needle = val.toLowerCase()
       customerOptions.value = allCustomers.value.filter(
-        customer => 
+        customer =>
           customer.name?.toLowerCase().includes(needle) ||
           customer.email?.toLowerCase().includes(needle) ||
           customer.phone?.toLowerCase().includes(needle)
@@ -1413,13 +1413,13 @@ const filterCustomers = async (val: string, update: (callback: () => void) => vo
   try {
     // 使用後端的搜索 API
     const response = await crmApi.searchCustomers(val, { page: 0, size: 20 })
-    
+
     update(() => {
       if (response.success && response.data) {
-        const searchResults = Array.isArray(response.data) 
-          ? response.data 
+        const searchResults = Array.isArray(response.data)
+          ? response.data
           : (response.data as any)?.content || []
-        
+
         // 合併搜索結果和已載入的客戶，去重
         const merged = [...allCustomers.value]
         searchResults.forEach((customer: Customer) => {
@@ -1427,14 +1427,14 @@ const filterCustomers = async (val: string, update: (callback: () => void) => vo
             merged.push(customer)
           }
         })
-        
+
         // 更新已載入的客戶列表
         allCustomers.value = merged
-        
+
         // 過濾匹配的客戶（支持姓名、郵箱、電話）
         const needle = val.toLowerCase()
         customerOptions.value = merged.filter(
-          customer => 
+          customer =>
             customer.name?.toLowerCase().includes(needle) ||
             customer.email?.toLowerCase().includes(needle) ||
             customer.phone?.toLowerCase().includes(needle)
@@ -1443,7 +1443,7 @@ const filterCustomers = async (val: string, update: (callback: () => void) => vo
         // 如果搜索失敗，使用本地過濾
         const needle = val.toLowerCase()
         customerOptions.value = allCustomers.value.filter(
-          customer => 
+          customer =>
             customer.name?.toLowerCase().includes(needle) ||
             customer.email?.toLowerCase().includes(needle) ||
             customer.phone?.toLowerCase().includes(needle)
@@ -1456,7 +1456,7 @@ const filterCustomers = async (val: string, update: (callback: () => void) => vo
     update(() => {
       const needle = val.toLowerCase()
       customerOptions.value = allCustomers.value.filter(
-        customer => 
+        customer =>
           customer.name?.toLowerCase().includes(needle) ||
           customer.email?.toLowerCase().includes(needle) ||
           customer.phone?.toLowerCase().includes(needle)
@@ -1531,14 +1531,14 @@ const loadOrders = async (useFilter = false) => {
   loading.value = true
   try {
     let response
-    
+
     if (useFilter && hasActiveFilters.value) {
       // 使用篩選條件搜索
       const queryParams: any = {
         page: pagination.value.page - 1, // 後端從0開始
         size: pagination.value.rowsPerPage
       }
-      
+
       if (filterForm.value.orderNumber) {
         queryParams.orderNumber = filterForm.value.orderNumber
       }
@@ -1569,7 +1569,7 @@ const loadOrders = async (useFilter = false) => {
       if (filterForm.value.storeId) {
         queryParams.storeId = filterForm.value.storeId
       }
-      
+
       response = await orderApi.searchOrders(queryParams)
     } else {
       // 使用普通查詢
@@ -1578,11 +1578,11 @@ const loadOrders = async (useFilter = false) => {
         size: pagination.value.rowsPerPage
       })
     }
-    
+
     const data = response.data as PageResponse<Order> | Order[]
     let orderList: Order[] = []
     let totalCount = 0
-    
+
     if (Array.isArray(data)) {
       orderList = data
       totalCount = data.length
@@ -1592,7 +1592,7 @@ const loadOrders = async (useFilter = false) => {
     } else {
       orderList = []
     }
-    
+
     // 如果訂單的 customerName 為空但有 customerId，從已載入的客戶列表中查找並填充
     orderList.forEach(order => {
       if (!order.customerName && order.customerId) {
@@ -1602,9 +1602,9 @@ const loadOrders = async (useFilter = false) => {
         }
       }
     })
-    
+
     orders.value = orderList
-    
+
     // 更新分頁資訊
     if (data && 'totalElements' in data) {
       pagination.value.rowsNumber = totalCount
@@ -1675,7 +1675,7 @@ const getStatusLabel = (status: Order['status']) => {
 
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
-  
+
   // 對於取消狀態，需要確認
   if (status === 'CANCELLED') {
     $q.dialog({
@@ -1714,8 +1714,8 @@ const loadCustomers = async () => {
     // 載入前20個客戶作為初始列表
     const response = await crmApi.getCustomers({ page: 0, size: 20 })
     if (response.success && response.data) {
-      const customerList = Array.isArray(response.data) 
-        ? response.data 
+      const customerList = Array.isArray(response.data)
+        ? response.data
         : (response.data as any)?.content || []
       customers.value = customerList
       allCustomers.value = customerList
@@ -1777,7 +1777,7 @@ const resetForm = () => {
 
 const handleDelete = (order: Order) => {
   if (!order.id) return
-  
+
   $q.dialog({
     title: '確認刪除',
     message: `確定要刪除訂單 ${order.orderNumber || order.id} 嗎？此操作無法復原。`,
@@ -1806,7 +1806,7 @@ const handleDelete = (order: Order) => {
 
 const handlePayment = async (order: Order) => {
   if (!order.id) return
-  
+
   try {
     // 載入完整的訂單資訊（如果需要）
     const response = await orderApi.getOrder(order.id)
@@ -1830,7 +1830,7 @@ const handlePayment = async (order: Order) => {
 
 const handleShipment = async (order: Order) => {
   if (!order.id) return
-  
+
   try {
     // 載入完整的訂單資訊
     const response = await orderApi.getOrder(order.id)
@@ -1839,7 +1839,7 @@ const handleShipment = async (order: Order) => {
     } else {
       shipmentOrder.value = order
     }
-    
+
     // 重置表單並填充預設值
     shipmentForm.value = {
       orderId: order.id!,
@@ -1851,7 +1851,7 @@ const handleShipment = async (order: Order) => {
       recipientAddress: order.shippingAddress || '',
       notes: ''
     }
-    
+
     showShipmentDialog.value = true
   } catch (error: any) {
     console.error('Failed to load order:', error)
@@ -1878,7 +1878,7 @@ const handleShipmentFromDetail = () => {
 
 const handleViewDetail = async (order: Order) => {
   if (!order.id) return
-  
+
   try {
     // 載入完整的訂單資訊
     const response = await orderApi.getOrder(order.id)
@@ -1892,10 +1892,10 @@ const handleViewDetail = async (order: Order) => {
     } else {
       selectedOrder.value = order
     }
-    
+
     // 載入物流記錄
     await loadShipments(order.id)
-    
+
     showDetailDialog.value = true
   } catch (error: any) {
     console.error('Failed to load order detail:', error)
@@ -1992,10 +1992,10 @@ const handleShipmentSubmit = async () => {
         message: '已出貨設定成功！訂單狀態已更新為「處理中」',
         position: 'top'
       })
-      
+
       showShipmentDialog.value = false
       loadOrders() // 重新載入訂單列表
-      
+
       // 如果訂單詳情 dialog 是打開的，重新載入物流記錄
       if (showDetailDialog.value && selectedOrder.value?.id) {
         await loadShipments(selectedOrder.value.id)
@@ -2042,10 +2042,10 @@ const processPayment = async () => {
 
     // 創建支付請求
     const response = await createPayment(selectedGateway.value, paymentRequest)
-    
+
     if (response.success && response.data) {
       const paymentData = response.data
-      
+
       if (paymentData.paymentUrl) {
         // ECPay 需要使用 POST 表單提交
         if (selectedGateway.value === 'ECPAY') {
@@ -2072,22 +2072,22 @@ const processPayment = async () => {
 const submitECPayForm = (paymentUrl: string) => {
   try {
     console.log('Submitting ECPay form with URL:', paymentUrl)
-    
+
     // 解析 URL 獲取參數
     const url = new URL(paymentUrl)
     const params = new URLSearchParams(url.search)
-    
+
     // ECPay 的 POST URL（不含參數）
     const postUrl = `${url.protocol}//${url.host}${url.pathname}`
     console.log('POST URL:', postUrl)
-    
+
     // 創建動態表單
     const form = document.createElement('form')
     form.method = 'POST'
     form.action = postUrl
     form.target = '_self' // 確保在同一窗口提交
     form.style.display = 'none'
-    
+
     // 添加所有參數作為隱藏 input
     // URLSearchParams 已經自動解碼，直接使用原始值
     // 瀏覽器在提交 POST 表單時會自動對表單字段值進行 URL 編碼
@@ -2099,7 +2099,7 @@ const submitECPayForm = (paymentUrl: string) => {
       form.appendChild(input)
       console.log(`Added form field: ${key} = ${input.value}`)
     })
-    
+
     // 添加到頁面並提交
     document.body.appendChild(form)
     console.log('Form created, submitting...')
@@ -2117,16 +2117,16 @@ const submitECPayForm = (paymentUrl: string) => {
 
 const handleEdit = async (order: Order) => {
   if (!order.id) return
-  
+
   editingOrderId.value = order.id
   showDialog.value = true
-  
+
   try {
     // 載入訂單詳情
     const response = await orderApi.getOrder(order.id)
     if (response.success && response.data) {
       const orderData = response.data
-      
+
       // 填充表單數據
       form.value.customerId = orderData.customerId || null
       form.value.customerName = orderData.customerName || ''
@@ -2140,7 +2140,7 @@ const handleEdit = async (order: Order) => {
       form.value.totalAmount = orderData.totalAmount || 0
       form.value.shippingAddress = orderData.shippingAddress || ''
       form.value.notes = orderData.notes || ''
-      
+
       // 填充訂單項目
       if (orderData.items && orderData.items.length > 0) {
         form.value.items = orderData.items.map((item: any, index: number) => ({
@@ -2153,12 +2153,12 @@ const handleEdit = async (order: Order) => {
         }))
         calculateTotal()
       }
-      
+
       // 設置客戶輸入值
       if (orderData.customerName) {
         customerInputValue.value = orderData.customerName
       }
-      
+
       // 載入訂單的折扣記錄
       await loadOrderDiscounts(order.id!)
     }
@@ -2194,12 +2194,12 @@ const onProductChange = async (item: any, productId: number) => {
     item.productName = product.name
     // 重置規格選擇
     item.specificationId = undefined
-    
+
     // 載入該商品的規格
     if (productId) {
       await loadProductSpecifications(productId)
     }
-    
+
     // 如果沒有規格，使用商品價格
     const specs = productSpecifications.value.get(productId) || []
     if (specs.length === 0) {
@@ -2245,7 +2245,7 @@ const loadProductSpecifications = async (productId: number) => {
   if (productSpecifications.value.has(productId)) {
     return
   }
-  
+
   try {
     const response = await productSpecificationApi.getProductSpecifications(productId)
     if (response.success && response.data) {
@@ -2294,11 +2294,11 @@ const openDiscountDialog = () => {
     })
     return
   }
-  
+
   // 設置訂單ID
   discountForm.value.orderId = editingOrderId.value
   showDiscountDialog.value = true
-  
+
   // 載入該訂單的折扣記錄
   loadOrderDiscounts(editingOrderId.value)
 }

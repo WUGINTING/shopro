@@ -44,7 +44,7 @@
 
           <template v-slot:body-cell-totalSpent="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">¥{{ (props.row.totalSpent || 0).toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">${{ (props.row.totalSpent || 0).toFixed(2) }}</span>
             </q-td>
           </template>
 
