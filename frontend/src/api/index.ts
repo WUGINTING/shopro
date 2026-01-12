@@ -21,6 +21,7 @@ export * from './operationLog'
 export * from './point'
 export * from './ecpayConfig'
 export * from './paymentCallbackLog'
+export * from './notification'
 
 // 匯出所有 API 服務
 export { default as productApi, categoryApi } from './product'
@@ -38,3 +39,4 @@ export { default as operationLogApi } from './operationLog'
 export { default as pointApi } from './point'
 export { default as ecpayConfigApi } from './ecpayConfig'
 export { default as paymentCallbackLogApi } from './paymentCallbackLog'
+export { default as notificationApi } from './notification'

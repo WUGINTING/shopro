@@ -13,25 +13,66 @@
         <q-space />
 
         <!-- 通知按鈕 -->
-        <q-btn flat dense round icon="notifications">
-          <q-badge color="red" floating>3</q-badge>
-          <q-menu>
-            <q-list style="min-width: 300px">
+        <q-btn flat dense round icon="notifications" @click="showNotificationMenu = !showNotificationMenu">
+          <q-badge v-if="unreadCount > 0" color="red" floating>{{ unreadCount > 99 ? '99+' : unreadCount }}</q-badge>
+          <q-menu v-model="showNotificationMenu" :offset="[0, 8]">
+            <q-list style="min-width: 350px; max-height: 500px">
               <q-item>
                 <q-item-section>
                   <q-item-label class="text-weight-bold">通知</q-item-label>
                 </q-item-section>
+                <q-item-section side v-if="unreadCount > 0">
+                  <q-btn 
+                    flat 
+                    dense 
+                    size="sm" 
+                    label="全部標記為已讀" 
+                    @click="markAllAsRead"
+                    :loading="markingAllAsRead"
+                  />
+                </q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-close-popup>
-                <q-item-section avatar>
-                  <q-avatar color="primary" text-color="white" icon="shopping_bag" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>新訂單 #12345</q-item-label>
-                  <q-item-label caption>5 分鐘前</q-item-label>
-                </q-item-section>
-              </q-item>
+              <div style="max-height: 400px; overflow-y: auto">
+                <q-item 
+                  v-for="notification in notifications" 
+                  :key="notification.id"
+                  clickable 
+                  v-ripple
+                  v-close-popup
+                  @click="handleNotificationClick(notification)"
+                  :class="{ 'bg-grey-2': !notification.isRead }"
+                  class="cursor-pointer"
+                >
+                  <q-item-section avatar>
+                    <q-avatar 
+                      :color="notification.color || 'primary'" 
+                      text-color="white" 
+                      :icon="notification.icon || 'info'"
+                      size="md"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label :class="{ 'text-weight-bold': !notification.isRead }">
+                      {{ notification.title }}
+                    </q-item-label>
+                    <q-item-label caption v-if="notification.content">
+                      {{ notification.content }}
+                    </q-item-label>
+                    <q-item-label caption v-if="notification.createdAt">
+                      {{ formatTimeAgo(notification.createdAt) }}
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="!notification.isRead">
+                    <q-badge color="primary" rounded />
+                  </q-item-section>
+                </q-item>
+                <q-item v-if="notifications.length === 0">
+                  <q-item-section>
+                    <q-item-label class="text-grey-6 text-center">暫無通知</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </div>
             </q-list>
           </q-menu>
         </q-btn>
@@ -492,11 +533,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useQuasar } from 'quasar'
+import { notificationApi, type Notification } from '@/api/notification'
 
 const router = useRouter()
 const route = useRoute()
@@ -505,14 +547,133 @@ const settingsStore = useSettingsStore()
 const $q = useQuasar()
 
 const leftDrawerOpen = ref(true)
+const showNotificationMenu = ref(false)
 
 const userName = computed(() => authStore.user?.username || '管理員')
 const userRole = computed(() => authStore.user?.role || 'ADMIN')
 const appTitle = computed(() => settingsStore.appTitle)
 
-// 初始化設置
+const notifications = ref<Notification[]>([])
+const unreadCount = ref(0)
+const loadingNotifications = ref(false)
+const markingAllAsRead = ref(false)
+
+let notificationInterval: number | null = null
+
+// 加載通知
+const loadNotifications = async () => {
+  if (loadingNotifications.value) return
+  
+  loadingNotifications.value = true
+  try {
+    const [notificationsResponse, countResponse] = await Promise.all([
+      notificationApi.getUnreadNotifications(),
+      notificationApi.getUnreadCount()
+    ])
+    
+    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
+    if (notificationsResponse.data) {
+      notifications.value = notificationsResponse.data
+    }
+    if (countResponse.data !== undefined) {
+      unreadCount.value = countResponse.data
+    }
+  } catch (error) {
+    console.error('加載通知失敗:', error)
+  } finally {
+    loadingNotifications.value = false
+  }
+}
+
+// 標記所有為已讀
+const markAllAsRead = async () => {
+  markingAllAsRead.value = true
+  try {
+    await notificationApi.markAllAsRead()
+    await loadNotifications()
+  } catch (error) {
+    console.error('標記已讀失敗:', error)
+  } finally {
+    markingAllAsRead.value = false
+  }
+}
+
+// 處理通知點擊
+const handleNotificationClick = async (notification: Notification) => {
+  console.log('點擊通知:', notification)
+  
+  // 標記為已讀
+  if (!notification.isRead && notification.id) {
+    try {
+      const response = await notificationApi.markAsRead(notification.id)
+      console.log('標記已讀響應:', response)
+      notification.isRead = true
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch (error) {
+      console.error('標記已讀失敗:', error)
+    }
+  }
+  
+  // 根據通知類型跳轉
+  try {
+    if (notification.relatedId && notification.relatedType) {
+      if (notification.relatedType === 'Order' || notification.relatedType === 'ORDER') {
+        router.push({ name: 'orders' })
+      } else if (notification.relatedType === 'Product' || notification.relatedType === 'PRODUCT') {
+        router.push({ name: 'products' })
+      }
+    } else if (notification.type === 'ORDER') {
+      // 如果是訂單通知，跳轉到訂單頁面
+      router.push({ name: 'orders' })
+    } else if (notification.type === 'INVENTORY') {
+      // 如果是庫存通知，跳轉到商品頁面
+      router.push({ name: 'products' })
+    }
+  } catch (error) {
+    console.error('路由跳轉失敗:', error)
+  }
+}
+
+// 格式化時間
+const formatTimeAgo = (dateString?: string) => {
+  if (!dateString) return ''
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return '剛剛'
+  if (minutes < 60) return `${minutes} 分鐘前`
+  if (hours < 24) return `${hours} 小時前`
+  if (days < 7) return `${days} 天前`
+  
+  return date.toLocaleDateString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 初始化設置和通知
 onMounted(() => {
   settingsStore.initialize()
+  loadNotifications()
+  
+  // 每 30 秒刷新一次通知
+  notificationInterval = window.setInterval(() => {
+    loadNotifications()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (notificationInterval !== null) {
+    clearInterval(notificationInterval)
+  }
 })
 
 const toggleLeftDrawer = () => {
