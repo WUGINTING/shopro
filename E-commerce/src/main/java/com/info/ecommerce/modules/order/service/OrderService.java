@@ -109,6 +109,19 @@ public class OrderService {
     private OrderItemDTO convertItemToDTO(OrderItem item) {
         OrderItemDTO dto = new OrderItemDTO();
         BeanUtils.copyProperties(item, dto);
+        // 確保所有字段都被正確複製（手動設置以確保字段映射正確）
+        dto.setId(item.getId());
+        dto.setOrderId(item.getOrderId());
+        dto.setProductId(item.getProductId());
+        dto.setSpecificationId(item.getSpecificationId());
+        dto.setProductName(item.getProductName());
+        dto.setProductSku(item.getProductSku());
+        dto.setProductSpec(item.getProductSpec());
+        dto.setUnitPrice(item.getUnitPrice());
+        dto.setQuantity(item.getQuantity());
+        dto.setSubtotalAmount(item.getSubtotalAmount());
+        dto.setDiscountAmount(item.getDiscountAmount());
+        dto.setActualAmount(item.getActualAmount());
         return dto;
     }
 
@@ -121,8 +134,11 @@ public class OrderService {
         item.setOrderId(orderId);
         item.setId(null);
 
-        // 如果提供了規格ID，從規格中獲取信息
+        // 確保 specificationId 被正確設置
         if (dto.getSpecificationId() != null) {
+            item.setSpecificationId(dto.getSpecificationId());
+            
+            // 從規格中獲取信息
             ProductSpecification spec = productSpecificationRepository.findById(dto.getSpecificationId())
                     .orElseThrow(() -> new BusinessException("商品規格不存在: " + dto.getSpecificationId()));
             

@@ -1102,10 +1102,45 @@
                     <q-list bordered separator v-if="getOrderItems(selectedOrder) && getOrderItems(selectedOrder).length > 0">
                       <q-item v-for="item in getOrderItems(selectedOrder)" :key="item.id">
                         <q-item-section>
-                          <q-item-label>{{ item.productName || `商品 #${item.productId}` }}</q-item-label>
+                          <q-item-label class="text-weight-bold">
+                            {{ item.productName || `商品 #${item.productId}` }}
+                          </q-item-label>
                           <q-item-label caption>
-                            數量：{{ item.quantity }} × ¥{{ (item.unitPrice || item.price || 0).toFixed(2) }} = 
-                            ¥{{ (item.subtotal || item.subtotalAmount || 0).toFixed(2) }}
+                            <!-- 調試信息（開發時可查看） -->
+                            <!-- <div class="text-caption text-grey-5 q-mb-xs">
+                              調試: {{ JSON.stringify(item) }}
+                            </div> -->
+                            
+                            <!-- 規格信息 -->
+                            <div v-if="item.productSpec || item.specificationId" class="q-mb-xs">
+                              <q-chip v-if="item.productSpec" size="sm" color="primary" text-color="white">
+                                規格：{{ item.productSpec }}
+                              </q-chip>
+                              <q-chip v-else-if="item.specificationId" size="sm" color="info" text-color="white">
+                                規格ID：{{ item.specificationId }}
+                              </q-chip>
+                            </div>
+                            
+                            <!-- SKU信息 -->
+                            <div v-if="item.productSku" class="q-mb-xs">
+                              <span class="text-grey-7">SKU：</span>
+                              <span class="text-weight-medium">{{ item.productSku }}</span>
+                            </div>
+                            
+                            <!-- 價格信息 -->
+                            <div class="q-mt-sm">
+                              <span class="text-grey-7">數量：</span>
+                              <span class="text-weight-medium">{{ item.quantity }}</span>
+                              <span class="text-grey-7 q-ml-md">單價：</span>
+                              <span class="text-weight-medium">¥{{ (item.unitPrice || item.price || 0).toFixed(2) }}</span>
+                              <span class="text-grey-7 q-ml-md">小計：</span>
+                              <span class="text-weight-bold text-primary">¥{{ (item.subtotal || item.subtotalAmount || 0).toFixed(2) }}</span>
+                            </div>
+                            
+                            <!-- 如果沒有任何規格信息，顯示提示 -->
+                            <div v-if="!item.productSpec && !item.productSku && !item.specificationId" class="q-mt-xs text-caption text-grey-6">
+                              （無規格信息）
+                            </div>
                           </q-item-label>
                         </q-item-section>
                       </q-item>
