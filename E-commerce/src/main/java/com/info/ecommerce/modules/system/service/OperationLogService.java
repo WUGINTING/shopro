@@ -6,7 +6,9 @@ import com.info.ecommerce.modules.system.repository.OperationLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +47,20 @@ public class OperationLogService {
      * 分頁查詢所有日誌
      */
     public Page<OperationLogDTO> listLogs(Pageable pageable) {
-        return operationLogRepository.findAll(pageable).map(this::toDTO);
+        // 1. 強制指定排序規則：依照 createdAt 倒序 (最新的日誌排在最前面)
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+
+        // 2. 重建 Pageable 物件
+        // 保留前端傳入的「頁碼」跟「每頁筆數」，但「排序」被我們上面的 sort 覆寫了
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                sort
+        );
+
+        // 3. 使用新的 sortedPageable 進行查詢
+        return operationLogRepository.findAll(sortedPageable)
+                .map(this::toDTO);
     }
 
     /**
