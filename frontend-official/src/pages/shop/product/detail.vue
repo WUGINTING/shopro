@@ -231,6 +231,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { addToCart } from 'src/utils/cart.js';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
+import { getProductDetail, getProductCategory } from 'src/api/product.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -254,109 +255,6 @@ const breadcrumbItems = computed(() => {
     { label: product.value.name, to: '' },
   ];
 });
-
-// 假資料 - 產品資料庫
-const productsData = {
-  'bath-ball': {
-    id: 'bath-ball',
-    name: 'ENTRY GRADE 1/144 攻擊鋼彈(GRAND SLAM裝備型)附迷你古恩/佐諾 沐浴球 入浴劑',
-    price: 499,
-    category: 'bath',
-    badges: [{ text: '隨機出貨', color: 'red' }],
-    features: [
-      '共2款，隨機出貨',
-      '大人小孩皆適用',
-      '散發出橘橙香味',
-      '溫和不刺鼻，讓您泡澡時可放鬆紓壓',
-      '快來享受沐浴球融化後的小驚喜吧',
-    ],
-    specs: {
-      產品尺寸: '70 x 290 x 370 mm',
-      款式: '共2款，隨機出貨',
-      香味: '橘橙香味',
-    },
-    notice: {
-      title: '使用注意事項',
-      content: [
-        '注意！開封後請立即使用',
-        '請勿使用於大理石浴缸、循環式浴缸',
-        '誤觸眼睛時請立即用清水沖洗，並諮詢醫生',
-      ],
-    },
-    fullDescription:
-      '這款有趣的沐浴球結合了鋼彈模型的驚喜元素，讓泡澡時光更加有趣！溫和的橘橙香味能幫助您放鬆身心，適合全家大小使用。沐浴球融化後會出現可愛的迷你古恩或佐諾模型，為您帶來意外的驚喜。',
-    images: [
-      'https://cdn.quasar.dev/img/material.png',
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/parallax1.jpg',
-    ],
-  },
-  'sewing-machine': {
-    id: 'sewing-machine',
-    name: '【日本直送】迷你縫紉機 - 史努比、玩具總動員',
-    price: 799,
-    category: 'toy',
-    tags: ['手提式縫紉機', '縫紉機', '迷你縫紉機', '史努比', '玩具總動員'],
-    features: [
-      '手提式縫紉機玩具組',
-      '適合7歲以上兒童 (需要大人陪同)',
-      '附不織布 / 白線3捲',
-      '底部尺規可清楚測量縫紉',
-      '需安裝電池，也可換成自己喜歡的線',
-      '可以替孩子縫製小物品',
-      '本機器適合較薄的材質',
-    ],
-    specs: {
-      產品尺寸: '14 x 20 x 9.5 cm',
-      款式: '史努比和玩具總動員兩種款式',
-      適用年齡: '7歲以上',
-    },
-    fullDescription:
-      '這款可愛的迷你縫紉機是專為兒童設計的手提式縫紉玩具，提供史努比和玩具總動員兩種可愛款式。適合7歲以上的兒童使用，讓孩子在安全的環境下學習縫紉的樂趣。配備完整的配件包括不織布和白線，並具有底部尺規方便測量。',
-    images: [
-      'https://cdn.quasar.dev/img/parallax2.jpg',
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/parallax1.jpg',
-    ],
-  },
-  'strawberry-dry': {
-    id: 'strawberry-dry',
-    name: '【日本直送】草莓乾 - 100%純天然草莓',
-    price: 350,
-    originalPrice: 450,
-    category: 'food',
-    badges: [{ text: '限時特價', color: 'orange' }],
-    tags: ['零食', '草莓', '天然', '無添加'],
-    features: [
-      '100%純天然草莓製作',
-      '無添加防腐劑、色素',
-      '保留草莓完整營養',
-      '酸甜適中，口感極佳',
-      '適合當作健康零食或下午茶點心',
-    ],
-    specs: {
-      重量: '50g',
-      產地: '日本',
-      保存期限: '6個月',
-      保存方式: '請置於陰涼乾燥處',
-    },
-    notice: {
-      title: '食用注意事項',
-      content: [
-        '開封後請盡速食用完畢',
-        '請存放於陰涼乾燥處，避免陽光直射',
-        '本產品含有水果成分，對水果過敏者請勿食用',
-      ],
-    },
-    fullDescription:
-      '嚴選日本優質草莓，採用低溫乾燥技術製成，完整保留草莓的天然風味和營養。不添加任何防腐劑、人工色素或香料，讓您吃得健康又安心。酸甜適中的口感，是下午茶或辦公室零食的最佳選擇。',
-    images: [
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/material.png',
-      'https://cdn.quasar.dev/img/parallax2.jpg',
-    ],
-  },
-};
 
 // 分類名稱映射
 const categoryMap = {
@@ -402,18 +300,99 @@ const handleBuyNow = () => {
   });
 };
 
+// 轉換 API 資料格式
+const mapProductData = (apiData) => {
+  // 提取主圖片
+  const primaryImage = apiData.images?.find(img => img.isPrimary);
+  const allImages = apiData.images?.map(img => img.imageUrl) || [];
+  
+  // 提取標籤
+  const tags = apiData.tags || [];
+  
+  // 計算是否有折扣
+  const hasDiscount = apiData.salePrice && apiData.basePrice && apiData.salePrice < apiData.basePrice;
+  
+  return {
+    id: apiData.id,
+    name: apiData.name,
+    price: apiData.salePrice || apiData.basePrice,
+    originalPrice: hasDiscount ? apiData.basePrice : null,
+    category: apiData.categoryId,
+    sku: apiData.sku,
+    description: apiData.description,
+    fullDescription: apiData.description,
+    images: allImages,
+    tags: tags,
+    badges: [],
+    features: [], // 若 API 沒有此欄位，可以從 description 解析或保持空陣列
+    specs: {
+      '商品編號': apiData.sku,
+      '狀態': apiData.status === 'ACTIVE' ? '上架中' : '已下架',
+      '重量': apiData.weight ? `${apiData.weight}g` : '未提供',
+    },
+    notice: {
+      title: '購買注意事項',
+      content: [
+        '本商品為現貨商品，下單前請先確認庫存',
+        '如有任何問題，請聯繫客服',
+      ]
+    },
+    // 規格選項（如有多規格）
+    specifications: apiData.specifications || [],
+  };
+};
+
 // 載入產品資料
-onMounted(() => {
-  setTimeout(() => {
+const fetchProduct = async () => {
+  loading.value = true;
+  try {
     const productId = route.params.id;
-    product.value = productsData[productId] || null;
-
-    if (product.value && product.value.images && product.value.images.length) {
-      currentImage.value = product.value.images[0];
+    const response = await getProductDetail(productId);
+    
+    console.log('商品詳情 API 回應:', response);
+    
+    if (response && response.data) {
+      product.value = mapProductData(response.data);
+      
+      // 設定主圖片
+      if (product.value.images && product.value.images.length > 0) {
+        currentImage.value = product.value.images[0];
+      }
+      
+      // 載入分類名稱
+      if (product.value.category) {
+        try {
+          const categoryResponse = await getProductCategory(product.value.category);
+          if (categoryResponse && categoryResponse.data) {
+            categoryMap[product.value.category] = categoryResponse.data.name;
+          }
+        } catch (error) {
+          console.warn('載入分類名稱失敗:', error);
+        }
+      }
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: '找不到此商品',
+        position: 'top',
+      });
+      product.value = null;
     }
-
+  } catch (error) {
+    console.error('載入商品失敗:', error);
+    $q.notify({
+      type: 'negative',
+      message: '載入商品失敗，請稍後再試',
+      position: 'top',
+    });
+    product.value = null;
+  } finally {
     loading.value = false;
-  }, 500);
+  }
+};
+
+onMounted(() => {
+  fetchProduct();
 });
 </script>
 

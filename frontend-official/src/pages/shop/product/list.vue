@@ -13,6 +13,7 @@
           <div class="sidebar-card">
             <h3 class="sidebar-title">商品分類</h3>
             <q-list class="category-list">
+              <!-- 所有商品 -->
               <q-item
                 clickable
                 v-ripple
@@ -20,157 +21,57 @@
                 active-class="category-active"
                 @click="filterByCategory('all')"
               >
+                <q-item-section avatar>
+                  <q-icon name="apps" color="primary" />
+                </q-item-section>
                 <q-item-section>
-                  <q-item-label>所有商品</q-item-label>
-                  <q-item-label caption
-                    >{{ allProducts.length }} 件</q-item-label
+                  <q-item-label class="text-weight-medium">所有商品</q-item-label>
+                  <q-item-label caption class="text-grey-7"
+                    >{{ totalElements }} 件</q-item-label
                   >
                 </q-item-section>
               </q-item>
 
-              <q-separator spaced />
+              <q-separator spaced="sm" />
 
+              <!-- 動態分類列表 -->
               <q-item
+                v-for="category in categories"
+                :key="category.id"
                 clickable
                 v-ripple
-                :active="categoryId === 'dessert'"
+                :active="categoryId == category.id"
                 active-class="category-active"
-                @click="filterByCategory('dessert')"
+                @click="filterByCategory(category.id)"
               >
                 <q-item-section avatar>
-                  <q-icon name="icecream" color="pink" />
+                  <q-avatar
+                    v-if="category.image"
+                    size="32px"
+                  >
+                    <img :src="category.image" :alt="category.name" />
+                  </q-avatar>
+                  <q-icon
+                    v-else
+                    name="category"
+                    color="grey-6"
+                  />
                 </q-item-section>
                 <q-item-section>
-                  <q-item-label>甜筒</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('dessert') }} 件</q-item-label
-                  >
+                  <q-item-label class="text-weight-medium">{{ category.name }}</q-item-label>
+                  <q-item-label caption class="text-grey-7">
+                    {{ category.productCount || 0 }} 件
+                  </q-item-label>
                 </q-item-section>
               </q-item>
 
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'japanese'"
-                active-class="category-active"
-                @click="filterByCategory('japanese')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="pets" color="orange" />
-                </q-item-section>
+              <!-- 分類載入中 -->
+              <q-item v-if="categories.length === 0 && !loading">
                 <q-item-section>
-                  <q-item-label>日系產品</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('japanese') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'bath'"
-                active-class="category-active"
-                @click="filterByCategory('bath')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="bathtub" color="blue" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>沐浴用品</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('bath') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'toy'"
-                active-class="category-active"
-                @click="filterByCategory('toy')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="toys" color="purple" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>玩具精品</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('toy') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'food'"
-                active-class="category-active"
-                @click="filterByCategory('food')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="restaurant" color="red" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>日系零食</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('food') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'home'"
-                active-class="category-active"
-                @click="filterByCategory('home')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="home" color="green" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>居家用品</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('home') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'daily'"
-                active-class="category-active"
-                @click="filterByCategory('daily')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="shopping_basket" color="teal" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>生活雜貨</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('daily') }} 件</q-item-label
-                  >
-                </q-item-section>
-              </q-item>
-
-              <q-item
-                clickable
-                v-ripple
-                :active="categoryId === 'other'"
-                active-class="category-active"
-                @click="filterByCategory('other')"
-              >
-                <q-item-section avatar>
-                  <q-icon name="category" color="grey" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>其他</q-item-label>
-                  <q-item-label caption
-                    >{{ getCategoryCount('other') }} 件</q-item-label
-                  >
+                  <q-item-label class="text-grey-6 text-center">
+                    <q-icon name="info" size="xs" />
+                    暫無分類
+                  </q-item-label>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -181,8 +82,14 @@
         <div class="product-content">
           <!-- 篩選和排序 -->
           <div class="filter-section">
-            <div class="result-count">
-              共 {{ allFilteredProducts.length }} 件商品
+            <div class="result-info">
+              <div class="result-count">
+                <q-icon name="list" size="xs" class="q-mr-xs" />
+                共 <strong>{{ totalElements }}</strong> 件商品
+              </div>
+              <div v-if="totalPages > 1" class="result-page text-grey-7">
+                第 {{ currentPage }} / {{ totalPages }} 頁
+              </div>
             </div>
             <div class="filter-controls">
               <q-select
@@ -194,18 +101,31 @@
                 map-options
                 label="排序方式"
                 style="min-width: 180px"
-              />
+              >
+                <template v-slot:prepend>
+                  <q-icon name="sort" />
+                </template>
+              </q-select>
             </div>
           </div>
 
           <!-- 商品列表 -->
           <div v-if="loading" class="loading-wrapper">
-            <q-spinner-dots color="primary" size="50px" />
+            <q-spinner-dots color="primary" size="60px" />
+            <p class="text-grey-7 q-mt-md">載入中...</p>
           </div>
 
           <div v-else-if="filteredProducts.length === 0" class="no-products">
             <q-icon name="inventory_2" size="80px" color="grey-5" />
-            <p>目前此分類暫無商品</p>
+            <p class="text-h6 text-grey-7 q-mt-md">目前此分類暫無商品</p>
+            <q-btn
+              flat
+              color="primary"
+              label="查看所有商品"
+              icon="arrow_back"
+              @click="filterByCategory('all')"
+              class="q-mt-md"
+            />
           </div>
 
           <div v-else class="products-grid">
@@ -239,22 +159,19 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 import ProductCard from 'src/components/shop/ProductCard.vue';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
-import { Notify } from 'quasar';
 import {
   getProductList,
   getProductsByCategory,
   getProductsByStatus,
-  getTopCategories,
+  getEnabledCategories,
 } from 'src/api/product.js';
-import { shopAllProducts } from 'src/utils/testData.js';
 
 const route = useRoute();
 const router = useRouter();
-
-// API 模式切換 (true: 使用真實 API, false: 使用測試數據)
-const useRealAPI = ref(true);
+const $q = useQuasar();
 
 const loading = ref(true);
 const sortBy = ref('default');
@@ -268,7 +185,9 @@ const categories = ref([]);
 
 // 分页相关
 const currentPage = ref(1);
-const pageSize = 9; // 每页显示9笔
+const pageSize = 12; // 每页显示12笔
+const totalPages = ref(0);
+const totalElements = ref(0);
 
 // 麵包屑項目
 const breadcrumbItems = computed(() => [
@@ -284,89 +203,48 @@ const sortOptions = [
   { label: '最新上架', value: 'newest' },
 ];
 
-// 使用统一的测试数据
-const allProducts = ref(shopAllProducts);
+// 商品列表
+const products = ref([]);
 
-// 根據分類 ID 篩選商品（不分页）
-const allFilteredProducts = computed(() => {
-  let products = [...allProducts.value];
+// 所有商品列表（用於計算分類數量）
+const allProducts = ref([]);
 
-  // 如果有分類 ID，則篩選該分類的商品
-  if (categoryId.value && categoryId.value !== 'all') {
-    products = products.filter(p => p.category === categoryId.value);
-  }
-
-  // 排序
-  if (sortBy.value === 'price-asc') {
-    products.sort((a, b) => a.price - b.price);
-  } else if (sortBy.value === 'price-desc') {
-    products.sort((a, b) => b.price - a.price);
-  } else if (sortBy.value === 'newest') {
-    products.sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0));
-  }
-
-  return products;
-});
-
-// 当前页显示的商品（分页后）
+// 當前頁顯示的商品
 const filteredProducts = computed(() => {
-  const start = (currentPage.value - 1) * pageSize;
-  const end = start + pageSize;
-  return allFilteredProducts.value.slice(start, end);
-});
+  let result = [...products.value];
 
-// 总页数
-const totalPages = computed(() => {
-  return Math.ceil(allFilteredProducts.value.length / pageSize);
+  // 前端排序（如果需要）
+  if (sortBy.value === 'price-asc') {
+    result.sort((a, b) => a.price - b.price);
+  } else if (sortBy.value === 'price-desc') {
+    result.sort((a, b) => b.price - a.price);
+  } else if (sortBy.value === 'newest') {
+    result.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+
+  return result;
 });
 
 // 切换页码
 const changePage = page => {
   currentPage.value = page;
+  fetchProducts();
   // 滚动到顶部
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 分類名稱映射 (用於測試數據模式)
-const categoryMap = {
-  all: '所有商品',
-  dessert: '甜筒',
-  japanese: '日系產品',
-  bath: '沐浴用品',
-  toy: '玩具精品',
-  food: '日系零食',
-  home: '居家用品',
-  daily: '生活雜貨',
-  other: '其他',
-};
-
 // 取得特定分類的商品數量
 const getCategoryCount = category => {
-  if (useRealAPI.value) {
-    // API 模式：從分類列表中查找
-    const cat = categories.value.find(
-      c => c.code === category || c.id == category
-    );
-    return cat?.productCount || 0;
-  } else {
-    // 測試數據模式
-    if (category === 'japanese') {
-      return allProducts.value.filter(p =>
-        ['bath', 'toy', 'food'].includes(p.category)
-      ).length;
-    } else if (category === 'dessert') {
-      return allProducts.value.filter(p => p.category === 'dessert').length;
-    } else if (category === 'other') {
-      return allProducts.value.filter(p => p.category === 'other').length;
-    }
-    return allProducts.value.filter(p => p.category === category).length;
-  }
+  const cat = categories.value.find(
+    c => c.id == category || c.name === category
+  );
+  return cat?.productCount || 0;
 };
 
 // 切換分類
-const filterByCategory = category => {
-  currentPage.value = 1; // 切换分类时重置页码
-  router.push(`/shop/product/list?category=${category}`);
+const filterByCategory = categoryIdOrAll => {
+  currentPage.value = 1;
+  router.push(`/shop/product/list?category=${categoryIdOrAll}`);
 };
 
 // 前往商品詳情頁
@@ -374,20 +252,73 @@ const goToDetail = productId => {
   router.push(`/shop/product/${productId}`);
 };
 
+// 統一錯誤處理
+const handleError = (error, message = '操作失敗') => {
+  console.error(message, error);
+  let errorMsg = message;
+  
+  if (error.response) {
+    const status = error.response.status;
+    if (status === 404) {
+      errorMsg = '找不到相關資料';
+    } else if (status === 500) {
+      errorMsg = '伺服器錯誤，請稍後再試';
+    } else if (error.response.data?.message) {
+      errorMsg = error.response.data.message;
+    }
+  } else if (error.request) {
+    errorMsg = '網路連線異常，請檢查網路連線';
+  }
+  
+  $q.notify({
+    type: 'negative',
+    message: errorMsg,
+    position: 'top',
+    timeout: 3000,
+  });
+};
+
 // 獲取分類列表
 const fetchCategories = async () => {
   try {
-    const response = await getTopCategories();
-    if (response && response.data) {
-      categories.value = response.data;
+    const response = await getEnabledCategories();
+    console.log('分類列表 API 回應:', response);
+    
+    // 根據 PRODUCT_PUBLIC_API.md 規範，回應格式為 { success, message, data }
+    // 注意：axios 攔截器已經返回 response.data，所以這裡直接使用 response
+    if (response?.success && response?.data) {
+      categories.value = response.data.map(cat => ({
+        ...cat,
+        productCount: 0, // 初始化為 0，後面會更新
+      }));
     }
   } catch (error) {
-    console.error('獲取分類列表失敗:', error);
-    Notify.create({
-      type: 'negative',
-      message: '獲取分類列表失敗，請稍後再試',
-      position: 'top',
-    });
+    handleError(error, '獲取分類列表失敗');
+    // 設置空數組以避免頁面錯誤
+    categories.value = [];
+  }
+};
+
+// 獲取所有商品用於計算分類數量
+const fetchAllProductsForCount = async () => {
+  try {
+    // 獲取所有上架商品（使用較大的 size 確保獲取所有商品）
+    const response = await getProductsByStatus('ACTIVE', { page: 0, size: 1000 });
+    
+    if (response?.success && response?.data?.content) {
+      allProducts.value = response.data.content;
+      
+      // 計算每個分類的商品數量
+      categories.value = categories.value.map(cat => ({
+        ...cat,
+        productCount: allProducts.value.filter(p => p.categoryId === cat.id).length,
+      }));
+      
+      console.log('已更新分類商品數量:', categories.value);
+    }
+  } catch (error) {
+    console.error('獲取商品數量失敗:', error);
+    // 不顯示錯誤訊息，因為這不影響主要功能
   }
 };
 
@@ -405,50 +336,68 @@ const fetchProducts = async () => {
       // 根據分類查詢
       response = await getProductsByCategory(categoryId.value, params);
     } else {
-      // 查詢所有商品 (只顯示上架商品)
+      // 查詢所有上架商品
       response = await getProductsByStatus('ACTIVE', params);
     }
 
     console.log('商品列表 API 回應:', response);
 
-    if (response && response.data) {
-      // 假設 API 返回格式：{ content: [], totalElements: 0, totalPages: 0 }
+    // 根據 PRODUCT_PUBLIC_API.md 規範處理回應
+    // 注意：axios 攔截器已經返回 response.data，所以這裡直接使用 response
+    if (response?.success && response?.data) {
       const data = response.data;
-      if (data.content) {
-        allProducts.value = data.content.map(item => ({
+      
+      // 處理分頁資料
+      if (data.content && Array.isArray(data.content)) {
+        products.value = data.content.map(item => ({
           id: item.id,
           name: item.name,
           category: item.categoryId,
+          categoryName: item.categoryName,
           price: item.salePrice || item.basePrice,
-          originalPrice: item.salePrice ? item.basePrice : null,
-          image:
-            item.images && item.images.length > 0
-              ? item.images[0].imageUrl
-              : '',
+          originalPrice: item.salePrice && item.basePrice > item.salePrice ? item.basePrice : null,
+          image: item.images && item.images.length > 0 ? item.images[0].imageUrl : '/placeholder.jpg',
           images: item.images || [],
           description: item.description,
           sku: item.sku,
           status: item.status,
-          new: item.isNew || false,
-          hot: item.isHot || false,
-          discount: item.salePrice
+          salesMode: item.salesMode,
+          tags: item.tags || [],
+          discount: item.salePrice && item.basePrice
             ? Math.round((1 - item.salePrice / item.basePrice) * 100)
             : 0,
+          createdAt: item.createdAt,
         }));
+        
+        totalPages.value = data.totalPages || 0;
+        totalElements.value = data.totalElements || 0;
+      } else {
+        products.value = [];
+        totalPages.value = 0;
+        totalElements.value = 0;
       }
+    } else {
+      products.value = [];
+      totalPages.value = 0;
+      totalElements.value = 0;
     }
   } catch (error) {
-    console.error('獲取商品列表失敗:', error);
-    Notify.create({
-      type: 'negative',
-      message: '獲取商品列表失敗，切換至測試數據模式',
-      position: 'top',
-    });
-    // 切換到測試數據模式
-    useRealAPI.value = false;
-    allProducts.value = shopAllProducts;
+    handleError(error, '獲取商品列表失敗');
+    products.value = [];
+    totalPages.value = 0;
+    totalElements.value = 0;
   } finally {
     loading.value = false;
+  }
+};
+
+// 更新分類名稱
+const updateCategoryName = () => {
+  if (categoryId.value === 'all' || !categoryId.value) {
+    categoryName.value = '所有商品';
+  } else if (categories.value.length > 0) {
+    const cat = categories.value.find(c => c.id == categoryId.value);
+    categoryName.value = cat?.name || '所有商品';
   }
 };
 
@@ -457,42 +406,22 @@ watch(
   () => categoryId.value,
   () => {
     currentPage.value = 1;
-    if (useRealAPI.value) {
-      fetchProducts();
-    }
-    // 更新分類名稱
-    if (useRealAPI.value && categories.value.length > 0) {
-      const cat = categories.value.find(
-        c => c.code === categoryId.value || c.id == categoryId.value
-      );
-      categoryName.value = cat?.name || '所有商品';
-    } else {
-      categoryName.value = categoryMap[categoryId.value] || '所有商品';
-    }
+    updateCategoryName();
+    fetchProducts();
   }
 );
 
+// 監聽排序變化
+watch(sortBy, () => {
+  // 排序變化時不需要重新載入資料，computed 會自動處理
+});
+
 // 載入資料
 onMounted(async () => {
-  if (useRealAPI.value) {
-    // 使用真實 API
-    await fetchCategories();
-    await fetchProducts();
-
-    // 設定分類名稱
-    if (categories.value.length > 0) {
-      const cat = categories.value.find(
-        c => c.code === categoryId.value || c.id == categoryId.value
-      );
-      categoryName.value = cat?.name || '所有商品';
-    }
-  } else {
-    // 使用測試數據
-    setTimeout(() => {
-      categoryName.value = categoryMap[categoryId.value] || '所有商品';
-      loading.value = false;
-    }, 500);
-  }
+  await fetchCategories();
+  await fetchAllProductsForCount(); // 獲取所有商品並計算分類數量
+  updateCategoryName();
+  await fetchProducts();
 });
 </script>
 
@@ -526,35 +455,47 @@ onMounted(async () => {
     background: white;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .sidebar-title {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.25rem;
+    font-weight: 700;
     color: $shop-text;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid $shop-primary;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid $shop-primary;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .category-list {
     .q-item {
-      border-radius: 8px;
-      margin-bottom: 5px;
-      transition: all 0.3s;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      padding: 12px 16px;
+      transition: all 0.3s ease;
 
       &:hover {
-        background: $shop-bg-light;
+        background: rgba($shop-primary, 0.05);
+        transform: translateX(4px);
       }
 
       &.category-active {
-        background: rgba($shop-primary, 0.1);
+        background: linear-gradient(135deg, rgba($shop-primary, 0.15), rgba($shop-primary, 0.08));
         color: $shop-primary;
         font-weight: 600;
+        border-left: 4px solid $shop-primary;
+        padding-left: 12px;
 
         .q-item__label {
           color: $shop-primary;
+        }
+
+        .q-icon {
+          color: $shop-primary !important;
         }
       }
     }
@@ -582,12 +523,32 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 30px;
   background: white;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+
+  .result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 
   .result-count {
-    font-size: 1rem;
-    color: $shop-text-secondary;
+    font-size: 1.05rem;
+    color: $shop-text;
+    display: flex;
+    align-items: center;
+
+    strong {
+      color: $shop-primary;
+      font-size: 1.2rem;
+      margin: 0 4px;
+    }
+  }
+
+  .result-page {
+    font-size: 0.85rem;
   }
 
   .filter-controls {
@@ -598,9 +559,13 @@ onMounted(async () => {
 
 .loading-wrapper {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 400px;
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
 }
 
 .no-products {
@@ -609,12 +574,10 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  color: $shop-text-secondary;
-
-  p {
-    margin-top: 20px;
-    font-size: 1.1rem;
-  }
+  background: white;
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
 }
 
 .products-grid {
