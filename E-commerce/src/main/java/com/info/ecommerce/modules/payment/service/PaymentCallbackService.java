@@ -1,6 +1,5 @@
 package com.info.ecommerce.modules.payment.service;
 
-import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderPayment;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 /**
  * 支付回調處理服務
@@ -42,8 +42,13 @@ public class PaymentCallbackService {
             String orderNumber = response.getOrderNumber();
             
             // 查找訂單
-            Order order = orderRepository.findByOrderNumber(orderNumber)
-                    .orElseThrow(() -> new BusinessException("訂單不存在: " + orderNumber));
+            Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
+            if (orderOpt.isEmpty()) {
+                log.error("Order not found for payment success: {}", orderNumber);
+                return false;
+            }
+            
+            Order order = orderOpt.get();
             
             // 檢查訂單狀態
             if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
@@ -97,8 +102,13 @@ public class PaymentCallbackService {
             String orderNumber = response.getOrderNumber();
             
             // 查找訂單
-            Order order = orderRepository.findByOrderNumber(orderNumber)
-                    .orElseThrow(() -> new BusinessException("訂單不存在: " + orderNumber));
+            Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
+            if (orderOpt.isEmpty()) {
+                log.error("Order not found for payment failure: {}", orderNumber);
+                return false;
+            }
+            
+            Order order = orderOpt.get();
             
             // 建立失敗的付款記錄
             OrderPayment payment = OrderPayment.builder()
@@ -146,8 +156,13 @@ public class PaymentCallbackService {
     public boolean handlePaymentCancellation(String orderNumber) {
         try {
             // 查找訂單
-            Order order = orderRepository.findByOrderNumber(orderNumber)
-                    .orElseThrow(() -> new BusinessException("訂單不存在: " + orderNumber));
+            Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
+            if (orderOpt.isEmpty()) {
+                log.error("Order not found for payment cancellation: {}", orderNumber);
+                return false;
+            }
+            
+            Order order = orderOpt.get();
             
             // 只有待付款或處理中的訂單可以取消
             if (order.getStatus() != OrderStatus.PENDING_PAYMENT 
