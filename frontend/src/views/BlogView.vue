@@ -78,6 +78,20 @@
                     </q-item-section>
                     <q-item-section>發布</q-item-section>
                   </q-item>
+
+                  <q-item v-if="props.row.status === 'DRAFT'" clickable v-close-popup @click="showSchedulePublishDialog(props.row.id)">
+                    <q-item-section avatar>
+                      <q-icon name="schedule" />
+                    </q-item-section>
+                    <q-item-section>排程上架</q-item-section>
+                  </q-item>
+
+                  <q-item v-if="props.row.status === 'PUBLISHED' || props.row.status === 'SCHEDULED'" clickable v-close-popup @click="showScheduleUnpublishDialog(props.row.id)">
+                    <q-item-section avatar>
+                      <q-icon name="event_busy" />
+                    </q-item-section>
+                    <q-item-section>排程下架</q-item-section>
+                  </q-item>
                   
                   <q-item v-if="props.row.status !== 'ARCHIVED'" clickable v-close-popup @click="handleArchive(props.row.id)">
                     <q-item-section avatar>
@@ -227,6 +241,58 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- 排程上架對話框 -->
+      <q-dialog v-model="showSchedulePublishDialogFlag">
+        <q-card style="min-width: 400px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">排程上架</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <q-input
+              v-model="schedulePublishDateTime"
+              label="排程上架時間 *"
+              outlined
+              type="datetime-local"
+              :rules="[val => !!val || '請選擇排程上架時間']"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn unelevated label="確認" color="primary" @click="handleSchedulePublish" :loading="schedulingPublish" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- 排程下架對話框 -->
+      <q-dialog v-model="showScheduleUnpublishDialogFlag">
+        <q-card style="min-width: 400px">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">排程下架</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section>
+            <q-input
+              v-model="scheduleUnpublishDateTime"
+              label="排程下架時間 *"
+              outlined
+              type="datetime-local"
+              :rules="[val => !!val || '請選擇排程下架時間']"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn unelevated label="確認" color="primary" @click="handleScheduleUnpublish" :loading="schedulingUnpublish" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -241,7 +307,14 @@ const $q = useQuasar()
 const posts = ref<BlogPost[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
+const showSchedulePublishDialogFlag = ref(false)
+const showScheduleUnpublishDialogFlag = ref(false)
 const statusTab = ref('all')
+const schedulingPublish = ref(false)
+const schedulingUnpublish = ref(false)
+const schedulePublishDateTime = ref('')
+const scheduleUnpublishDateTime = ref('')
+const currentSchedulePostId = ref<number | undefined>()
 
 const form = ref<BlogPost>({
   title: '',
@@ -452,7 +525,7 @@ const handleDelete = (id?: number) => {
         message: '刪除成功',
         position: 'top'
       })
-      loadBlogs()
+      loadPosts()
     } catch (error) {
       $q.notify({
         type: 'negative',
@@ -461,6 +534,86 @@ const handleDelete = (id?: number) => {
       })
     }
   })
+}
+
+const showSchedulePublishDialog = (id?: number) => {
+  if (!id) return
+  currentSchedulePostId.value = id
+  schedulePublishDateTime.value = ''
+  showSchedulePublishDialogFlag.value = true
+}
+
+const handleSchedulePublish = async () => {
+  if (!currentSchedulePostId.value || !schedulePublishDateTime.value) {
+    $q.notify({
+      type: 'warning',
+      message: '請選擇排程上架時間',
+      position: 'top'
+    })
+    return
+  }
+
+  schedulingPublish.value = true
+  try {
+    // 轉換為 ISO 8601 格式
+    const isoDateTime = new Date(schedulePublishDateTime.value).toISOString()
+    await blogApi.scheduleBlogPost(currentSchedulePostId.value, isoDateTime)
+    $q.notify({
+      type: 'positive',
+      message: '排程上架設定成功',
+      position: 'top'
+    })
+    showSchedulePublishDialogFlag.value = false
+    loadPosts()
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: error?.response?.data?.message || '排程上架失敗',
+      position: 'top'
+    })
+  } finally {
+    schedulingPublish.value = false
+  }
+}
+
+const showScheduleUnpublishDialog = (id?: number) => {
+  if (!id) return
+  currentSchedulePostId.value = id
+  scheduleUnpublishDateTime.value = ''
+  showScheduleUnpublishDialogFlag.value = true
+}
+
+const handleScheduleUnpublish = async () => {
+  if (!currentSchedulePostId.value || !scheduleUnpublishDateTime.value) {
+    $q.notify({
+      type: 'warning',
+      message: '請選擇排程下架時間',
+      position: 'top'
+    })
+    return
+  }
+
+  schedulingUnpublish.value = true
+  try {
+    // 轉換為 ISO 8601 格式
+    const isoDateTime = new Date(scheduleUnpublishDateTime.value).toISOString()
+    await blogApi.scheduleUnpublishBlogPost(currentSchedulePostId.value, isoDateTime)
+    $q.notify({
+      type: 'positive',
+      message: '排程下架設定成功',
+      position: 'top'
+    })
+    showScheduleUnpublishDialogFlag.value = false
+    loadPosts()
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: error?.response?.data?.message || '排程下架失敗',
+      position: 'top'
+    })
+  } finally {
+    schedulingUnpublish.value = false
+  }
 }
 
 watch(statusTab, () => {

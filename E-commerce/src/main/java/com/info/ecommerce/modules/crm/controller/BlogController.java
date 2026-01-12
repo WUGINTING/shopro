@@ -122,4 +122,13 @@ public class BlogController {
             @Parameter(description = "文章 ID") @PathVariable Long id) {
         return ApiResponse.success("部落格文章已封存", blogService.archiveBlogPost(id));
     }
+
+    @PostMapping("/{id}/schedule-unpublish")
+    @Operation(summary = "排程下架部落格文章")
+    public ApiResponse<BlogPostDTO> scheduleUnpublishBlogPost(
+            @Parameter(description = "文章 ID") @PathVariable Long id,
+            @Parameter(description = "排程下架時間") @RequestParam 
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime scheduledUnpublishAt) {
+        return ApiResponse.success("部落格文章已排程下架", blogService.scheduleUnpublishBlogPost(id, scheduledUnpublishAt));
+    }
 }

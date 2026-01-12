@@ -47,6 +47,8 @@ export interface BlogPost {
   viewCount?: number
   /** 排程發佈時間 */
   scheduledAt?: string
+  /** 排程下架時間 */
+  scheduledUnpublishAt?: string
   /** 發佈時間 */
   publishedAt?: string
 }
@@ -236,6 +238,22 @@ export const blogApi = {
    */
   archiveBlogPost: (id: number) => {
     return axios.post<any, ApiResponse<BlogPost>>(`/crm/blog/${id}/archive`)
+  },
+
+  /**
+   * 排程下架部落格文章
+   * @description 設定文章的下架時間
+   * @param {number} id - 文章 ID
+   * @param {string} scheduledUnpublishAt - 排程下架時間（ISO 8601 格式）
+   * @returns {Promise<ApiResponse<BlogPost>>} 更新後的文章資料
+   * @swagger POST /api/crm/blog/{id}/schedule-unpublish
+   * @example
+   * const scheduled = await blogApi.scheduleUnpublishBlogPost(123, '2026-02-01T10:00:00Z')
+   */
+  scheduleUnpublishBlogPost: (id: number, scheduledUnpublishAt: string) => {
+    return axios.post<any, ApiResponse<BlogPost>>(`/crm/blog/${id}/schedule-unpublish`, null, {
+      params: { scheduledUnpublishAt }
+    })
   }
 }
 

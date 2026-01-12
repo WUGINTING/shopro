@@ -85,6 +85,10 @@ public class BlogPost {
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
 
+    // 排程下架時間
+    @Column(name = "scheduled_unpublish_at")
+    private LocalDateTime scheduledUnpublishAt;
+
     // 發布時間
     @Column(name = "published_at")
     private LocalDateTime publishedAt;

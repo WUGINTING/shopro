@@ -68,6 +68,9 @@ public class BlogPostDTO {
     @Schema(description = "排程發布時間")
     private LocalDateTime scheduledAt;
 
+    @Schema(description = "排程下架時間")
+    private LocalDateTime scheduledUnpublishAt;
+
     @Schema(description = "發布時間")
     private LocalDateTime publishedAt;
 }

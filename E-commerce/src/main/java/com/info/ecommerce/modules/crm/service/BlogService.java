@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -126,6 +127,64 @@ public class BlogService {
         blogPost.setStatus(BlogStatus.ARCHIVED);
         blogPost = blogPostRepository.save(blogPost);
         return toDTO(blogPost);
+    }
+
+    @Transactional
+    public BlogPostDTO scheduleUnpublishBlogPost(Long id, LocalDateTime scheduledUnpublishAt) {
+        BlogPost blogPost = blogPostRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("部落格文章不存在"));
+
+        if (blogPost.getStatus() != BlogStatus.PUBLISHED && blogPost.getStatus() != BlogStatus.SCHEDULED) {
+            throw new BusinessException("只有已發布或排程中的文章可以排程下架");
+        }
+
+        blogPost.setScheduledUnpublishAt(scheduledUnpublishAt);
+        blogPost = blogPostRepository.save(blogPost);
+        return toDTO(blogPost);
+    }
+
+    /**
+     * 處理排程上架的文章
+     * 將狀態為 SCHEDULED 且 scheduledAt 時間已到的文章改為 PUBLISHED
+     */
+    @Transactional
+    public int processScheduledPublish() {
+        LocalDateTime now = LocalDateTime.now();
+        List<BlogPost> scheduledPosts = blogPostRepository.findByStatusAndScheduledAtLessThanEqual(
+                BlogStatus.SCHEDULED, now);
+        
+        int count = 0;
+        for (BlogPost post : scheduledPosts) {
+            post.setStatus(BlogStatus.PUBLISHED);
+            post.setPublishedAt(now);
+            blogPostRepository.save(post);
+            count++;
+        }
+        
+        return count;
+    }
+
+    /**
+     * 處理排程下架的文章
+     * 將狀態為 PUBLISHED 或 SCHEDULED 且 scheduledUnpublishAt 時間已到的文章改為 ARCHIVED
+     */
+    @Transactional
+    public int processScheduledUnpublish() {
+        LocalDateTime now = LocalDateTime.now();
+        List<BlogStatus> statuses = List.of(BlogStatus.PUBLISHED, BlogStatus.SCHEDULED);
+        List<BlogPost> postsToUnpublish = blogPostRepository.findByStatusInAndScheduledUnpublishAtLessThanEqual(
+                statuses, now);
+        
+        int count = 0;
+        for (BlogPost post : postsToUnpublish) {
+            if (post.getScheduledUnpublishAt() != null) {
+                post.setStatus(BlogStatus.ARCHIVED);
+                blogPostRepository.save(post);
+                count++;
+            }
+        }
+        
+        return count;
     }
 
     private BlogPostDTO toDTO(BlogPost blogPost) {
