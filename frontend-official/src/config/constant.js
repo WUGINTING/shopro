@@ -6,6 +6,9 @@ export const TokenKey = 'vite__token';
 export const CartItemsKey = 'cart__items';
 export const CartTotalKey = 'cart__total';
 
+// 商品分類相關
+export const ProductCategoriesKey = 'product__categories';
+
 // 使用者偏好設定
 export const LanguageKey = 'app__language';
 export const ThemeKey = 'app__theme';

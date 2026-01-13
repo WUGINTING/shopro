@@ -16,11 +16,12 @@
 5. [UI 框架使用規範](#ui-框架使用規範)
 6. [樣式開發規範](#樣式開發規範)
 7. [API 開發規範](#api-開發規範)
-8. [路由與佈局](#路由與佈局)
-9. [元件開發規範](#元件開發規範)
-10. [開發流程](#開發流程)
-11. [購物車功能開發](#購物車功能開發)
-12. [常見問題](#常見問題)
+8. [Cookie 工具使用規範](#cookie-工具使用規範)
+9. [路由與佈局](#路由與佈局)
+10. [元件開發規範](#元件開發規範)
+11. [開發流程](#開發流程)
+12. [購物車功能開發](#購物車功能開發)
+13. [常見問題](#常見問題)
 
 ---
 
@@ -155,6 +156,8 @@ frontend-official/
 │   │   └── routes.js           # 路由定義
 │   │
 │   ├── utils/                  # 工具函式
+│   │   ├── cookies.js          # Cookie 工具（已整合 js-cookie）
+│   │   └── envs.js             # 環境變數工具
 │   │
 │   ├── App.vue                 # 根元件
 │   └── main.js                 # 應用入口
@@ -643,6 +646,396 @@ const handleApiError = (error, defaultMessage = '操作失敗') => {
 - 📄 分頁從 0 開始，不是從 1
 - 🖼️ 圖片路徑可能是相對路徑，需組合完整 URL
 - 💰 價格顯示優先使用 `salePrice`（銷售價）
+
+---
+
+## Cookie 工具使用規範
+
+### 1. Cookie 工具概述
+
+專案已整合 `js-cookie` 並提供統一的 Cookie 操作工具，位於 `src/utils/cookies.js`。
+
+#### 核心特色
+- ✅ **多環境隔離**：自動加上環境前綴（dev_/prod_/test_）
+- ✅ **統一管理**：所有 Cookie 操作都通過工具進行
+- ✅ **白名單機制**：清除時可保留重要 Cookie（如語言設定、主題等）
+- ✅ **完整 JSDoc**：所有方法都有詳細的文檔和範例
+
+### 2. Cookie 鍵名定義
+
+所有 Cookie 鍵名都定義在 `src/config/constant.js` 中：
+
+```javascript
+// src/config/constant.js
+// ========== Cookie Key 定義 ==========
+// 認證相關
+export const TokenKey = 'vite__token';
+
+// 購物車相關
+export const CartItemsKey = 'cart__items';
+export const CartTotalKey = 'cart__total';
+
+// 使用者偏好設定
+export const LanguageKey = 'app__language';
+export const ThemeKey = 'app__theme';
+
+// 彈窗廣告相關
+export const PopupAdHideKey = 'popup__ad__hide';
+
+// 其他
+export const LastVisitKey = 'last__visit';
+export const RememberMeKey = 'remember__me';
+
+// ========== Cookie 白名單 ==========
+// (登出時不清空，需手動清空)
+export const cookieWhiteList = [LanguageKey, ThemeKey, RememberMeKey];
+```
+
+### 3. 基本使用方法
+
+#### 引入 Cookie 工具
+```javascript
+import cookies from '@/utils/cookies'
+import { TokenKey, CartItemsKey } from '@/config/constant'
+```
+
+#### 設定 Cookie
+```javascript
+// 使用預設選項（7天過期）
+cookies.set(TokenKey, 'your_token_here')
+
+// 自訂過期時間（30天）
+cookies.set(RememberMeKey, 'true', { expires: 30 })
+
+// 儲存 JSON 物件
+const cartItems = [{ id: 1, name: 'Product', qty: 2 }]
+cookies.set(CartItemsKey, JSON.stringify(cartItems))
+```
+
+#### 獲取 Cookie
+```javascript
+// 獲取帶環境前綴的 Cookie
+const token = cookies.get(TokenKey)
+
+// 獲取不帶前綴的原始 Cookie
+const rawValue = cookies.get('some_key', false)
+
+// 解析 JSON
+const cartItems = JSON.parse(cookies.get(CartItemsKey) || '[]')
+```
+
+#### 檢查 Cookie 是否存在
+```javascript
+if (cookies.has(TokenKey)) {
+  console.log('使用者已登入')
+}
+```
+
+#### 刪除 Cookie
+```javascript
+// 刪除帶環境前綴的 Cookie
+cookies.remove(TokenKey)
+
+// 刪除不帶前綴的 Cookie
+cookies.remove('some_key', false)
+```
+
+#### 清除所有 Cookie（保留白名單）
+```javascript
+// 會清除所有 Cookie，但保留語言、主題、記住我等設定
+cookies.clearAll()
+```
+
+#### 獲取所有 Cookie
+```javascript
+const allCookies = cookies.getAll()
+console.log('目前所有 Cookie:', allCookies)
+```
+
+### 4. 實際使用範例
+
+#### 範例 1：會員登入
+```vue
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import cookies from '@/utils/cookies'
+import { TokenKey } from '@/config/constant'
+import { login } from '@/api/account'
+
+const $q = useQuasar()
+const router = useRouter()
+
+const email = ref('')
+const password = ref('')
+const rememberMe = ref(false)
+
+/**
+ * 處理登入
+ */
+const handleLogin = async () => {
+  try {
+    const response = await login({
+      email: email.value,
+      password: password.value
+    })
+    
+    if (response.data.success) {
+      const { token } = response.data.data
+      
+      // 儲存 Token（根據記住我選項設定過期時間）
+      const expires = rememberMe.value ? 30 : 1
+      cookies.set(TokenKey, token, { expires })
+      
+      $q.notify({
+        type: 'positive',
+        message: '登入成功',
+        position: 'top'
+      })
+      
+      router.push({ name: 'shop-home' })
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '登入失敗，請檢查帳號密碼',
+      position: 'top'
+    })
+  }
+}
+</script>
+
+<template>
+  <q-form @submit="handleLogin">
+    <q-input 
+      v-model="email" 
+      label="電子郵件" 
+      type="email"
+      outlined 
+    />
+    
+    <q-input 
+      v-model="password" 
+      label="密碼" 
+      type="password"
+      outlined 
+    />
+    
+    <q-checkbox 
+      v-model="rememberMe" 
+      label="記住我（30天）" 
+    />
+    
+    <q-btn 
+      type="submit" 
+      color="primary" 
+      label="登入" 
+      class="full-width"
+    />
+  </q-form>
+</template>
+```
+
+#### 範例 2：會員登出
+```vue
+<script setup>
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import cookies from '@/utils/cookies'
+import { TokenKey } from '@/config/constant'
+
+const router = useRouter()
+const $q = useQuasar()
+
+/**
+ * 處理登出
+ */
+const handleLogout = () => {
+  $q.dialog({
+    title: '確認登出',
+    message: '確定要登出嗎？',
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    // 清除所有 Cookie（保留語言、主題等白名單設定）
+    cookies.clearAll()
+    
+    $q.notify({
+      type: 'positive',
+      message: '已成功登出',
+      position: 'top'
+    })
+    
+    router.push({ name: 'shop-home' })
+  })
+}
+</script>
+
+<template>
+  <q-btn 
+    flat 
+    icon="logout" 
+    label="登出" 
+    @click="handleLogout"
+  />
+</template>
+```
+
+#### 範例 3：購物車狀態持久化
+```javascript
+// src/composables/useCart.js
+import { ref, watch } from 'vue'
+import cookies from '@/utils/cookies'
+import { CartItemsKey, CartTotalKey } from '@/config/constant'
+
+const cartItems = ref([])
+
+export function useCart() {
+  /**
+   * 載入購物車（從 Cookie）
+   */
+  const loadCart = () => {
+    const saved = cookies.get(CartItemsKey)
+    if (saved) {
+      try {
+        cartItems.value = JSON.parse(saved)
+      } catch (error) {
+        console.error('載入購物車失敗:', error)
+        cartItems.value = []
+      }
+    }
+  }
+
+  /**
+   * 儲存購物車（到 Cookie）
+   */
+  const saveCart = () => {
+    cookies.set(CartItemsKey, JSON.stringify(cartItems.value))
+    cookies.set(CartTotalKey, cartItems.value.length.toString())
+  }
+
+  /**
+   * 加入購物車
+   */
+  const addToCart = (product, quantity = 1) => {
+    const existingItem = cartItems.value.find(item => item.id === product.id)
+    
+    if (existingItem) {
+      existingItem.quantity += quantity
+    } else {
+      cartItems.value.push({
+        ...product,
+        quantity
+      })
+    }
+    
+    saveCart()
+  }
+
+  /**
+   * 清空購物車
+   */
+  const clearCart = () => {
+    cartItems.value = []
+    cookies.remove(CartItemsKey)
+    cookies.remove(CartTotalKey)
+  }
+
+  // 監聽購物車變化，自動儲存
+  watch(cartItems, saveCart, { deep: true })
+
+  return {
+    cartItems,
+    loadCart,
+    saveCart,
+    addToCart,
+    clearCart
+  }
+}
+```
+
+### 5. 環境隔離說明
+
+Cookie 工具會根據環境自動加上前綴：
+
+| 環境 | 前綴 | 實際 Cookie 鍵名 |
+|-----|------|----------------|
+| 開發環境 (development) | `dev_` | `dev_vite__token` |
+| 生產環境 (production) | `prod_` | `prod_vite__token` |
+| 測試環境 (其他) | `test_` | `test_vite__token` |
+
+#### 好處
+1. **避免環境衝突**：同一瀏覽器可同時開發/測試多個環境
+2. **資料隔離**：不同環境的資料不會互相影響
+3. **一次打包**：可打包一次部署到多個環境
+
+### 6. Cookie 白名單機制
+
+白名單中的 Cookie 在執行 `cookies.clearAll()` 時不會被清除，適合存放：
+
+- ✅ 語言設定 (`app__language`)
+- ✅ 主題設定 (`app__theme`)
+- ✅ 記住我選項 (`remember__me`)
+
+❌ **不應該**加入白名單的：
+- Token（登出時需清除）
+- 購物車資料（登出時需清除）
+- 會員資訊（登出時需清除）
+
+### 7. 開發建議
+
+#### ✅ 推薦做法
+```javascript
+// 1. 使用統一的 Cookie 鍵名常數
+import { TokenKey } from '@/config/constant'
+cookies.set(TokenKey, token)
+
+// 2. 儲存物件時轉為 JSON
+cookies.set('user_info', JSON.stringify(userInfo))
+
+// 3. 讀取時檢查是否存在
+const token = cookies.get(TokenKey)
+if (token) {
+  // 處理已登入狀態
+}
+
+// 4. 敏感資料設定較短過期時間
+cookies.set(TokenKey, token, { expires: 1 }) // 1天後過期
+```
+
+#### ❌ 避免做法
+```javascript
+// ❌ 不要直接使用 js-cookie（繞過環境隔離）
+import Cookies from 'js-cookie'
+Cookies.set('token', token) // 錯誤！
+
+// ❌ 不要使用硬編碼的鍵名
+cookies.set('my_token', token) // 應該使用常數
+
+// ❌ 不要儲存敏感明文資訊
+cookies.set('password', password) // 危險！永遠不要儲存密碼
+```
+
+### 8. 常見問題
+
+#### Q1: Cookie 為什麼看不到？
+**A**: 檢查環境前綴是否正確，開發環境下 Cookie 鍵名會是 `dev_vite__token` 而非 `vite__token`。
+
+#### Q2: 如何清除特定 Cookie？
+**A**: 使用 `cookies.remove(key)`，如 `cookies.remove(TokenKey)`。
+
+#### Q3: 如何設定永久 Cookie？
+**A**: 設定很長的過期時間，如 `cookies.set(key, value, { expires: 365 })`（1年）。
+
+#### Q4: Cookie 大小限制？
+**A**: 單一 Cookie 最大約 4KB，建議大量資料使用 localStorage 或後端存儲。
+
+#### Q5: 如何在不同子網域共享 Cookie？
+**A**: 設定 domain 參數：
+```javascript
+cookies.set('shared_key', value, { domain: '.example.com' })
+```
 
 ---
 
@@ -1385,6 +1778,7 @@ npm install
 
 | 版本 | 日期 | 更新內容 |
 |-----|------|---------|
+| 1.1.0 | 2026-01-13 | 新增 Cookie 工具使用規範章節，優化 cookies.js 並增加完整 JSDoc 注釋 |
 | 1.0.0 | 2026-01-13 | 初始版本，完整開發規範建立 |
 
 ---

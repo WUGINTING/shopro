@@ -162,6 +162,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import ProductCard from 'src/components/shop/ProductCard.vue';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
+import cookies from 'src/utils/cookies.js';
+import { ProductCategoriesKey } from 'src/config/constant.js';
 import {
   getProductList,
   getProductsByCategory,
@@ -291,6 +293,9 @@ const fetchCategories = async () => {
         ...cat,
         productCount: 0, // 初始化為 0，後面會更新
       }));
+      
+      // 將分類資料存入 cookie（有效期 7 天）
+      cookies.set(ProductCategoriesKey, JSON.stringify(response.data), { expires: 7 });
     }
   } catch (error) {
     handleError(error, '獲取分類列表失敗');

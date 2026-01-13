@@ -784,6 +784,384 @@ GET /api/product-categories/1
 
 ---
 
+## 商品規格 API (Product Specification APIs)
+
+### 11. 取得商品所有規格
+
+取得特定商品的所有規格選項，適用於商品詳情頁的規格選擇功能。
+
+**端點**：`GET /api/product-specifications/product/{productId}`
+
+**使用情境**：
+- 📦 商品詳情頁規格選擇器
+- 💰 多規格價格顯示
+- 📊 庫存狀態檢查
+- 🛒 加入購物車前的規格驗證
+
+**路徑參數**：
+
+| 參數 | 類型 | 必填 | 說明 |
+|------|------|------|------|
+| `productId` | Long | 是 | 商品 ID |
+
+**請求範例**：
+
+```bash
+# 取得商品 ID 為 1 的所有規格
+GET /api/product-specifications/product/1
+```
+
+**回應範例**：
+
+```json
+{
+  "success": true,
+  "message": "操作成功",
+  "data": [
+    {
+      "id": 1,
+      "specName": "顏色:白色,尺寸:S",
+      "sku": "SKU001-WH-S",
+      "price": 399.00,
+      "stock": 50,
+      "image": "/uploads/images/spec-white-s.jpg"
+    },
+    {
+      "id": 2,
+      "specName": "顏色:白色,尺寸:M",
+      "sku": "SKU001-WH-M",
+      "price": 399.00,
+      "stock": 100,
+      "image": "/uploads/images/spec-white-m.jpg"
+    },
+    {
+      "id": 3,
+      "specName": "顏色:黑色,尺寸:M",
+      "sku": "SKU001-BK-M",
+      "price": 419.00,
+      "stock": 80,
+      "image": "/uploads/images/spec-black-m.jpg"
+    },
+    {
+      "id": 4,
+      "specName": "顏色:黑色,尺寸:L",
+      "sku": "SKU001-BK-L",
+      "price": 419.00,
+      "stock": 0,
+      "image": "/uploads/images/spec-black-l.jpg"
+    }
+  ]
+}
+```
+
+**錯誤回應（商品不存在或無規格）**：
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": []
+}
+```
+
+**前端串接範例**：
+
+```javascript
+// Vue 3 + Quasar 範例
+import { ref, computed } from 'vue';
+import { getProductSpecifications } from 'src/api/product.js';
+
+// 規格資料和選中規格
+const specifications = ref([]);
+const selectedSpec = ref(null);
+
+// 載入規格
+async function loadSpecifications(productId) {
+  try {
+    const response = await getProductSpecifications(productId);
+    
+    if (response && response.data) {
+      specifications.value = response.data;
+      
+      // 預設選擇第一個有庫存的規格
+      const firstAvailable = specifications.value.find(spec => spec.stock > 0);
+      if (firstAvailable) {
+        selectedSpec.value = firstAvailable;
+      }
+    }
+  } catch (error) {
+    console.error('載入規格失敗:', error);
+  }
+}
+
+// 選擇規格
+function selectSpecification(spec) {
+  if (spec.stock === 0) {
+    // 提示已售完
+    return;
+  }
+  selectedSpec.value = spec;
+}
+
+// 計算顯示價格
+const displayPrice = computed(() => {
+  return selectedSpec.value?.price || product.value?.price || 0;
+});
+
+// 檢查是否可加入購物車
+const canAddToCart = computed(() => {
+  // 如果有規格，必須選擇規格且有庫存
+  if (specifications.value.length > 0) {
+    return selectedSpec.value && selectedSpec.value.stock > 0;
+  }
+  // 沒有規格的商品可直接加入
+  return true;
+});
+```
+
+**React 範例**：
+
+```javascript
+import { useState, useEffect } from 'react';
+import { getProductSpecifications } from './api/product';
+
+function ProductDetail({ productId }) {
+  const [specifications, setSpecifications] = useState([]);
+  const [selectedSpec, setSelectedSpec] = useState(null);
+  
+  useEffect(() => {
+    loadSpecifications();
+  }, [productId]);
+  
+  const loadSpecifications = async () => {
+    try {
+      const response = await getProductSpecifications(productId);
+      if (response?.data) {
+        setSpecifications(response.data);
+        
+        // 自動選擇第一個有庫存的規格
+        const firstAvailable = response.data.find(spec => spec.stock > 0);
+        if (firstAvailable) {
+          setSelectedSpec(firstAvailable);
+        }
+      }
+    } catch (error) {
+      console.error('載入規格失敗:', error);
+    }
+  };
+  
+  const handleSelectSpec = (spec) => {
+    if (spec.stock > 0) {
+      setSelectedSpec(spec);
+    }
+  };
+  
+  return (
+    <div>
+      {specifications.length > 0 && (
+        <div className="specifications">
+          <h3>選擇規格</h3>
+          <div className="spec-options">
+            {specifications.map(spec => (
+              <div
+                key={spec.id}
+                className={`spec-option ${selectedSpec?.id === spec.id ? 'selected' : ''} ${spec.stock === 0 ? 'out-of-stock' : ''}`}
+                onClick={() => handleSelectSpec(spec)}
+              >
+                <div className="spec-name">{spec.specName}</div>
+                <div className="spec-price">NT$ {spec.price}</div>
+                <div className="spec-stock">
+                  {spec.stock > 0 ? `庫存: ${spec.stock}` : '售完'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <div className="price">
+        NT$ {selectedSpec?.price || product.price}
+      </div>
+      
+      <button 
+        onClick={handleAddToCart}
+        disabled={specifications.length > 0 && (!selectedSpec || selectedSpec.stock === 0)}
+      >
+        加入購物車
+      </button>
+    </div>
+  );
+}
+```
+
+**jQuery 範例**：
+
+```javascript
+// 載入規格
+function loadProductSpecifications(productId) {
+  $.ajax({
+    url: `/api/product-specifications/product/${productId}`,
+    method: 'GET',
+    success: function(response) {
+      if (response.success && response.data.length > 0) {
+        renderSpecifications(response.data);
+      } else {
+        // 無規格，隱藏規格選擇器
+        $('#specifications-section').hide();
+      }
+    },
+    error: function(error) {
+      console.error('載入規格失敗:', error);
+    }
+  });
+}
+
+// 渲染規格選擇器
+function renderSpecifications(specifications) {
+  const container = $('#spec-options');
+  container.empty();
+  
+  specifications.forEach(spec => {
+    const specHtml = `
+      <div class="spec-option ${spec.stock === 0 ? 'out-of-stock' : ''}" 
+           data-spec-id="${spec.id}" 
+           data-price="${spec.price}"
+           data-stock="${spec.stock}">
+        <div class="spec-name">${spec.specName}</div>
+        <div class="spec-price">NT$ ${spec.price}</div>
+        <div class="spec-stock">
+          ${spec.stock > 0 ? `庫存: ${spec.stock}` : '售完'}
+        </div>
+      </div>
+    `;
+    container.append(specHtml);
+  });
+  
+  // 綁定點擊事件
+  $('.spec-option').on('click', function() {
+    if ($(this).hasClass('out-of-stock')) {
+      alert('此規格已售完');
+      return;
+    }
+    
+    $('.spec-option').removeClass('selected');
+    $(this).addClass('selected');
+    
+    // 更新價格顯示
+    const price = $(this).data('price');
+    $('#product-price').text(`NT$ ${price}`);
+  });
+}
+```
+
+### ProductSpecificationDTO 欄位說明
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `id` | Long | 規格 ID |
+| `specName` | String | 規格名稱（例如："顏色:白色,尺寸:M"） |
+| `sku` | String | 規格 SKU 編號（唯一） |
+| `price` | BigDecimal | 規格價格（可能與商品基礎價格不同） |
+| `stock` | Integer | 庫存數量（0 表示售完） |
+| `image` | String | 規格圖片 URL（可選，用於切換主圖） |
+
+### 規格選擇邏輯建議
+
+```javascript
+// 完整的規格選擇邏輯
+class ProductSpecificationManager {
+  constructor(product, specifications) {
+    this.product = product;
+    this.specifications = specifications;
+    this.selectedSpec = null;
+  }
+  
+  // 選擇規格
+  selectSpec(specId) {
+    const spec = this.specifications.find(s => s.id === specId);
+    
+    if (!spec) {
+      throw new Error('規格不存在');
+    }
+    
+    if (spec.stock === 0) {
+      throw new Error('此規格已售完');
+    }
+    
+    this.selectedSpec = spec;
+    return spec;
+  }
+  
+  // 取得當前價格
+  getCurrentPrice() {
+    return this.selectedSpec?.price || this.product.salePrice;
+  }
+  
+  // 取得當前庫存
+  getCurrentStock() {
+    return this.selectedSpec?.stock || 999;
+  }
+  
+  // 取得當前 SKU
+  getCurrentSku() {
+    return this.selectedSpec?.sku || this.product.sku;
+  }
+  
+  // 檢查是否可以加入購物車
+  canAddToCart(quantity) {
+    // 有規格時必須選擇規格
+    if (this.specifications.length > 0 && !this.selectedSpec) {
+      return { valid: false, message: '請先選擇商品規格' };
+    }
+    
+    // 檢查庫存
+    const stock = this.getCurrentStock();
+    if (quantity > stock) {
+      return { valid: false, message: `庫存不足，目前剩餘 ${stock} 件` };
+    }
+    
+    return { valid: true };
+  }
+  
+  // 取得購物車項目資料
+  getCartItemData(quantity) {
+    return {
+      productId: this.product.id,
+      productName: this.product.name,
+      specificationId: this.selectedSpec?.id,
+      specificationName: this.selectedSpec?.specName,
+      sku: this.getCurrentSku(),
+      price: this.getCurrentPrice(),
+      quantity: quantity,
+      image: this.selectedSpec?.image || this.product.images[0]?.imageUrl
+    };
+  }
+}
+
+// 使用範例
+const manager = new ProductSpecificationManager(product, specifications);
+
+// 選擇規格
+try {
+  manager.selectSpec(specId);
+  updatePriceDisplay(manager.getCurrentPrice());
+} catch (error) {
+  showError(error.message);
+}
+
+// 加入購物車前驗證
+const validation = manager.canAddToCart(quantity);
+if (!validation.valid) {
+  showError(validation.message);
+  return;
+}
+
+const cartItem = manager.getCartItemData(quantity);
+addToCart(cartItem);
+```
+
+---
+
 ## 常見使用情境範例
 
 ### 情境 1：首頁商品展示
@@ -838,8 +1216,13 @@ async function loadProductDetail(productId) {
   document.title = product.metaTitle || product.name;
   setMetaDescription(product.metaDescription);
   
+  // 載入商品規格
+  const specifications = await fetch(`/api/product-specifications/product/${productId}`)
+    .then(res => res.json())
+    .then(res => res.data || []);
+  
   // 渲染商品詳情
-  renderProductDetail(product);
+  renderProductDetail(product, specifications);
 }
 ```
 
@@ -865,6 +1248,63 @@ async function searchAndDisplay(keyword) {
 }
 ```
 
+### 情境 5：多規格商品加入購物車
+
+```javascript
+// 完整的規格商品加入購物車流程
+async function addSpecProductToCart(productId, quantity) {
+  // 1. 載入商品資訊
+  const product = await fetch(`/api/products/${productId}`)
+    .then(res => res.json())
+    .then(res => res.data);
+  
+  // 2. 載入規格資訊
+  const specifications = await fetch(`/api/product-specifications/product/${productId}`)
+    .then(res => res.json())
+    .then(res => res.data || []);
+  
+  // 3. 如果有規格，必須先選擇
+  if (specifications.length > 0) {
+    if (!selectedSpec) {
+      showError('請先選擇商品規格');
+      return;
+    }
+    
+    // 檢查庫存
+    if (selectedSpec.stock < quantity) {
+      showError(`庫存不足，目前剩餘 ${selectedSpec.stock} 件`);
+      return;
+    }
+    
+    // 使用規格的價格和 SKU
+    const cartItem = {
+      productId: product.id,
+      productName: product.name,
+      specificationId: selectedSpec.id,
+      specificationName: selectedSpec.specName,
+      sku: selectedSpec.sku,
+      price: selectedSpec.price,
+      quantity: quantity,
+      image: selectedSpec.image || product.images[0]?.imageUrl
+    };
+    
+    addToCart(cartItem);
+  } else {
+    // 無規格商品，直接使用商品資訊
+    const cartItem = {
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      price: product.salePrice,
+      quantity: quantity,
+      image: product.images[0]?.imageUrl
+    };
+    
+    addToCart(cartItem);
+  }
+}
+```
+
 ---
 
 ## 注意事項
@@ -875,6 +1315,12 @@ async function searchAndDisplay(keyword) {
 4. **圖片路徑**：圖片 URL 可能為相對路徑，需根據實際部署環境組合完整 URL
 5. **價格顯示**：建議使用 `salePrice` 作為顯示價格，`basePrice` 作為原價（可顯示折扣）
 6. **庫存判斷**：可透過 `status` 或 `specifications[].stock` 判斷商品是否可購買
+7. **規格處理**：
+   - 有規格的商品必須先載入規格列表
+   - 使用者必須選擇規格後才能加入購物車
+   - 規格價格可能與商品基礎價格不同，需以規格價格為準
+   - 規格庫存獨立計算，需檢查選中規格的庫存
+8. **規格圖片切換**：選擇規格時，如果規格有 `image` 欄位，建議更新商品主圖顯示
 
 ---
 
