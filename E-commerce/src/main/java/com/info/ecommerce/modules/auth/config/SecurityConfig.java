@@ -33,45 +33,37 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // CSRF is disabled because this is a stateless REST API using JWT tokens.
+                // JWT tokens are immune to CSRF attacks as they are not automatically sent by browsers.
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // 允許所有路徑
+                        // 公開頁面 - 不需要認證
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/api/albums/images/**"  // 允許公開訪問相冊圖片
+                        ).permitAll()
+                        // 管理員專屬 API
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // 經理級以上 API (ADMIN, MANAGER)
+                        .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
+                        // 員工級以上 API (ADMIN, MANAGER, STAFF)
+                        .requestMatchers("/api/staff/**").hasAnyRole("ADMIN", "MANAGER", "STAFF")
+                        // 客戶專屬 API
+                        .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
+                        // 其他需要認證的請求
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
-        // 如果你還是報錯，建議直接把下面這行註解掉：
-        // .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http
-//                // CSRF is disabled because this is a stateless REST API using JWT tokens.
-//                // JWT tokens are immune to CSRF attacks as they are not automatically sent by browsers.
-//                // This is a standard practice for JWT-based authentication.
-//                .csrf(AbstractHttpConfigurer::disable)
-//                .authorizeHttpRequests(auth -> auth
-//                        // Public endpoints
-//                        .requestMatchers(
-//                                "/api/auth/**",
-//                                "/swagger-ui/**",
-//                                "/v3/api-docs/**",
-//                                "/swagger-ui.html",
-//                                "/api/albums/images/**"  // Allow public access to album images
-//                        ).permitAll()
-//                        // All other requests require authentication
-//                        .anyRequest().authenticated()
-//                )
-//                .sessionManagement(session -> session
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                )
-//                .authenticationProvider(authenticationProvider())
-//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

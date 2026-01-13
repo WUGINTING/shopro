@@ -94,6 +94,21 @@ export const orderApi = {
   },
   
   /**
+   * 取得我的訂單（CUSTOMER 專用）
+   * @description 取得當前登入用戶的訂單列表
+   * @param {Object} [params] - 查詢參數
+   * @param {number} [params.page] - 頁碼（從 0 開始）
+   * @param {number} [params.size] - 每頁數量（預設 20）
+   * @returns {Promise<ApiResponse<Order[]>>} 訂單列表回應
+   * @swagger GET /api/orders/my
+   * @example
+   * const response = await orderApi.getMyOrders({ page: 0, size: 10 })
+   */
+  getMyOrders: (params?: any) => {
+    return axios.get<any, ApiResponse<Order[]>>('/orders/my', { params })
+  },
+  
+  /**
    * 取得訂單詳情
    * @description 根據訂單 ID 獲取完整訂單資訊（包含訂單項目）
    * @param {number} id - 訂單 ID

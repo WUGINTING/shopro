@@ -1246,6 +1246,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
+import { useAuthStore } from '@/stores/auth'
 import { orderApi, type Order, type OrderItem, type PageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
 import { productApi, productSpecificationApi, type Product, type ProductSpecification } from '@/api/product'
@@ -1255,6 +1256,7 @@ import { shipmentApi, type OrderShipment } from '@/api/shipment'
 import { startOrderTour, isOrderTourCompleted } from '@/utils/orderTour'
 
 const $q = useQuasar()
+const authStore = useAuthStore()
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
@@ -1583,26 +1585,55 @@ const loadOrders = async (useFilter = false) => {
 
       response = await orderApi.searchOrders(queryParams)
     } else {
-      // 使用普通查詢
-      response = await orderApi.getOrders({
-        page: pagination.value.page - 1,
-        size: pagination.value.rowsPerPage
-      })
+      // 根據用戶角色選擇不同的 API
+      if (authStore.userRole === 'CUSTOMER') {
+        // CUSTOMER 使用專屬 API 獲取自己的訂單
+        response = await orderApi.getMyOrders({
+          page: pagination.value.page - 1,
+          size: pagination.value.rowsPerPage
+        })
+      } else {
+        // 其他角色使用普通查詢
+        response = await orderApi.getOrders({
+          page: pagination.value.page - 1,
+          size: pagination.value.rowsPerPage
+        })
+      }
     }
 
+    // 後端返回的格式是 ApiResponse<Page<OrderDTO>>
+    // response.data 本身就是 Page 對象（包含 content, totalElements 等）
     const data = response.data as PageResponse<Order> | Order[]
     let orderList: Order[] = []
     let totalCount = 0
 
+    // 調試信息
+    console.log('Order API Response:', response)
+    console.log('Response data:', data)
+    console.log('Data type:', Array.isArray(data) ? 'Array' : typeof data)
+    console.log('Has content?', data && typeof data === 'object' && 'content' in data)
+
     if (Array.isArray(data)) {
+      // 如果是數組，直接使用
       orderList = data
       totalCount = data.length
-    } else if (data && 'content' in data) {
-      orderList = data.content
-      totalCount = data.totalElements || data.total || 0
+    } else if (data && typeof data === 'object' && 'content' in data) {
+      // 如果是分頁對象，提取 content
+      const pageData = data as PageResponse<Order>
+      orderList = pageData.content || []
+      totalCount = pageData.totalElements || pageData.total || 0
+    } else if (data && typeof data === 'object') {
+      // 嘗試直接訪問可能的字段
+      console.warn('Unexpected data format:', data)
+      orderList = []
+      totalCount = 0
     } else {
       orderList = []
+      totalCount = 0
     }
+
+    console.log('Parsed orderList:', orderList)
+    console.log('Total count:', totalCount)
 
     // 如果訂單的 customerName 為空但有 customerId，從已載入的客戶列表中查找並填充
     orderList.forEach(order => {
@@ -1620,13 +1651,31 @@ const loadOrders = async (useFilter = false) => {
     if (data && 'totalElements' in data) {
       pagination.value.rowsNumber = totalCount
     }
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '載入訂單清單失敗',
-      position: 'top'
-    })
-    console.error(error)
+  } catch (error: any) {
+    console.error('Load orders error:', error)
+    console.error('Error response:', error.response)
+    console.error('Error message:', error.message)
+    
+    // 如果是 403 錯誤，可能是權限問題
+    if (error.response?.status === 403) {
+      $q.notify({
+        type: 'negative',
+        message: '沒有權限訪問訂單列表',
+        position: 'top'
+      })
+    } else if (error.response?.status === 401) {
+      $q.notify({
+        type: 'negative',
+        message: '請先登入',
+        position: 'top'
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || error.message || '載入訂單清單失敗',
+        position: 'top'
+      })
+    }
   } finally {
     loading.value = false
   }

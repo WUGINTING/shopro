@@ -14,8 +14,8 @@
         </q-card-section>
       </q-card>
 
-      <!-- Stats Row -->
-      <div class="row q-col-gutter-md q-mb-md">
+      <!-- Stats Row (僅管理員、經理、員工可見) -->
+      <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-sm-6 col-md-3">
           <q-card class="card-hover card-border-top border-primary">
             <q-card-section>
@@ -105,8 +105,8 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <q-card class="q-mb-md">
+      <!-- Quick Actions (僅管理員、經理、員工可見) -->
+      <q-card v-if="authStore.userRole !== 'CUSTOMER'" class="q-mb-md">
         <q-card-section>
           <div class="text-h6 text-weight-bold">快速操作</div>
         </q-card-section>
@@ -128,8 +128,8 @@
         </q-card-section>
       </q-card>
 
-      <!-- Recent Activity -->
-      <div class="row q-col-gutter-md">
+      <!-- Recent Activity (僅管理員、經理、員工可見) -->
+      <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md">
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
@@ -189,6 +189,44 @@
           </q-card>
         </div>
       </div>
+
+      <!-- CUSTOMER 專屬內容 -->
+      <div v-if="authStore.userRole === 'CUSTOMER'" class="row q-col-gutter-md">
+        <div class="col-12 col-md-6">
+          <q-card>
+            <q-card-section>
+              <div class="text-h6 text-weight-bold">我的訂單</div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+              <div class="text-body2 text-grey-7 q-mb-md">查看您的訂單狀態和歷史記錄</div>
+              <q-btn
+                color="primary"
+                label="查看我的訂單"
+                icon="receipt"
+                unelevated
+                @click="$router.push('/orders')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-md-6">
+          <q-card>
+            <q-card-section>
+              <div class="text-h6 text-weight-bold">瀏覽商品</div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+              <div class="text-body2 text-grey-7 q-mb-md">探索我們的商品目錄</div>
+              <q-btn
+                color="primary"
+                label="瀏覽商品"
+                icon="shopping_bag"
+                unelevated
+                @click="$router.push('/products')"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
     </div>
   </q-page>
 </template>
@@ -197,10 +235,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { useAuthStore } from '@/stores/auth'
 import { dashboardApi, type DashboardStats, type RecentOrder, type TopProduct } from '@/api'
 
 const router = useRouter()
 const $q = useQuasar()
+const authStore = useAuthStore()
 
 const stats = ref<DashboardStats>({
   totalProducts: 0,
@@ -263,6 +303,13 @@ const quickActions = [
 ]
 
 const loadDashboardData = async () => {
+  // 只有管理員、經理和員工可以訪問儀表板統計
+  if (authStore.userRole === 'CUSTOMER') {
+    // CUSTOMER 角色不顯示儀表板統計
+    loading.value = false
+    return
+  }
+
   loading.value = true
   try {
     // Load stats

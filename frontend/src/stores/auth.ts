@@ -10,6 +10,19 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
   const userRole = computed(() => user.value?.role || null)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
+  const isManager = computed(() => user.value?.role === 'MANAGER')
+  const isStaff = computed(() => user.value?.role === 'STAFF')
+  const isCustomer = computed(() => user.value?.role === 'CUSTOMER')
+  
+  // 角色檢查方法
+  const hasRole = (role: string) => user.value?.role === role
+  const hasAnyRole = (roles: string[]) => roles.includes(user.value?.role || '')
+  
+  // 權限檢查方法
+  const canAccessAdmin = computed(() => hasRole('ADMIN'))
+  const canAccessManager = computed(() => hasAnyRole(['ADMIN', 'MANAGER']))
+  const canAccessStaff = computed(() => hasAnyRole(['ADMIN', 'MANAGER', 'STAFF']))
+  const canAccessCustomer = computed(() => hasRole('CUSTOMER'))
 
   // Actions
   function initialize() {
@@ -47,6 +60,15 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userRole,
     isAdmin,
+    isManager,
+    isStaff,
+    isCustomer,
+    hasRole,
+    hasAnyRole,
+    canAccessAdmin,
+    canAccessManager,
+    canAccessStaff,
+    canAccessCustomer,
     initialize,
     setAuth,
     clearAuth,
