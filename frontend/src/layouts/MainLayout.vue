@@ -94,8 +94,9 @@
     >
       <q-scroll-area class="fit">
         <q-list padding>
-          <!-- 儀表板 -->
+          <!-- 儀表板 (僅管理員、經理、員工可見) -->
           <q-item
+            v-if="authStore.canAccessStaff"
             clickable
             v-ripple
             :active="isActive('home')"
@@ -111,8 +112,9 @@
             </q-item-section>
           </q-item>
 
-          <!-- 商品管理 -->
+          <!-- 商品管理 (僅管理員、經理、員工可見) -->
           <q-expansion-item
+            v-if="authStore.canAccessStaff"
             icon="inventory"
             label="商品管理"
             :default-opened="isMenuActive(['products', 'categories'])"
@@ -169,7 +171,9 @@
                 <q-item-label>訂單列表</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- 訂單折扣 (僅管理員、經理、員工可見) -->
             <q-item
+              v-if="authStore.canAccessStaff"
               clickable
               v-ripple
               :active="isActive('orderDiscounts')"
@@ -183,7 +187,9 @@
                 <q-item-label>訂單折扣</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- 訂單問答 (僅管理員、經理、員工可見) -->
             <q-item
+              v-if="authStore.canAccessStaff"
               clickable
               v-ripple
               :active="isActive('orderQA')"
@@ -199,8 +205,9 @@
             </q-item>
           </q-expansion-item>
 
-          <!-- 客戶管理 -->
+          <!-- 客戶管理 (僅管理員、經理、員工可見) -->
           <q-expansion-item
+            v-if="authStore.canAccessStaff"
             icon="people"
             label="客戶管理"
             :default-opened="isMenuActive(['customers', 'members', 'memberGroups', 'memberLevels'])"
@@ -264,8 +271,9 @@
             </q-item>
           </q-expansion-item>
 
-          <!-- 營銷管理 -->
+          <!-- 營銷管理 (僅管理員、經理、員工可見) -->
           <q-expansion-item
+            v-if="authStore.canAccessStaff"
             icon="campaign"
             label="營銷管理"
             :default-opened="isMenuActive(['marketing', 'promotions', 'points', 'edm'])"
@@ -329,8 +337,9 @@
             </q-item>
           </q-expansion-item>
 
-          <!-- 內容管理 -->
+          <!-- 內容管理 (僅管理員、經理、員工可見) -->
           <q-expansion-item
+            v-if="authStore.canAccessStaff"
             icon="article"
             label="內容管理"
             :default-opened="isMenuActive(['blog', 'albums'])"
@@ -365,8 +374,9 @@
             </q-item>
           </q-expansion-item>
 
-          <!-- 支付管理 -->
+          <!-- 支付管理 (僅管理員、經理、員工可見) -->
           <q-expansion-item
+            v-if="authStore.canAccessStaff"
             icon="payment"
             label="支付管理"
             :default-opened="isMenuActive(['paymentDashboard', 'paymentTransactions', 'paymentSettings', 'ecpayConfig', 'paymentCallbackLogs'])"
@@ -399,7 +409,9 @@
                 <q-item-label>交易記錄</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- 支付設定 (僅管理員、經理可見) -->
             <q-item
+              v-if="authStore.canAccessManager"
               clickable
               v-ripple
               :active="isActive('paymentSettings')"
@@ -413,7 +425,9 @@
                 <q-item-label>支付設定</q-item-label>
               </q-item-section>
             </q-item>
+            <!-- ECPay 配置 (僅管理員、經理可見) -->
             <q-item
+              v-if="authStore.canAccessManager"
               clickable
               v-ripple
               :active="isActive('ecpayConfig')"
@@ -444,8 +458,11 @@
           </q-expansion-item>
 
           <!-- 系統管理 -->
-          <q-separator class="q-my-md" />
+          <q-separator v-if="authStore.canAccessStaff" class="q-my-md" />
+          
+          <!-- 數據統計 (僅管理員、經理可見) -->
           <q-item
+            v-if="authStore.canAccessManager"
             clickable
             v-ripple
             :active="isActive('statistics')"
@@ -460,7 +477,9 @@
             </q-item-section>
           </q-item>
 
+          <!-- 操作日誌 (僅管理員、經理、員工可見) -->
           <q-item
+            v-if="authStore.canAccessStaff"
             clickable
             v-ripple
             :active="isActive('operationLogs')"
@@ -475,7 +494,9 @@
             </q-item-section>
           </q-item>
 
+          <!-- 用戶管理 (僅管理員、經理可見) -->
           <q-item
+            v-if="authStore.canAccessManager"
             clickable
             v-ripple
             :active="isActive('users')"
@@ -490,7 +511,9 @@
             </q-item-section>
           </q-item>
 
+          <!-- 系統設定 (僅管理員可見) -->
           <q-item
+            v-if="authStore.canAccessAdmin"
             clickable
             v-ripple
             :active="isActive('systemSettings')"
