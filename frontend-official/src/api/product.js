@@ -109,3 +109,20 @@ export function getTopCategories() {
 export function getChildCategories(parentId) {
   return http.get(`/product-categories/${parentId}/children`);
 }
+
+/**
+ * 取得已啟用的分類
+ * @returns {Promise} List<ProductCategoryDTO>
+ */
+export function getEnabledCategories() {
+  return http.get('/product-categories/enabled');
+}
+
+/**
+ * 取得單一分類詳情
+ * @param {number} id - 分類 ID
+ * @returns {Promise} ProductCategoryDTO
+ */
+export function getProductCategory(id) {
+  return http.get(`/product-categories/${id}`);
+}

@@ -87,41 +87,10 @@
 
           <q-separator class="q-my-md" />
 
-          <!-- 產品描述 -->
-          <div
-            v-if="product.features && product.features.length"
-            class="product-description"
-          >
-            <h3>產品特色</h3>
-            <ul>
-              <li v-for="(feature, index) in product.features" :key="index">
-                {{ feature }}
-              </li>
-            </ul>
-          </div>
-
-          <!-- 產品規格 -->
-          <div v-if="product.specs" class="product-specs">
-            <h3>產品規格</h3>
-            <div
-              v-for="(value, key) in product.specs"
-              :key="key"
-              class="spec-item"
-            >
-              <span class="spec-label">{{ key }}：</span>
-              <span class="spec-value">{{ value }}</span>
-            </div>
-          </div>
-
-          <!-- 注意事項 -->
-          <div v-if="product.notice" class="product-notice">
-            <h3>{{ product.notice.title || '注意事項' }}</h3>
-            <ul v-if="Array.isArray(product.notice.content)">
-              <li v-for="(item, index) in product.notice.content" :key="index">
-                {{ item }}
-              </li>
-            </ul>
-            <p v-else>{{ product.notice.content }}</p>
+          <!-- 產品簡介 -->
+          <div v-if="product.description" class="product-description">
+            <h3>商品簡介</h3>
+            <p>{{ product.description }}</p>
           </div>
 
           <q-separator class="q-my-md" />
@@ -168,55 +137,45 @@
       </div>
 
       <!-- 詳細說明 -->
-      <div class="product-detail-tabs">
+      <div v-if="product.descriptionBlocks && product.descriptionBlocks.length" class="product-detail-tabs">
         <q-tabs v-model="tab" class="text-primary">
-          <q-tab name="description" label="商品說明" />
-          <q-tab name="shipping" label="購物需知" />
+          <q-tab 
+            v-for="block in product.descriptionBlocks" 
+            :key="block.id"
+            :name="`block-${block.id}`" 
+            :label="block.title" 
+          />
         </q-tabs>
 
         <q-separator />
 
         <q-tab-panels v-model="tab" animated>
-          <q-tab-panel name="description">
+          <q-tab-panel 
+            v-for="block in product.descriptionBlocks" 
+            :key="block.id"
+            :name="`block-${block.id}`"
+          >
             <div class="detail-content">
-              <h3>產品說明</h3>
-              <p>{{ product.fullDescription }}</p>
-            </div>
-          </q-tab-panel>
-
-          <q-tab-panel name="shipping">
-            <div class="detail-content">
-              <h3>一、購物需知說明：</h3>
-              <ul>
-                <li>
-                  本公司購物平台內商品皆爲現貨，因與門市同時銷售，麻煩私訊本公司作業人員詢問。
-                </li>
-                <li>
-                  謝謝您支持選購及指教!!!下單前建議您選購完您所需商品時，在逛一下本賣場多選購一樣商品，宅配或物流運費也是只收一次。
-                </li>
-                <li>預購商品、代尋商品及熱門團購商品要等15~90個工作天。</li>
-                <li>預購商品、代尋商品結單日為每週五下午一點結單。</li>
-              </ul>
-
-              <h3>二、付款方式：</h3>
-              <ul>
-                <li>信用卡：一次付清</li>
-                <li>超商條碼繳費 (下單後會提供超商代碼)</li>
-                <li>銀行轉帳</li>
-              </ul>
-
-              <h3>三、商品寄送方式：</h3>
-              <ul>
-                <li>賣家宅配(新竹貨運)：每件150元(購物滿999元運費50元)</li>
-                <li>
-                  超商店到店取貨：常溫: 7-ELEVEN、全家、萊爾富
-                  (純取貨運費65元、取貨付款運費65元)
-                </li>
-                <li>
-                  超商店到店取貨：低溫: 7-ELEVEN
-                  (純取貨運費200元、取貨付款運費200元)
-                </li>
-              </ul>
+              <!-- 區塊標題 -->
+              <h3 v-if="block.title">{{ block.title }}</h3>
+              
+              <!-- 區塊圖片 -->
+              <div v-if="block.imageUrl" class="block-image">
+                <q-img 
+                  :src="block.imageUrl" 
+                  :alt="block.title"
+                  fit="contain"
+                  class="q-mb-md"
+                />
+              </div>
+              
+              <!-- 區塊內容 -->
+              <div v-if="block.content" v-html="formatBlockContent(block.content)"></div>
+              
+              <!-- 如果沒有內容和圖片 -->
+              <p v-if="!block.content && !block.imageUrl" class="text-grey-6">
+                此區塊暫無內容
+              </p>
             </div>
           </q-tab-panel>
         </q-tab-panels>
@@ -231,6 +190,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { addToCart } from 'src/utils/cart.js';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
+import { getProductDetail, getProductCategory } from 'src/api/product.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -240,7 +200,17 @@ const loading = ref(true);
 const product = ref(null);
 const currentImage = ref('');
 const quantity = ref(1);
-const tab = ref('description');
+const tab = ref('');
+
+// 格式化區塊內容（將換行符轉換為 HTML）
+const formatBlockContent = (content) => {
+  if (!content) return '';
+  // 將換行符轉換為 <br>，並保持段落格式
+  return content
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.+)$/, '<p>$1</p>');
+};
 
 // 麵包屑項目
 const breadcrumbItems = computed(() => {
@@ -254,109 +224,6 @@ const breadcrumbItems = computed(() => {
     { label: product.value.name, to: '' },
   ];
 });
-
-// 假資料 - 產品資料庫
-const productsData = {
-  'bath-ball': {
-    id: 'bath-ball',
-    name: 'ENTRY GRADE 1/144 攻擊鋼彈(GRAND SLAM裝備型)附迷你古恩/佐諾 沐浴球 入浴劑',
-    price: 499,
-    category: 'bath',
-    badges: [{ text: '隨機出貨', color: 'red' }],
-    features: [
-      '共2款，隨機出貨',
-      '大人小孩皆適用',
-      '散發出橘橙香味',
-      '溫和不刺鼻，讓您泡澡時可放鬆紓壓',
-      '快來享受沐浴球融化後的小驚喜吧',
-    ],
-    specs: {
-      產品尺寸: '70 x 290 x 370 mm',
-      款式: '共2款，隨機出貨',
-      香味: '橘橙香味',
-    },
-    notice: {
-      title: '使用注意事項',
-      content: [
-        '注意！開封後請立即使用',
-        '請勿使用於大理石浴缸、循環式浴缸',
-        '誤觸眼睛時請立即用清水沖洗，並諮詢醫生',
-      ],
-    },
-    fullDescription:
-      '這款有趣的沐浴球結合了鋼彈模型的驚喜元素，讓泡澡時光更加有趣！溫和的橘橙香味能幫助您放鬆身心，適合全家大小使用。沐浴球融化後會出現可愛的迷你古恩或佐諾模型，為您帶來意外的驚喜。',
-    images: [
-      'https://cdn.quasar.dev/img/material.png',
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/parallax1.jpg',
-    ],
-  },
-  'sewing-machine': {
-    id: 'sewing-machine',
-    name: '【日本直送】迷你縫紉機 - 史努比、玩具總動員',
-    price: 799,
-    category: 'toy',
-    tags: ['手提式縫紉機', '縫紉機', '迷你縫紉機', '史努比', '玩具總動員'],
-    features: [
-      '手提式縫紉機玩具組',
-      '適合7歲以上兒童 (需要大人陪同)',
-      '附不織布 / 白線3捲',
-      '底部尺規可清楚測量縫紉',
-      '需安裝電池，也可換成自己喜歡的線',
-      '可以替孩子縫製小物品',
-      '本機器適合較薄的材質',
-    ],
-    specs: {
-      產品尺寸: '14 x 20 x 9.5 cm',
-      款式: '史努比和玩具總動員兩種款式',
-      適用年齡: '7歲以上',
-    },
-    fullDescription:
-      '這款可愛的迷你縫紉機是專為兒童設計的手提式縫紉玩具，提供史努比和玩具總動員兩種可愛款式。適合7歲以上的兒童使用，讓孩子在安全的環境下學習縫紉的樂趣。配備完整的配件包括不織布和白線，並具有底部尺規方便測量。',
-    images: [
-      'https://cdn.quasar.dev/img/parallax2.jpg',
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/parallax1.jpg',
-    ],
-  },
-  'strawberry-dry': {
-    id: 'strawberry-dry',
-    name: '【日本直送】草莓乾 - 100%純天然草莓',
-    price: 350,
-    originalPrice: 450,
-    category: 'food',
-    badges: [{ text: '限時特價', color: 'orange' }],
-    tags: ['零食', '草莓', '天然', '無添加'],
-    features: [
-      '100%純天然草莓製作',
-      '無添加防腐劑、色素',
-      '保留草莓完整營養',
-      '酸甜適中，口感極佳',
-      '適合當作健康零食或下午茶點心',
-    ],
-    specs: {
-      重量: '50g',
-      產地: '日本',
-      保存期限: '6個月',
-      保存方式: '請置於陰涼乾燥處',
-    },
-    notice: {
-      title: '食用注意事項',
-      content: [
-        '開封後請盡速食用完畢',
-        '請存放於陰涼乾燥處，避免陽光直射',
-        '本產品含有水果成分，對水果過敏者請勿食用',
-      ],
-    },
-    fullDescription:
-      '嚴選日本優質草莓，採用低溫乾燥技術製成，完整保留草莓的天然風味和營養。不添加任何防腐劑、人工色素或香料，讓您吃得健康又安心。酸甜適中的口感，是下午茶或辦公室零食的最佳選擇。',
-    images: [
-      'https://cdn.quasar.dev/img/mountains.jpg',
-      'https://cdn.quasar.dev/img/material.png',
-      'https://cdn.quasar.dev/img/parallax2.jpg',
-    ],
-  },
-};
 
 // 分類名稱映射
 const categoryMap = {
@@ -402,18 +269,94 @@ const handleBuyNow = () => {
   });
 };
 
+// 轉換 API 資料格式
+const mapProductData = (apiData) => {
+  // 提取主圖片
+  const primaryImage = apiData.images?.find(img => img.isPrimary);
+  const allImages = apiData.images?.map(img => img.imageUrl) || [];
+  
+  // 提取標籤
+  const tags = apiData.tags || [];
+  
+  // 計算是否有折扣
+  const hasDiscount = apiData.salePrice && apiData.basePrice && apiData.salePrice < apiData.basePrice;
+  
+  return {
+    id: apiData.id,
+    name: apiData.name,
+    price: apiData.salePrice || apiData.basePrice,
+    originalPrice: hasDiscount ? apiData.basePrice : null,
+    category: apiData.categoryId,
+    sku: apiData.sku,
+    description: apiData.description, // 商品簡介（右側顯示）
+    images: allImages,
+    tags: tags,
+    badges: [],
+    // 規格選項（如有多規格）
+    specifications: apiData.specifications || [],
+    // 商品描述區塊（下方 tab-panel 顯示，只顯示已啟用的區塊）
+    descriptionBlocks: (apiData.descriptionBlocks || [])
+      .filter(block => block.enabled)
+      .sort((a, b) => a.blockOrder - b.blockOrder),
+  };
+};
+
 // 載入產品資料
-onMounted(() => {
-  setTimeout(() => {
+const fetchProduct = async () => {
+  loading.value = true;
+  try {
     const productId = route.params.id;
-    product.value = productsData[productId] || null;
-
-    if (product.value && product.value.images && product.value.images.length) {
-      currentImage.value = product.value.images[0];
+    const response = await getProductDetail(productId);
+    
+    console.log('商品詳情 API 回應:', response);
+    
+    if (response && response.data) {
+      product.value = mapProductData(response.data);
+      
+      // 設定主圖片
+      if (product.value.images && product.value.images.length > 0) {
+        currentImage.value = product.value.images[0];
+      }
+      
+      // 設定第一個 tab 為預設值
+      if (product.value.descriptionBlocks && product.value.descriptionBlocks.length > 0) {
+        tab.value = `block-${product.value.descriptionBlocks[0].id}`;
+      }
+      
+      // 載入分類名稱
+      if (product.value.category) {
+        try {
+          const categoryResponse = await getProductCategory(product.value.category);
+          if (categoryResponse && categoryResponse.data) {
+            categoryMap[product.value.category] = categoryResponse.data.name;
+          }
+        } catch (error) {
+          console.warn('載入分類名稱失敗:', error);
+        }
+      }
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: '找不到此商品',
+        position: 'top',
+      });
+      product.value = null;
     }
-
+  } catch (error) {
+    console.error('載入商品失敗:', error);
+    $q.notify({
+      type: 'negative',
+      message: '載入商品失敗，請稍後再試',
+      position: 'top',
+    });
+    product.value = null;
+  } finally {
     loading.value = false;
-  }, 500);
+  }
+};
+
+onMounted(() => {
+  fetchProduct();
 });
 </script>
 
@@ -520,9 +463,7 @@ onMounted(() => {
     }
   }
 
-  .product-description,
-  .product-specs,
-  .product-notice {
+  .product-description {
     margin-bottom: 20px;
 
     h3 {
@@ -532,40 +473,9 @@ onMounted(() => {
       font-weight: 600;
     }
 
-    ul {
-      padding-left: 20px;
-      color: $shop-text-secondary;
-
-      li {
-        margin-bottom: 8px;
-        line-height: 1.6;
-      }
-    }
-
     p {
       color: $shop-text-secondary;
       line-height: 1.6;
-    }
-
-    .spec-item {
-      margin-bottom: 8px;
-      color: $shop-text-secondary;
-
-      .spec-label {
-        font-weight: 500;
-        color: $shop-text;
-      }
-    }
-  }
-
-  .product-notice {
-    background: #fff3e0;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #ff9800;
-
-    h3 {
-      color: #e65100;
     }
   }
 
@@ -609,6 +519,13 @@ onMounted(() => {
       color: $shop-text;
       margin-bottom: 15px;
       font-weight: 600;
+    }
+
+    .block-image {
+      max-width: 100%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      overflow: hidden;
     }
 
     p {
