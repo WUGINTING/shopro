@@ -167,6 +167,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import {
   getCartItems,
@@ -187,6 +188,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'cart-updated']);
 
 const $q = useQuasar();
+const router = useRouter();
 
 const isOpen = ref(props.modelValue);
 const cartItems = ref(getCartItems());
@@ -353,14 +355,22 @@ const clearCartConfirm = () => {
 
 // 前往結帳
 const checkout = () => {
-  $q.notify({
-    message: '前往結帳頁面...',
-    color: 'primary',
-    position: 'top',
-    timeout: 2000,
-  });
-  // 這裡可以導航到結帳頁面
-  // router.push('/shop/checkout')
+  // 檢查購物車是否有商品
+  if (cartItems.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: '購物車是空的',
+      position: 'top',
+      timeout: 1500,
+    });
+    return;
+  }
+
+  // 關閉購物車側邊欄
+  isOpen.value = false;
+  
+  // 導航到結帳頁面
+  router.push('/shop/checkout');
 };
 
 // 關閉側邊欄
@@ -388,17 +398,21 @@ onBeforeUnmount(() => {
 @import '../../css/variables.scss';
 
 .cart-drawer {
-  z-index: 6000 !important;
+  z-index: 10000 !important;
 
   :deep(.q-drawer__content) {
     background: white !important;
     top: 0 !important;
     height: 100vh !important;
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
+    z-index: 10000 !important;
+    position: fixed !important;
   }
 
   :deep(.q-drawer__backdrop) {
-    z-index: 5999 !important;
+    z-index: 9999 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    position: fixed !important;
   }
 }
 

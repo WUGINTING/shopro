@@ -1,5 +1,6 @@
 <template>
   <div
+    v-show="!hide"
     class="back-to-official-btn"
     @click="goToOfficial"
     role="button"
@@ -19,6 +20,13 @@
 <script setup>
 import { useRouter } from 'vue-router';
 
+const props = defineProps({
+  hide: {
+    type: Boolean,
+    default: false
+  }
+});
+
 const router = useRouter();
 const img_logo = '/icons/logo.jpg';
 
@@ -32,7 +40,7 @@ const goToOfficial = () => {
   position: fixed;
   bottom: 100px;
   right: 30px;
-  z-index: 9999;
+  z-index: 9990;
   width: 60px;
   height: 60px;
   border-radius: 50%;

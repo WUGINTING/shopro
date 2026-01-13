@@ -317,10 +317,10 @@
     </q-page-container>
 
     <!-- 返回官網按鈕 -->
-    <BackToOfficialBtn />
+    <BackToOfficialBtn :hide="showCartDrawer" />
 
     <!-- 返回頂部按鈕 -->
-    <ScrollToTopBtn />
+    <ScrollToTopBtn :hide="showCartDrawer" />
 
     <!-- 購物車側邊欄 -->
     <CartDrawer v-model="showCartDrawer" @cart-updated="updateCartCount" />

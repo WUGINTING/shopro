@@ -1,6 +1,6 @@
 <template>
   <q-btn
-    v-show="showScrollToTop"
+    v-show="shouldShow"
     fab
     color="primary"
     class="scroll-to-top-btn flex-center"
@@ -12,9 +12,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+
+const props = defineProps({
+  hide: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const showScrollToTop = ref(false);
+
+// 結合內部滾動邏輯和外部控制
+const shouldShow = computed(() => {
+  return showScrollToTop.value && !props.hide;
+});
 
 const handleScroll = () => {
   showScrollToTop.value = window.scrollY > 100;
@@ -33,7 +45,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll));
   position: fixed;
   bottom: 30px;
   right: 30px;
-  z-index: 9999;
+  z-index: 9990;
   width: 56px;
   height: 56px;
   box-shadow: 0 4px 12px rgba(240, 131, 4, 0.4);
