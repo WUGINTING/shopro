@@ -15,6 +15,8 @@ export function getCartItems() {
  */
 export function saveCartItems(items) {
   localStorage.setItem('shop_cart', JSON.stringify(items));
+  // 觸發自定義事件，通知購物車已更新
+  window.dispatchEvent(new CustomEvent('cart-updated', { detail: items }));
 }
 
 /**
@@ -25,7 +27,15 @@ export function saveCartItems(items) {
  */
 export function addToCart(product, quantity = 1) {
   const cartItems = getCartItems();
-  const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
+  
+  // 如果有規格，需要比對商品ID + 規格ID來判斷是否為同一個項目
+  const specId = product.specification?.id;
+  const existingItemIndex = cartItems.findIndex(item => {
+    if (specId) {
+      return item.id === product.id && item.specification?.id === specId;
+    }
+    return item.id === product.id;
+  });
 
   if (existingItemIndex > -1) {
     // 商品已存在，增加數量
@@ -46,12 +56,18 @@ export function addToCart(product, quantity = 1) {
 /**
  * 更新購物車商品數量
  * @param {Number} productId - 商品 ID
+ * @param {Number} specId - 規格 ID (可選)
  * @param {Number} quantity - 新數量
  * @returns {Array} 更新後的購物車列表
  */
-export function updateCartItemQuantity(productId, quantity) {
+export function updateCartItemQuantity(productId, quantity, specId = null) {
   const cartItems = getCartItems();
-  const itemIndex = cartItems.findIndex(item => item.id === productId);
+  const itemIndex = cartItems.findIndex(item => {
+    if (specId) {
+      return item.id === productId && item.specification?.id === specId;
+    }
+    return item.id === productId && !item.specification;
+  });
 
   if (itemIndex > -1) {
     if (quantity <= 0) {
@@ -69,13 +85,52 @@ export function updateCartItemQuantity(productId, quantity) {
 /**
  * 移除購物車商品
  * @param {Number} productId - 商品 ID
+ * @param {Number} specId - 規格 ID (可選)
  * @returns {Array} 更新後的購物車列表
  */
-export function removeFromCart(productId) {
+export function removeFromCart(productId, specId = null) {
   const cartItems = getCartItems();
-  const filteredItems = cartItems.filter(item => item.id !== productId);
+  const filteredItems = cartItems.filter(item => {
+    if (specId) {
+      return !(item.id === productId && item.specification?.id === specId);
+    }
+    return !(item.id === productId && !item.specification);
+  });
   saveCartItems(filteredItems);
   return filteredItems;
+}
+
+/**
+ * 更新購物車項目的規格
+ * @param {Number} productId - 商品 ID
+ * @param {Number} oldSpecId - 原規格 ID
+ * @param {Object} newSpec - 新規格資訊
+ * @returns {Array} 更新後的購物車列表
+ */
+export function updateCartItemSpec(productId, oldSpecId, newSpec) {
+  const cartItems = getCartItems();
+  const itemIndex = cartItems.findIndex(item => {
+    if (oldSpecId) {
+      return item.id === productId && item.specification?.id === oldSpecId;
+    }
+    return item.id === productId && !item.specification;
+  });
+
+  if (itemIndex > -1) {
+    // 更新規格和價格
+    cartItems[itemIndex].specification = newSpec;
+    cartItems[itemIndex].selectedPrice = newSpec.price;
+    cartItems[itemIndex].selectedSku = newSpec.sku;
+    cartItems[itemIndex].price = newSpec.price;
+    
+    // 檢查數量是否超過新規格的庫存
+    if (cartItems[itemIndex].quantity > newSpec.stock) {
+      cartItems[itemIndex].quantity = newSpec.stock;
+    }
+  }
+
+  saveCartItems(cartItems);
+  return cartItems;
 }
 
 /**
@@ -83,6 +138,7 @@ export function removeFromCart(productId) {
  */
 export function clearCart() {
   localStorage.removeItem('shop_cart');
+  window.dispatchEvent(new CustomEvent('cart-updated', { detail: [] }));
   return [];
 }
 

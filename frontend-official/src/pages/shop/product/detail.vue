@@ -396,15 +396,22 @@ const handleAddToCart = () => {
   
   // 構建加入購物車的商品資料
   const cartItem = {
-    ...product.value,
-    specification: selectedSpec.value,
+    id: product.value.id,
+    name: product.value.name,
+    image: currentImage.value,
+    price: displayPrice.value,
     selectedPrice: displayPrice.value,
+    originalPrice: product.value.originalPrice,
+    sku: selectedSpec.value?.sku || product.value.sku,
     selectedSku: selectedSpec.value?.sku || product.value.sku,
+    specification: selectedSpec.value,
+    category: product.value.category,
+    images: product.value.images,
   };
   
   addToCart(cartItem, quantity.value);
   $q.notify({
-    message: `已將 ${quantity.value} 件「${product.value.name}」加入購物車`,
+    message: `已將 ${quantity.value} 件「${product.value.name}${selectedSpec.value ? ` (${selectedSpec.value.specName})` : ''}」加入購物車`,
     color: 'positive',
     position: 'top',
     icon: 'check_circle',

@@ -3,6 +3,8 @@
     v-model="isOpen"
     side="right"
     overlay
+    elevated
+    no-swipe-backdrop
     :width="400"
     :breakpoint="500"
     class="cart-drawer"
@@ -41,8 +43,45 @@
             <!-- 商品資訊 -->
             <div class="item-info">
               <div class="item-name">{{ item.name }}</div>
+              
+              <!-- 規格選擇（如果有多個規格） -->
+              <div 
+                v-if="getItemSpecifications(item).length > 0" 
+                class="item-spec-selector"
+              >
+                <q-select
+                  :model-value="item.specification?.id"
+                  :options="getItemSpecifications(item).map(spec => ({
+                    label: `${spec.specName} - NT$ ${spec.price} (庫存: ${spec.stock})`,
+                    value: spec.id,
+                    disable: spec.stock === 0
+                  }))"
+                  dense
+                  outlined
+                  options-dense
+                  emit-value
+                  map-options
+                  label="選擇規格"
+                  @update:model-value="(val) => handleSpecChange(item, val)"
+                  class="spec-select"
+                >
+                  <template v-slot:selected>
+                    <div class="selected-spec">
+                      {{ item.specification?.specName || '請選擇規格' }}
+                    </div>
+                  </template>
+                </q-select>
+              </div>
+              
+              <!-- 顯示當前規格（只顯示） -->
+              <div v-else-if="item.specification" class="item-spec-info">
+                <q-chip size="sm" color="primary" text-color="white" dense>
+                  {{ item.specification.specName }}
+                </q-chip>
+              </div>
+              
               <div class="item-price">
-                NT$ {{ item.price.toLocaleString() }}
+                NT$ {{ (item.selectedPrice || item.price).toLocaleString() }}
               </div>
 
               <!-- 數量控制 -->
@@ -127,16 +166,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import {
   getCartItems,
   updateCartItemQuantity,
   removeFromCart,
   clearCart,
-  getCartTotal,
-  getCartCount,
+  updateCartItemSpec,
 } from 'src/utils/cart.js';
+import { getProductSpecifications } from 'src/api/product.js';
 
 const props = defineProps({
   modelValue: {
@@ -151,6 +190,7 @@ const $q = useQuasar();
 
 const isOpen = ref(props.modelValue);
 const cartItems = ref(getCartItems());
+const productSpecifications = ref({}); // 儲存各商品的規格列表
 
 // 監聽 modelValue 變化
 watch(
@@ -182,21 +222,83 @@ const totalAmount = computed(() => {
 });
 
 // 重新載入購物車
-const refreshCart = () => {
+const refreshCart = async () => {
   cartItems.value = getCartItems();
+  // 載入每個商品的規格
+  for (const item of cartItems.value) {
+    if (item.id && !productSpecifications.value[item.id]) {
+      await loadProductSpecifications(item.id);
+    }
+  }
+};
+
+// 載入商品規格
+const loadProductSpecifications = async (productId) => {
+  try {
+    const response = await getProductSpecifications(productId);
+    if (response && response.data) {
+      productSpecifications.value[productId] = response.data;
+    }
+  } catch (error) {
+    console.warn(`載入商品 ${productId} 規格失敗:`, error);
+  }
+};
+
+// 取得商品的規格列表
+const getItemSpecifications = (item) => {
+  return productSpecifications.value[item.id] || [];
+};
+
+// 處理規格變更
+const handleSpecChange = (item, newSpecId) => {
+  const specs = getItemSpecifications(item);
+  const newSpec = specs.find(s => s.id === newSpecId);
+  
+  if (!newSpec) return;
+  
+  const oldSpecId = item.specification?.id || null;
+  
+  // 檢查庫存
+  if (newSpec.stock === 0) {
+    $q.notify({
+      type: 'warning',
+      message: '此規格已售完',
+      position: 'top',
+      timeout: 1500,
+    });
+    return;
+  }
+  
+  updateCartItemSpec(item.id, oldSpecId, newSpec);
+  refreshCart();
+  emit('cart-updated');
 };
 
 // 增加數量
 const increaseQuantity = item => {
-  updateCartItemQuantity(item.id, item.quantity + 1);
+  const specId = item.specification?.id || null;
+  const maxStock = item.specification?.stock || 999;
+  
+  if (item.quantity >= maxStock) {
+    $q.notify({
+      type: 'warning',
+      message: '已達最大購買數量',
+      position: 'top',
+      timeout: 1000,
+    });
+    return;
+  }
+  
+  updateCartItemQuantity(item.id, item.quantity + 1, specId);
   refreshCart();
   emit('cart-updated');
 };
 
 // 減少數量
 const decreaseQuantity = item => {
+  const specId = item.specification?.id || null;
   if (item.quantity > 1) {
-    updateCartItemQuantity(item.id, item.quantity - 1);
+    updateCartItemQuantity(item.id, item.quantity - 1, specId);
     refreshCart();
     emit('cart-updated');
   } else {
@@ -206,13 +308,18 @@ const decreaseQuantity = item => {
 
 // 移除商品
 const removeItem = item => {
+  const specId = item.specification?.id || null;
+  const displayName = item.specification 
+    ? `${item.name} (${item.specification.specName})`
+    : item.name;
+    
   $q.dialog({
     title: '確認刪除',
-    message: `確定要將「${item.name}」從購物車移除嗎？`,
+    message: `確定要將「${displayName}」從購物車移除嗎？`,
     cancel: true,
     persistent: true,
   }).onOk(() => {
-    removeFromCart(item.id);
+    removeFromCart(item.id, specId);
     refreshCart();
     emit('cart-updated');
     $q.notify({
@@ -260,14 +367,38 @@ const checkout = () => {
 const closeDrawer = () => {
   isOpen.value = false;
 };
+
+// 監聽購物車更新事件（即時同步）
+const handleCartUpdate = (event) => {
+  refreshCart();
+};
+
+onMounted(() => {
+  // 監聽自定義的購物車更新事件
+  window.addEventListener('cart-updated', handleCartUpdate);
+});
+
+onBeforeUnmount(() => {
+  // 清理事件監聽器
+  window.removeEventListener('cart-updated', handleCartUpdate);
+});
 </script>
 
 <style lang="scss" scoped>
 @import '../../css/variables.scss';
 
 .cart-drawer {
+  z-index: 6000 !important;
+
   :deep(.q-drawer__content) {
-    background: white;
+    background: white !important;
+    top: 0 !important;
+    height: 100vh !important;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
+  }
+
+  :deep(.q-drawer__backdrop) {
+    z-index: 5999 !important;
   }
 }
 
@@ -289,7 +420,7 @@ const closeDrawer = () => {
 .cart-content {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 120px);
 }
 
 .cart-items {
@@ -328,6 +459,33 @@ const closeDrawer = () => {
       font-weight: 500;
       color: $shop-text;
       line-height: 1.4;
+    }
+
+    .item-spec-selector {
+      margin: 4px 0;
+
+      .spec-select {
+        font-size: 0.85rem;
+        
+        :deep(.q-field__control) {
+          min-height: 32px;
+          padding: 0 8px;
+        }
+        
+        :deep(.q-field__native) {
+          padding: 4px 0;
+        }
+      }
+
+      .selected-spec {
+        font-size: 0.85rem;
+        color: $shop-primary;
+        font-weight: 500;
+      }
+    }
+
+    .item-spec-info {
+      margin: 2px 0;
     }
 
     .item-price {

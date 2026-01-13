@@ -316,14 +316,15 @@
       <!-- Footer 結束 -->
     </q-page-container>
 
-    <!-- 購物車側邊欄 -->
-    <CartDrawer v-model="showCartDrawer" @cart-updated="updateCartCount" />
-
     <!-- 返回官網按鈕 -->
     <BackToOfficialBtn />
 
     <!-- 返回頂部按鈕 -->
     <ScrollToTopBtn />
+
+    <!-- 購物車側邊欄 -->
+    <CartDrawer v-model="showCartDrawer" @cart-updated="updateCartCount" />
+
   </q-layout>
 </template>
 
