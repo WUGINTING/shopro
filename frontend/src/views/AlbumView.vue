@@ -4,7 +4,19 @@
       <q-card-section>
         <div class="row items-center justify-between">
           <div class="text-h5">相冊管理</div>
-          <q-btn color="primary" icon="add" label="新增相冊" @click="showCreateDialog = true" />
+          <div class="row q-gutter-sm">
+            <q-btn
+              flat
+              dense
+              round
+              icon="help_outline"
+              color="grey-7"
+              @click="handleStartTour"
+            >
+              <q-tooltip>相冊管理教學</q-tooltip>
+            </q-btn>
+            <q-btn color="primary" icon="add" label="新增相冊" @click="showCreateDialog = true" />
+          </div>
         </div>
       </q-card-section>
     </q-card>
@@ -93,10 +105,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { albumApi, type Album } from '@/api/album'
+import { startAlbumTour, isAlbumTourCompleted } from '@/utils/albumTour'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -225,7 +238,21 @@ const deleteAlbumConfirm = (album: Album) => {
   })
 }
 
+// 啟動相冊管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startAlbumTour(true)
+  })
+}
+
 onMounted(() => {
   loadAlbums()
+  
+  // 如果用戶是第一次訪問相冊管理頁面，自動啟動導覽
+  if (!isAlbumTourCompleted()) {
+    setTimeout(() => {
+      startAlbumTour()
+    }, 1500)
+  }
 })
 </script>

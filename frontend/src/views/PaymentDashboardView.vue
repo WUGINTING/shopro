@@ -1,7 +1,17 @@
 <template>
   <q-page padding>
     <div class="q-pa-md">
-      <div class="text-h4 q-mb-md">金流儀表板</div>
+      <div class="row items-center justify-between q-mb-md">
+        <div class="text-h4">金流儀表板</div>
+        <q-btn
+          round
+          icon="help_outline"
+          color="grey-7"
+          @click="handleStartTour"
+        >
+          <q-tooltip>金流儀表板教學</q-tooltip>
+        </q-btn>
+      </div>
       
       <!-- 統計卡片 -->
       <div class="row q-col-gutter-md q-mb-md">
@@ -126,6 +136,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { getPaymentStatistics, type PaymentStatistics } from '@/api/payment'
 import { Notify } from 'quasar'
 import Chart from 'chart.js/auto'
+import { startPaymentDashboardTour, isPaymentDashboardTourCompleted } from '@/utils/paymentDashboardTour'
 
 const statistics = ref<PaymentStatistics>({
   todayAmount: 0,
@@ -287,10 +298,24 @@ const renderChart = () => {
   })
 }
 
+// 啟動金流儀表板導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startPaymentDashboardTour(true)
+  })
+}
+
 onMounted(() => {
   loadStatistics()
   // 每 30 秒自動更新
   setInterval(loadStatistics, 30000)
+  
+  // 如果用戶是第一次訪問金流儀表板，自動啟動導覽
+  if (!isPaymentDashboardTourCompleted()) {
+    setTimeout(() => {
+      startPaymentDashboardTour()
+    }, 1500)
+  }
 })
 </script>
 

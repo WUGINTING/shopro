@@ -6,6 +6,16 @@
       </div>
       <div class="col-auto q-gutter-md">
         <q-btn
+          flat
+          dense
+          round
+          icon="help_outline"
+          color="grey-7"
+          @click="handleStartTour"
+        >
+          <q-tooltip>促銷活動管理教學</q-tooltip>
+        </q-btn>
+        <q-btn
           color="primary"
           label="新增促銷"
           icon="add"
@@ -271,10 +281,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { promotionApi, type Promotion } from '@/api/promotion'
 import CouponManagement from '@/components/CouponManagement.vue'
+import { startPromotionTour, isPromotionTourCompleted } from '@/utils/promotionTour'
 
 const $q = useQuasar()
 const promotionForm = ref()
@@ -468,7 +479,21 @@ const togglePromotion = async (id: number, enabled: boolean) => {
   }
 }
 
+// 啟動促銷活動管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startPromotionTour(true)
+  })
+}
+
 onMounted(() => {
   loadPromotions()
+  
+  // 如果用戶是第一次訪問促銷活動管理頁面，自動啟動導覽
+  if (!isPromotionTourCompleted()) {
+    setTimeout(() => {
+      startPromotionTour()
+    }, 1500)
+  }
 })
 </script>

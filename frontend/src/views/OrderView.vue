@@ -9,6 +9,16 @@
         </div>
         <div class="row q-gutter-sm">
           <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>訂單管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
             color="grey-7"
             icon="info"
             label="狀態說明"
@@ -1234,7 +1244,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { orderApi, type Order, type OrderItem, type PageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
@@ -1242,6 +1252,7 @@ import { productApi, productSpecificationApi, type Product, type ProductSpecific
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
 import { createPayment, type PaymentRequest } from '@/api/payment'
 import { shipmentApi, type OrderShipment } from '@/api/shipment'
+import { startOrderTour, isOrderTourCompleted } from '@/utils/orderTour'
 
 const $q = useQuasar()
 
@@ -2540,9 +2551,23 @@ watch(() => pagination.value.page, () => {
   }
 })
 
+// 啟動訂單管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startOrderTour(true)
+  })
+}
+
 onMounted(() => {
   loadOrders()
   loadCustomers()
   loadProducts()
+  
+  // 如果用戶是第一次訪問訂單管理頁面，自動啟動導覽
+  if (!isOrderTourCompleted()) {
+    setTimeout(() => {
+      startOrderTour()
+    }, 1500)
+  }
 })
 </script>

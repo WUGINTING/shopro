@@ -11,6 +11,16 @@
           <q-btn
             flat
             dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>支付回調記錄教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            dense
             icon="refresh"
             label="重新載入"
             @click="loadCallbackLogs"
@@ -309,10 +319,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { paymentCallbackLogApi, type PaymentCallbackLog } from '@/api/paymentCallbackLog'
 import type { PageResponse } from '@/api/types'
+import { startPaymentCallbackLogTour, isPaymentCallbackLogTourCompleted } from '@/utils/paymentCallbackLogTour'
 
 const $q = useQuasar()
 
@@ -493,8 +504,22 @@ const handleViewDetail = (log: PaymentCallbackLog) => {
   showDetailDialog.value = true
 }
 
+// 啟動支付回調記錄導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startPaymentCallbackLogTour(true)
+  })
+}
+
 onMounted(() => {
   loadCallbackLogs()
+  
+  // 如果用戶是第一次訪問支付回調記錄頁面，自動啟動導覽
+  if (!isPaymentCallbackLogTourCompleted()) {
+    setTimeout(() => {
+      startPaymentCallbackLogTour()
+    }, 1500)
+  }
 })
 </script>
 

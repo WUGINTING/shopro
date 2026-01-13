@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">分類管理</div>
           <div class="text-caption text-grey-7">管理商品分類、支援多層級結構（100 ~ 600 個分類）</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add"
-          label="新增分類"
-          unelevated
-          @click="handleAdd"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>分類管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add"
+            label="新增分類"
+            unelevated
+            @click="handleAdd"
+          />
+        </div>
       </div>
 
       <!-- Search and Filter Bar -->
@@ -188,9 +200,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { categoryApi, type ProductCategory } from '@/api'
+import { startCategoryTour, isCategoryTourCompleted } from '@/utils/categoryTour'
 
 const $q = useQuasar()
 
@@ -363,8 +376,22 @@ const closeDialog = () => {
   }
 }
 
+// 啟動分類管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startCategoryTour(true)
+  })
+}
+
 onMounted(() => {
   loadCategories()
+  
+  // 如果用戶是第一次訪問分類管理頁面，自動啟動導覽
+  if (!isCategoryTourCompleted()) {
+    setTimeout(() => {
+      startCategoryTour()
+    }, 1500)
+  }
 })
 </script>
 

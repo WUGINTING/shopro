@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">訂單折扣管理</div>
           <div class="text-caption text-grey-7">管理訂單折扣和優惠代碼</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add_circle"
-          label="新增折扣"
-          unelevated
-          @click="handleOpenDialog"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>訂單折扣管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add_circle"
+            label="新增折扣"
+            unelevated
+            @click="handleOpenDialog"
+          />
+        </div>
       </div>
 
       <!-- Search Filters -->
@@ -201,9 +213,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { orderDiscountApi, orderApi, type OrderDiscount, type Order } from '@/api'
+import { startOrderDiscountTour, isOrderDiscountTourCompleted } from '@/utils/orderDiscountTour'
 
 const $q = useQuasar()
 
@@ -492,8 +505,22 @@ const handleOpenDialog = () => {
   showDialog.value = true
 }
 
+// 啟動訂單折扣管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startOrderDiscountTour(true)
+  })
+}
+
 onMounted(() => {
   loadOrders()
   loadAllDiscounts()
+  
+  // 如果用戶是第一次訪問訂單折扣管理頁面，自動啟動導覽
+  if (!isOrderDiscountTourCompleted()) {
+    setTimeout(() => {
+      startOrderDiscountTour()
+    }, 1500)
+  }
 })
 </script>

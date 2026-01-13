@@ -1,7 +1,23 @@
 <template>
   <q-page padding>
     <div class="q-pa-md">
-      <div class="text-h4 q-mb-md">支付參數設定</div>
+      <div class="row items-center q-mb-md">
+        <div class="col">
+          <div class="text-h4 q-my-none" data-tour="title">支付參數設定</div>
+        </div>
+        <div class="col-auto">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>支付參數設定教學</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
 
       <q-card>
         <q-card-section>
@@ -12,6 +28,7 @@
               color="primary"
               label="初始化設定"
               icon="add"
+              data-tour="init-btn"
               @click="initializeSettings"
               :loading="initializing"
             />
@@ -25,7 +42,7 @@
             </div>
           </div>
           
-          <q-list v-else bordered separator>
+          <q-list v-else bordered separator data-tour="settings-list">
             <q-item v-for="setting in settings" :key="setting.id">
               <q-item-section avatar>
                 <q-avatar :color="getGatewayColor(setting.gateway)" text-color="white">
@@ -39,7 +56,7 @@
               </q-item-section>
 
               <q-item-section side>
-                <div class="row q-gutter-sm">
+                <div class="row q-gutter-sm" data-tour="toggle-switches">
                   <q-toggle
                     v-model="setting.enabled"
                     color="positive"
@@ -58,6 +75,7 @@
                     dense
                     color="primary"
                     icon="edit"
+                    data-tour="edit-btn"
                     @click="editSetting(setting)"
                   >
                     <q-tooltip>編輯設定</q-tooltip>
@@ -71,7 +89,7 @@
 
       <!-- 編輯對話框 -->
       <q-dialog v-model="showEditDialog" persistent>
-        <q-card style="min-width: 500px">
+        <q-card style="min-width: 500px" data-tour="edit-dialog">
           <q-card-section>
             <div class="text-h6">編輯支付設定</div>
           </q-card-section>
@@ -147,6 +165,7 @@ import { ref, onMounted } from 'vue'
 import { getAllPaymentSettings, updatePaymentSetting, type PaymentSetting } from '@/api/payment'
 import { Notify } from 'quasar'
 import axiosInstance from '@/api/axios'
+import { startPaymentSettingsTour, isPaymentSettingsTourCompleted } from '@/utils/paymentSettingsTour'
 
 const settings = ref<PaymentSetting[]>([])
 const showEditDialog = ref(false)
@@ -259,7 +278,19 @@ const initializeSettings = async () => {
   }
 }
 
+// 啟動導覽
+const handleStartTour = () => {
+  startPaymentSettingsTour(true)
+}
+
 onMounted(() => {
   loadSettings()
+  
+  // 如果是第一次訪問，自動啟動導覽
+  if (!isPaymentSettingsTourCompleted()) {
+    setTimeout(() => {
+      startPaymentSettingsTour()
+    }, 500)
+  }
 })
 </script>

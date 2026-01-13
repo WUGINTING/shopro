@@ -2,20 +2,33 @@
   <q-page class="q-pa-md">
     <div class="row items-center q-mb-md">
       <div class="col">
-        <h4 class="q-my-none">積點管理</h4>
+        <h4 class="q-my-none" data-tour="title">積點管理</h4>
       </div>
       <div class="col-auto">
-        <q-btn
-          color="primary"
-          label="批次發放積點"
-          icon="add"
-          @click="showBatchDialog"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>積點管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            label="批次發放積點"
+            icon="add"
+            data-tour="batch-grant-btn"
+            @click="showBatchDialog"
+          />
+        </div>
       </div>
     </div>
 
     <!-- 統計卡片 -->
-    <div class="row q-col-gutter-md q-mb-md">
+    <div class="row q-col-gutter-md q-mb-md" data-tour="stats-cards">
       <div class="col-12 col-sm-6 col-md-3">
         <q-card>
           <q-card-section>
@@ -59,7 +72,7 @@
     </div>
 
     <!-- 搜尋欄 -->
-    <q-card class="q-mb-md">
+    <q-card class="q-mb-md" data-tour="search-card">
       <q-card-section>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-sm-6">
@@ -105,7 +118,7 @@
     </q-card>
 
     <!-- 積點紀錄列表 -->
-    <q-card>
+    <q-card data-tour="points-table">
       <q-linear-progress
         v-if="loading"
         indeterminate
@@ -151,7 +164,7 @@
 
     <!-- 批次發放對話框 -->
     <q-dialog v-model="showBatchGrantDialog">
-      <q-card style="width: 500px; max-width: 90vw">
+      <q-card style="width: 500px; max-width: 90vw" data-tour="batch-dialog">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">批次發放積點</div>
           <q-space />
@@ -239,6 +252,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { pointApi, memberApi, type PointRecord } from '@/api'
+import { startPointTour, isPointTourCompleted } from '@/utils/pointTour'
 
 const $q = useQuasar()
 const batchForm = ref()
@@ -495,6 +509,11 @@ const executeBatchGrant = async () => {
   }
 }
 
+// 啟動導覽
+const handleStartTour = () => {
+  startPointTour(true)
+}
+
 onMounted(async () => {
   // 確保初始狀態：沒有選擇會員
   searchForm.value.memberId = undefined
@@ -506,5 +525,12 @@ onMounted(async () => {
   
   // 自動載入所有積點紀錄
   await loadRecords()
+  
+  // 如果是第一次訪問，自動啟動導覽
+  if (!isPointTourCompleted()) {
+    setTimeout(() => {
+      startPointTour()
+    }, 500)
+  }
 })
 </script>

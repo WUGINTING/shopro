@@ -4,12 +4,22 @@
       <!-- Header -->
       <div class="row items-center justify-between q-mb-md">
         <div class="text-h4">營銷活動管理</div>
-        <q-btn
-          color="primary"
-          label="新增活動"
-          icon="add"
-          @click="openDialog()"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>營銷活動管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            label="新增活動"
+            icon="add"
+            @click="openDialog()"
+          />
+        </div>
       </div>
 
       <!-- 搜索和篩選 -->
@@ -270,9 +280,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import marketingApi, { type MarketingCampaign } from '@/api/marketing'
+import { startMarketingTour, isMarketingTourCompleted } from '@/utils/marketingTour'
 
 const $q = useQuasar()
 
@@ -466,8 +477,22 @@ const deleteCampaign = (id?: number) => {
   })
 }
 
+// 啟動營銷活動管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startMarketingTour(true)
+  })
+}
+
 onMounted(() => {
   loadCampaigns()
+  
+  // 如果用戶是第一次訪問營銷活動管理頁面，自動啟動導覽
+  if (!isMarketingTourCompleted()) {
+    setTimeout(() => {
+      startMarketingTour()
+    }, 1500)
+  }
 })
 </script>
 

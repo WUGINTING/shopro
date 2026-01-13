@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">商品管理</div>
           <div class="text-caption text-grey-7">管理商品資訊、上架狀態和庫存</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add"
-          label="新增商品"
-          unelevated
-          @click="showDialog = true; form = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>商品管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add"
+            label="新增商品"
+            unelevated
+            @click="showDialog = true; form = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }"
+          />
+        </div>
       </div>
 
       <!-- Search and Filter Bar -->
@@ -703,10 +715,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
+import { startProductTour, isProductTourCompleted } from '@/utils/productTour'
 
 const $q = useQuasar()
 
@@ -1534,9 +1547,23 @@ const loadCategories = async () => {
   }
 }
 
+// 啟動商品管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startProductTour(true)
+  })
+}
+
 onMounted(() => {
   loadProducts()
   loadAlbums()
   loadCategories()
+  
+  // 如果用戶是第一次訪問商品管理頁面，自動啟動導覽
+  if (!isProductTourCompleted()) {
+    setTimeout(() => {
+      startProductTour()
+    }, 1500)
+  }
 })
 </script>

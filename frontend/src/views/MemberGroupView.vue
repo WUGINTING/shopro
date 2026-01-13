@@ -2,20 +2,33 @@
   <q-page class="q-pa-md">
     <div class="row items-center q-mb-md">
       <div class="col">
-        <h4 class="q-my-none">會員群組管理</h4>
+        <h4 class="q-my-none" data-tour="title">會員群組管理</h4>
       </div>
       <div class="col-auto">
-        <q-btn
-          color="primary"
-          label="新增群組"
-          icon="add"
-          @click="showCreateDialog"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>會員群組管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            label="新增群組"
+            icon="add"
+            data-tour="add-group-btn"
+            @click="showCreateDialog"
+          />
+        </div>
       </div>
     </div>
 
     <!-- 群組列表 -->
-    <div class="row q-col-gutter-md">
+    <div class="row q-col-gutter-md" data-tour="group-list">
       <div
         v-for="group in groups"
         :key="group.id"
@@ -24,6 +37,7 @@
         <q-card
           class="cursor-pointer hover-highlight"
           :class="{ 'disabled-group': !group.enabled }"
+          data-tour="group-card"
         >
           <q-card-section>
             <div class="row items-start">
@@ -53,7 +67,7 @@
 
           <q-separator />
 
-          <q-card-actions>
+          <q-card-actions data-tour="group-actions">
             <q-btn
               flat
               dense
@@ -90,7 +104,7 @@
 
     <!-- 新增/編輯對話框 -->
     <q-dialog v-model="showDialog">
-      <q-card style="width: 500px; max-width: 90vw">
+      <q-card style="width: 500px; max-width: 90vw" data-tour="group-form-dialog">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">
             {{ editingGroup?.id ? '編輯群組' : '新增群組' }}
@@ -181,7 +195,7 @@
 
     <!-- 成員管理對話框 -->
     <q-dialog v-model="showMembersDialogFlag" style="width: 600px; max-width: 90vw">
-      <q-card>
+      <q-card data-tour="member-management-dialog">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">群組成員管理</div>
           <q-space />
@@ -295,6 +309,7 @@ import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberGroupApi, type MemberGroup } from '@/api/memberGroup'
 import { memberApi } from '@/api/member'
+import { startMemberGroupTour, isMemberGroupTourCompleted } from '@/utils/memberGroupTour'
 
 const $q = useQuasar()
 const groupForm = ref()
@@ -589,9 +604,21 @@ const removeMemberFromGroup = async (memberId: number) => {
   }
 }
 
+// 啟動導覽
+const handleStartTour = () => {
+  startMemberGroupTour(true)
+}
+
 onMounted(() => {
   loadGroups()
   loadMembers()
+  
+  // 如果是第一次訪問，自動啟動導覽
+  if (!isMemberGroupTourCompleted()) {
+    setTimeout(() => {
+      startMemberGroupTour()
+    }, 500)
+  }
 })
 </script>
 

@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">客戶管理 (CRM)</div>
           <div class="text-caption text-grey-7">管理客戶資訊、會員等級和積分</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="person_add"
-          label="新增客戶"
-          unelevated
-          @click="showDialog = true; form = { name: '', email: '', phone: '', memberLevel: 'BRONZE' }"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>客戶管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="person_add"
+            label="新增客戶"
+            unelevated
+            @click="showDialog = true; form = { name: '', email: '', phone: '', memberLevel: 'BRONZE' }"
+          />
+        </div>
       </div>
 
       <!-- Customers Table -->
@@ -158,9 +170,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { crmApi, type Customer, type PageResponse } from '@/api'
+import { startCustomerTour, isCustomerTourCompleted } from '@/utils/customerTour'
 
 const $q = useQuasar()
 
@@ -305,7 +318,21 @@ const handlePointsSubmit = async () => {
   }
 }
 
+// 啟動客戶管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startCustomerTour(true)
+  })
+}
+
 onMounted(() => {
   loadCustomers()
+  
+  // 如果用戶是第一次訪問客戶管理頁面，自動啟動導覽
+  if (!isCustomerTourCompleted()) {
+    setTimeout(() => {
+      startCustomerTour()
+    }, 1500)
+  }
 })
 </script>

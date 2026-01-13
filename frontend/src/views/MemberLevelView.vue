@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">會員等級管理</div>
           <div class="text-caption text-grey-7">管理會員等級、權益和折扣</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add_circle"
-          label="新增等級"
-          unelevated
-          @click="showDialog = true; resetForm()"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>會員等級管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add_circle"
+            label="新增等級"
+            unelevated
+            @click="showDialog = true; resetForm()"
+          />
+        </div>
       </div>
 
       <!-- Member Levels Table -->
@@ -195,9 +207,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberLevelApi, type MemberLevel, type PageResponse } from '@/api'
+import { startMemberLevelTour, isMemberLevelTourCompleted } from '@/utils/memberLevelTour'
 
 const $q = useQuasar()
 
@@ -362,7 +375,21 @@ const handleDelete = (id?: number) => {
   })
 }
 
+// 啟動會員等級管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startMemberLevelTour(true)
+  })
+}
+
 onMounted(() => {
   loadLevels()
+  
+  // 如果用戶是第一次訪問會員等級管理頁面，自動啟動導覽
+  if (!isMemberLevelTourCompleted()) {
+    setTimeout(() => {
+      startMemberLevelTour()
+    }, 1500)
+  }
 })
 </script>

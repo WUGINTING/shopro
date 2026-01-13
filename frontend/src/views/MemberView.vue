@@ -5,12 +5,24 @@
         <h4 class="q-my-none">會員管理</h4>
       </div>
       <div class="col-auto">
-        <q-btn
-          color="primary"
-          label="新增會員"
-          icon="add"
-          @click="showCreateDialog"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>會員管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            label="新增會員"
+            icon="add"
+            @click="showCreateDialog"
+          />
+        </div>
       </div>
     </div>
 
@@ -289,9 +301,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberApi, type Member, type PageResponse } from '@/api/member'
+import { startMemberTour, isMemberTourCompleted } from '@/utils/memberTour'
 
 const $q = useQuasar()
 const memberForm = ref()
@@ -513,7 +526,21 @@ const activateMember = async (id: number) => {
   }
 }
 
+// 啟動會員管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startMemberTour(true)
+  })
+}
+
 onMounted(() => {
   loadMembers()
+  
+  // 如果用戶是第一次訪問會員管理頁面，自動啟動導覽
+  if (!isMemberTourCompleted()) {
+    setTimeout(() => {
+      startMemberTour()
+    }, 1500)
+  }
 })
 </script>

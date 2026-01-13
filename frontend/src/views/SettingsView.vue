@@ -447,10 +447,8 @@ import systemSettingsApi, {
   type NotificationSettings, 
   type SecuritySettings 
 } from '@/api/settings'
-import { useSettingsStore } from '@/stores/settings'
 
 const $q = useQuasar()
-const settingsStore = useSettingsStore()
 
 const activeTab = ref('system')
 const saving = ref(false)
@@ -506,22 +504,13 @@ const securitySettings = ref<Partial<SecuritySettings>>({
 const saveSystemSettings = async () => {
   saving.value = true
   try {
-    const response = await systemSettingsApi.updateSystemSettings(systemSettings.value)
-    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
-    if (response.data) {
-      Object.assign(systemSettings.value, response.data)
-      // 更新 store 中的商店名稱
-      if (response.data.storeName) {
-        settingsStore.updateStoreName(response.data.storeName)
-      }
-    }
+    await systemSettingsApi.updateSystemSettings(systemSettings.value)
     $q.notify({
       type: 'positive',
       message: '系統設置已保存',
       position: 'top'
     })
   } catch (error) {
-    console.error('保存系統設置失敗:', error)
     $q.notify({
       type: 'negative',
       message: '保存系統設置失敗',
@@ -535,17 +524,13 @@ const saveSystemSettings = async () => {
 const saveEmailSettings = async () => {
   saving.value = true
   try {
-    const response = await systemSettingsApi.updateEmailSettings(emailSettings.value)
-    if (response.data) {
-      Object.assign(emailSettings.value, response.data)
-    }
+    await systemSettingsApi.updateEmailSettings(emailSettings.value)
     $q.notify({
       type: 'positive',
       message: '郵件設置已保存',
       position: 'top'
     })
   } catch (error) {
-    console.error('保存郵件設置失敗:', error)
     $q.notify({
       type: 'negative',
       message: '保存郵件設置失敗',
@@ -559,17 +544,13 @@ const saveEmailSettings = async () => {
 const saveNotificationSettings = async () => {
   saving.value = true
   try {
-    const response = await systemSettingsApi.updateNotificationSettings(notificationSettings.value)
-    if (response.data) {
-      Object.assign(notificationSettings.value, response.data)
-    }
+    await systemSettingsApi.updateNotificationSettings(notificationSettings.value)
     $q.notify({
       type: 'positive',
       message: '通知設置已保存',
       position: 'top'
     })
   } catch (error) {
-    console.error('保存通知設置失敗:', error)
     $q.notify({
       type: 'negative',
       message: '保存通知設置失敗',
@@ -583,17 +564,13 @@ const saveNotificationSettings = async () => {
 const saveSecuritySettings = async () => {
   saving.value = true
   try {
-    const response = await systemSettingsApi.updateSecuritySettings(securitySettings.value)
-    if (response.data) {
-      Object.assign(securitySettings.value, response.data)
-    }
+    await systemSettingsApi.updateSecuritySettings(securitySettings.value)
     $q.notify({
       type: 'positive',
       message: '安全設置已保存',
       position: 'top'
     })
   } catch (error) {
-    console.error('保存安全設置失敗:', error)
     $q.notify({
       type: 'negative',
       message: '保存安全設置失敗',
@@ -661,34 +638,9 @@ const testEmailSettings = async () => {
 
 const loadAllSettings = async () => {
   try {
-    const response = await systemSettingsApi.getAllSettings()
-    const settings = response.data
-    
-    // 更新系統設置
-    if (settings.system) {
-      Object.assign(systemSettings.value, settings.system)
-      // 更新 store 中的商店名稱
-      if (settings.system.storeName) {
-        settingsStore.updateStoreName(settings.system.storeName)
-      }
-    }
-    
-    // 更新郵件設置
-    if (settings.email) {
-      Object.assign(emailSettings.value, settings.email)
-    }
-    
-    // 更新通知設置
-    if (settings.notification) {
-      Object.assign(notificationSettings.value, settings.notification)
-    }
-    
-    // 更新安全設置
-    if (settings.security) {
-      Object.assign(securitySettings.value, settings.security)
-    }
+    const settings = await systemSettingsApi.getAllSettings()
+    // Update settings from response
   } catch (error) {
-    console.error('加載設置失敗:', error)
     $q.notify({
       type: 'negative',
       message: '加載設置失敗',

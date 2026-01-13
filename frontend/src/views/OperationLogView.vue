@@ -106,14 +106,8 @@
           <template v-slot:body-cell-executionTime="props">
             <q-td :props="props">
               <span :class="{ 'text-warning': props.row.executionTime && props.row.executionTime > 1000 }">
-                {{ props.row.executionTime ? `${props.row.executionTime}ms` : '-' }}
+                {{ props.row.executionTime }}ms
               </span>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-createdAt="props">
-            <q-td :props="props">
-              {{ formatDateTime(props.row.createdAt) }}
             </q-td>
           </template>
 
@@ -270,7 +264,7 @@
                   <q-item>
                     <q-item-section>
                       <q-item-label caption>創建時間</q-item-label>
-                      <q-item-label>{{ formatDateTime(currentLog.createdAt) }}</q-item-label>
+                      <q-item-label>{{ currentLog.createdAt }}</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -360,7 +354,6 @@ const loadLogs = async () => {
   loading.value = true
   try {
     const response = await operationLogApi.listLogs(pagination.value.page - 1, pagination.value.rowsPerPage)
-    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
     const data = response.data as PageResponse<OperationLog> | OperationLog[]
     
     if (Array.isArray(data)) {
@@ -418,7 +411,6 @@ const searchLogs = async () => {
       response = await operationLogApi.listLogs(pagination.value.page - 1, pagination.value.rowsPerPage)
     }
     
-    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
     const data = response.data as PageResponse<OperationLog> | OperationLog[]
     if (Array.isArray(data)) {
       logs.value = data
@@ -435,7 +427,6 @@ const searchLogs = async () => {
       message: '搜尋失敗',
       position: 'top'
     })
-    console.error(error)
   } finally {
     loading.value = false
   }
@@ -470,28 +461,11 @@ const getModuleColor = (module?: string) => {
   return colorMap[module || ''] || 'grey'
 }
 
-const formatDateTime = (dateString?: string) => {
-  if (!dateString) return '-'
-  try {
-    return new Date(dateString).toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch (error) {
-    return dateString
-  }
-}
-
 const handleViewDetails = async (log: OperationLog) => {
   if (!log.id) return
   
   try {
     const response = await operationLogApi.getLog(log.id)
-    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
     currentLog.value = response.data
     showDetailsDialog.value = true
   } catch (error) {
@@ -500,7 +474,6 @@ const handleViewDetails = async (log: OperationLog) => {
       message: '載入詳情失敗',
       position: 'top'
     })
-    console.error(error)
   }
 }
 
@@ -523,24 +496,16 @@ const applyAdvancedFilter = async () => {
         pagination.value.rowsPerPage
       )
     } else if (advancedFilter.value.startDate && advancedFilter.value.endDate) {
-      // 將 datetime-local 格式轉換為 ISO 8601 格式
-      try {
-        const startDate = new Date(advancedFilter.value.startDate).toISOString()
-        const endDate = new Date(advancedFilter.value.endDate).toISOString()
-        response = await operationLogApi.listByDateRange(
-          startDate,
-          endDate,
-          pagination.value.page - 1,
-          pagination.value.rowsPerPage
-        )
-      } catch (error) {
-        throw new Error('日期格式無效')
-      }
+      response = await operationLogApi.listByDateRange(
+        advancedFilter.value.startDate,
+        advancedFilter.value.endDate,
+        pagination.value.page - 1,
+        pagination.value.rowsPerPage
+      )
     } else {
       response = await operationLogApi.listLogs(pagination.value.page - 1, pagination.value.rowsPerPage)
     }
     
-    // 響應攔截器已經返回 response.data，所以 response 就是 ApiResponse
     const data = response.data as PageResponse<OperationLog> | OperationLog[]
     if (Array.isArray(data)) {
       logs.value = data
@@ -559,7 +524,6 @@ const applyAdvancedFilter = async () => {
       message: '篩選失敗',
       position: 'top'
     })
-    console.error(error)
   } finally {
     loading.value = false
   }

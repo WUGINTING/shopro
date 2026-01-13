@@ -1,7 +1,19 @@
 <template>
   <q-page padding>
     <div class="q-pa-md">
-      <div class="text-h4 q-mb-md">金流交易紀錄</div>
+      <div class="row items-center justify-between q-mb-md">
+        <div class="text-h4">金流交易紀錄</div>
+        <q-btn
+          flat
+          dense
+          round
+          icon="help_outline"
+          color="grey-7"
+          @click="handleStartTour"
+        >
+          <q-tooltip>金流交易紀錄教學</q-tooltip>
+        </q-btn>
+      </div>
 
       <!-- 搜尋欄位 -->
       <q-card class="q-mb-md">
@@ -208,9 +220,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { searchTransactions, queryPaymentStatus, type PaymentTransaction } from '@/api/payment'
 import { Notify } from 'quasar'
+import { startPaymentTransactionTour, isPaymentTransactionTourCompleted } from '@/utils/paymentTransactionTour'
 
 const transactions = ref<PaymentTransaction[]>([])
 const loading = ref(false)
@@ -400,8 +413,22 @@ const syncStatus = async (transaction: PaymentTransaction) => {
   }
 }
 
+// 啟動金流交易紀錄導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startPaymentTransactionTour(true)
+  })
+}
+
 onMounted(() => {
   search()
+  
+  // 如果用戶是第一次訪問金流交易紀錄頁面，自動啟動導覽
+  if (!isPaymentTransactionTourCompleted()) {
+    setTimeout(() => {
+      startPaymentTransactionTour()
+    }, 1500)
+  }
 })
 </script>
 

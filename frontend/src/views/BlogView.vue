@@ -7,13 +7,23 @@
           <div class="text-h5 text-weight-bold">部落格管理</div>
           <div class="text-caption text-grey-7">管理部落格文章和內容</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add_circle"
-          label="新增文章"
-          unelevated
-          @click="showDialog = true; resetForm()"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>部落格管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add_circle"
+            label="新增文章"
+            unelevated
+            @click="showDialog = true; resetForm()"
+          />
+        </div>
       </div>
 
       <!-- Filter Tabs -->
@@ -298,9 +308,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { blogApi, type BlogPost, type BlogStatus, type PageResponse } from '@/api'
+import { startBlogTour, isBlogTourCompleted } from '@/utils/blogTour'
 
 const $q = useQuasar()
 
@@ -616,6 +627,13 @@ const handleScheduleUnpublish = async () => {
   }
 }
 
+// 啟動部落格管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startBlogTour(true)
+  })
+}
+
 watch(statusTab, () => {
   pagination.value.page = 1
   loadPosts()
@@ -623,6 +641,13 @@ watch(statusTab, () => {
 
 onMounted(() => {
   loadPosts()
+  
+  // 如果用戶是第一次訪問部落格管理頁面，自動啟動導覽
+  if (!isBlogTourCompleted()) {
+    setTimeout(() => {
+      startBlogTour()
+    }, 1500)
+  }
 })
 </script>
 

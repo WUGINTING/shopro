@@ -7,14 +7,24 @@
           <div class="text-h5 text-weight-bold">ECPay 支付配置</div>
           <div class="text-caption text-grey-7">管理綠界 ECPay 支付閘道的配置資訊</div>
         </div>
-        <q-btn
-          v-if="!config"
-          color="primary"
-          icon="add"
-          label="建立配置"
-          unelevated
-          @click="handleCreate"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>ECPay 支付配置教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            v-if="!config"
+            color="primary"
+            icon="add"
+            label="建立配置"
+            unelevated
+            @click="handleCreate"
+          />
+        </div>
       </div>
 
       <!-- Config Form -->
@@ -202,9 +212,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { ecpayConfigApi, type EcPayConfig } from '@/api/ecpayConfig'
+import { startEcPayConfigTour, isEcPayConfigTourCompleted } from '@/utils/ecPayConfigTour'
 
 const $q = useQuasar()
 
@@ -329,8 +340,22 @@ const handleSubmit = async () => {
   }
 }
 
+// 啟動 ECPay 支付配置導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startEcPayConfigTour(true)
+  })
+}
+
 onMounted(() => {
   loadConfig()
+  
+  // 如果用戶是第一次訪問 ECPay 支付配置頁面，自動啟動導覽
+  if (!isEcPayConfigTourCompleted()) {
+    setTimeout(() => {
+      startEcPayConfigTour()
+    }, 1500)
+  }
 })
 </script>
 

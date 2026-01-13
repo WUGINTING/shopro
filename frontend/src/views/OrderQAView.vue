@@ -7,13 +7,25 @@
           <div class="text-h5 text-weight-bold">訂單問答管理</div>
           <div class="text-caption text-grey-7">管理訂單相關的客戶問答</div>
         </div>
-        <q-btn
-          color="primary"
-          icon="add_circle"
-          label="新增問題"
-          unelevated
-          @click="handleOpenDialog"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            flat
+            dense
+            round
+            icon="help_outline"
+            color="grey-7"
+            @click="handleStartTour"
+          >
+            <q-tooltip>訂單問答管理教學</q-tooltip>
+          </q-btn>
+          <q-btn
+            color="primary"
+            icon="add_circle"
+            label="新增問題"
+            unelevated
+            @click="handleOpenDialog"
+          />
+        </div>
       </div>
 
       <!-- Search Filter -->
@@ -246,9 +258,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { orderQAApi, orderApi, type OrderQA, type Order } from '@/api'
+import { startOrderQATour, isOrderQATourCompleted } from '@/utils/orderQATour'
 
 const $q = useQuasar()
 
@@ -493,9 +506,23 @@ const loadAllQAs = async () => {
   }
 }
 
+// 啟動訂單問答管理導覽
+const handleStartTour = () => {
+  nextTick(() => {
+    startOrderQATour(true)
+  })
+}
+
 onMounted(() => {
   loadOrders()
   loadAllQAs()
+  
+  // 如果用戶是第一次訪問訂單問答管理頁面，自動啟動導覽
+  if (!isOrderQATourCompleted()) {
+    setTimeout(() => {
+      startOrderQATour()
+    }, 1500)
+  }
 })
 
 const handleOpenDialog = () => {

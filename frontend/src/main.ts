@@ -1,6 +1,7 @@
 import './assets/main.css'
 import '@/styles/theme-system.scss'
 import '@/styles/app.scss'
+import '@/styles/tour.scss'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { Quasar, Notify, Dialog, Loading } from 'quasar'
