@@ -69,6 +69,15 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        // Get user from database first to check enabled status
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new BusinessException("使用者不存在或密碼錯誤"));
+
+        // Check if user account is enabled
+        if (!user.getEnabled()) {
+            throw new BusinessException("此帳號已被停用，無法登入");
+        }
+
         // Authenticate user
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -76,10 +85,6 @@ public class AuthService {
                         request.getPassword()
                 )
         );
-
-        // Get user from database
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BusinessException("User not found"));
 
         // Generate JWT token
         String token = jwtService.generateToken(user);
@@ -192,6 +197,11 @@ public class AuthService {
                 // Create corresponding CRM member record
                 createCrmMember(googleUser, user);
             } else {
+                // Check if user account is enabled
+                if (!user.getEnabled()) {
+                    throw new BusinessException("此帳號已被停用，無法登入");
+                }
+                
                 // Update last login time for existing member
                 updateMemberLastLogin(googleUser.getEmail());
             }
