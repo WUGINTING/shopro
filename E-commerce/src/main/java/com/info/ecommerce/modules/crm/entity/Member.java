@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -63,6 +64,11 @@ public class Member {
     @Column(nullable = false)
     private Integer availablePoints;
 
+    // 總消費金額
+    @Column(name = "total_spent", precision = 10, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal totalSpent = BigDecimal.ZERO;
+
     // 地址
     @Column(columnDefinition = "NVARCHAR(500)")
     private String address;
@@ -108,6 +114,9 @@ public class Member {
         }
         if (this.availablePoints == null) {
             this.availablePoints = 0;
+        }
+        if (this.totalSpent == null) {
+            this.totalSpent = BigDecimal.ZERO;
         }
     }
 

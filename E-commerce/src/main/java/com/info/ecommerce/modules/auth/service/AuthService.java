@@ -9,6 +9,9 @@ import com.info.ecommerce.modules.auth.dto.UserDTO;
 import com.info.ecommerce.modules.auth.entity.Role;
 import com.info.ecommerce.modules.auth.entity.User;
 import com.info.ecommerce.modules.auth.repository.UserRepository;
+import com.info.ecommerce.modules.crm.entity.Member;
+import com.info.ecommerce.modules.crm.enums.MemberStatus;
+import com.info.ecommerce.modules.crm.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final MemberRepository memberRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -172,7 +176,9 @@ public class AuthService {
             User user = userRepository.findByEmail(googleUser.getEmail())
                     .orElse(null);
 
-            if (user == null) {
+            boolean isNewUser = (user == null);
+            
+            if (isNewUser) {
                 // Create new user if doesn't exist
                 user = User.builder()
                         .username(googleUser.getEmail().split("@")[0] + "_" + System.currentTimeMillis())
@@ -182,6 +188,12 @@ public class AuthService {
                         .enabled(true)
                         .build();
                 user = userRepository.save(user);
+                
+                // Create corresponding CRM member record
+                createCrmMember(googleUser, user);
+            } else {
+                // Update last login time for existing member
+                updateMemberLastLogin(googleUser.getEmail());
             }
 
             // Generate JWT token
@@ -236,6 +248,51 @@ public class AuthService {
                     .build();
         } catch (Exception e) {
             throw new BusinessException("無法解析 Google Token: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create CRM member record for new Google OAuth user
+     */
+    @Transactional
+    private void createCrmMember(GoogleUserInfo googleUser, User user) {
+        try {
+            // Check if member already exists
+            if (memberRepository.existsByEmail(googleUser.getEmail())) {
+                return; // Member already exists, skip creation
+            }
+
+            // Create new member record
+            Member member = Member.builder()
+                    .name(googleUser.getName() != null ? googleUser.getName() : googleUser.getEmail().split("@")[0])
+                    .email(googleUser.getEmail())
+                    .status(MemberStatus.ACTIVE)
+                    .totalPoints(0)
+                    .availablePoints(0)
+                    .registeredAt(java.time.LocalDateTime.now())
+                    .lastLoginAt(java.time.LocalDateTime.now())
+                    .build();
+
+            memberRepository.save(member);
+        } catch (Exception e) {
+            // Log error but don't fail the login process
+            System.err.println("Failed to create CRM member for Google user: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update member last login time
+     */
+    @Transactional
+    private void updateMemberLastLogin(String email) {
+        try {
+            memberRepository.findByEmail(email).ifPresent(member -> {
+                member.setLastLoginAt(java.time.LocalDateTime.now());
+                memberRepository.save(member);
+            });
+        } catch (Exception e) {
+            // Log error but don't fail the login process
+            System.err.println("Failed to update member last login time: " + e.getMessage());
         }
     }
 

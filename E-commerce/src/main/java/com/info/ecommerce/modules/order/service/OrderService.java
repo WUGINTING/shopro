@@ -13,6 +13,7 @@ import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
+import com.info.ecommerce.modules.crm.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ public class OrderService {
     private final OrderHistoryService orderHistoryService;
     private final ProductRepository productRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
+    private final MemberService memberService;
 
     /**
      * 生成訂單編號
@@ -250,6 +252,16 @@ public class OrderService {
         orderHistoryService.recordHistory(orderId, "CREATE", "訂單已建立", null,
             order.getStatus().name(), null, null);
 
+        // 如果訂單創建時狀態就是已付款或已完成，更新客戶總消費
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.PAID) {
+            try {
+                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+            } catch (Exception e) {
+                // 記錄錯誤但不影響訂單創建
+                System.err.println("Failed to update member total spent on order creation: " + e.getMessage());
+            }
+        }
+
         return convertToDTO(order);
     }
 
@@ -300,6 +312,17 @@ public class OrderService {
         if (oldStatus != dto.getStatus()) {
             orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
                 oldStatus.name(), dto.getStatus().name(), null, null);
+            
+            // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
+            if ((dto.getStatus() == OrderStatus.COMPLETED || dto.getStatus() == OrderStatus.PAID) 
+                && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
+                try {
+                    memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+                } catch (Exception e) {
+                    // 記錄錯誤但不影響訂單更新
+                    System.err.println("Failed to update member total spent: " + e.getMessage());
+                }
+            }
         } else {
             orderHistoryService.recordHistory(id, "UPDATE", "訂單已更新",
                 null, null, null, null);
@@ -397,6 +420,17 @@ public class OrderService {
         // 記錄歷史
         orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
             oldStatus.name(), newStatus.name(), operatorId, operatorName);
+
+        // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
+        if ((newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.PAID) 
+            && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
+            try {
+                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+            } catch (Exception e) {
+                // 記錄錯誤但不影響訂單更新
+                System.err.println("Failed to update member total spent: " + e.getMessage());
+            }
+        }
 
         return convertToDTO(order);
     }

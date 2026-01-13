@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -44,6 +45,9 @@ public class MemberDTO {
 
     @Schema(description = "可用積點", example = "800")
     private Integer availablePoints;
+
+    @Schema(description = "總消費金額", example = "15000.00")
+    private BigDecimal totalSpent;
 
     @Size(max = 500, message = "地址最多 500 字")
     @Schema(description = "地址")

@@ -5,6 +5,7 @@ import com.info.ecommerce.modules.order.dto.BatchOrderUpdateDTO;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.crm.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class OrderBatchService {
 
     private final OrderRepository orderRepository;
     private final OrderHistoryService orderHistoryService;
+    private final MemberService memberService;
 
     /**
      * 批次更新訂單狀態
@@ -50,6 +52,17 @@ public class OrderBatchService {
                     "批次更新訂單狀態: " + (dto.getNotes() != null ? dto.getNotes() : ""), 
                     oldStatus.name(), dto.getTargetStatus().name(), 
                     dto.getOperatorId(), dto.getOperatorName());
+                
+                // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
+                if ((dto.getTargetStatus() == OrderStatus.COMPLETED || dto.getTargetStatus() == OrderStatus.PAID) 
+                    && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
+                    try {
+                        memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+                    } catch (Exception e) {
+                        // 記錄錯誤但不影響訂單更新
+                        System.err.println("Failed to update member total spent in batch update: " + e.getMessage());
+                    }
+                }
                 
                 successIds.add(orderId);
             } catch (Exception e) {

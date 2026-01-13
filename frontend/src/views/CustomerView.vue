@@ -19,6 +19,16 @@
             <q-tooltip>客戶管理教學</q-tooltip>
           </q-btn>
           <q-btn
+            color="info"
+            icon="calculate"
+            label="重新計算總消費"
+            unelevated
+            :loading="recalculating"
+            @click="confirmRecalculateAll"
+          >
+            <q-tooltip>從所有已付款或已完成的訂單中重新計算所有客戶的總消費</q-tooltip>
+          </q-btn>
+          <q-btn
             color="primary"
             icon="person_add"
             label="新增客戶"
@@ -67,6 +77,12 @@
               </q-btn>
               <q-btn flat dense round icon="add_circle" color="positive" size="sm" @click="handleAddPoints(props.row)">
                 <q-tooltip>加積分</q-tooltip>
+              </q-btn>
+              <q-btn flat dense round icon="calculate" color="info" size="sm" @click="recalculateSingleCustomer(props.row)">
+                <q-tooltip>重新計算總消費</q-tooltip>
+              </q-btn>
+              <q-btn flat dense round icon="delete" color="negative" size="sm" @click="confirmDelete(props.row)">
+                <q-tooltip>刪除</q-tooltip>
               </q-btn>
             </q-td>
           </template>
@@ -121,6 +137,47 @@
           <q-card-actions align="right" class="q-px-md q-pb-md">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
             <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Recalculate Confirmation Dialog -->
+      <q-dialog v-model="recalculateDialogVisible" persistent>
+        <q-card>
+          <q-card-section class="row items-center">
+            <q-icon name="calculate" color="info" size="md" />
+            <span class="q-ml-sm">確定要重新計算所有客戶的總消費嗎？</span>
+          </q-card-section>
+          <q-card-section>
+            <div class="text-body2 text-grey-7">
+              此操作將從所有已付款或已完成的訂單中重新計算每個客戶的總消費金額。
+              <br />
+              <strong>注意：</strong>此操作可能需要一些時間，請耐心等待。
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" color="grey-7" @click="recalculateDialogVisible = false" />
+            <q-btn unelevated label="確定" color="info" :loading="recalculating" @click="handleRecalculateAll" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Delete Confirmation Dialog -->
+      <q-dialog v-model="deleteDialogVisible" persistent>
+        <q-card>
+          <q-card-section class="row items-center">
+            <q-icon name="warning" color="negative" size="md" />
+            <span class="q-ml-sm">確定要刪除此客戶嗎？</span>
+          </q-card-section>
+          <q-card-section v-if="customerToDelete">
+            <div class="text-body2">
+              <div><strong>姓名：</strong>{{ customerToDelete.name }}</div>
+              <div><strong>Email：</strong>{{ customerToDelete.email }}</div>
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" color="grey-7" @click="deleteDialogVisible = false" />
+            <q-btn unelevated label="刪除" color="negative" :loading="deleting" @click="handleDelete" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -181,6 +238,11 @@ const customers = ref<Customer[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const pointsDialogVisible = ref(false)
+const deleteDialogVisible = ref(false)
+const deleting = ref(false)
+const customerToDelete = ref<Customer | null>(null)
+const recalculateDialogVisible = ref(false)
+const recalculating = ref(false)
 
 const form = ref<Customer>({
   name: '',
@@ -316,6 +378,93 @@ const handlePointsSubmit = async () => {
       position: 'top'
     })
   }
+}
+
+const confirmDelete = (customer: Customer) => {
+  customerToDelete.value = customer
+  deleteDialogVisible.value = true
+}
+
+const handleDelete = async () => {
+  if (!customerToDelete.value || !customerToDelete.value.id) {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await crmApi.deleteCustomer(customerToDelete.value.id)
+    $q.notify({
+      type: 'positive',
+      message: '客戶已刪除',
+      position: 'top'
+    })
+    deleteDialogVisible.value = false
+    customerToDelete.value = null
+    loadCustomers()
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || '刪除失敗',
+      position: 'top'
+    })
+  } finally {
+    deleting.value = false
+  }
+}
+
+const confirmRecalculateAll = () => {
+  recalculateDialogVisible.value = true
+}
+
+const handleRecalculateAll = async () => {
+  recalculating.value = true
+  try {
+    await crmApi.recalculateAllCustomersTotalSpent()
+    $q.notify({
+      type: 'positive',
+      message: '所有客戶的總消費已重新計算',
+      position: 'top'
+    })
+    recalculateDialogVisible.value = false
+    loadCustomers()
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || '重新計算失敗',
+      position: 'top'
+    })
+  } finally {
+    recalculating.value = false
+  }
+}
+
+const recalculateSingleCustomer = async (customer: Customer) => {
+  if (!customer.id) {
+    return
+  }
+
+  $q.dialog({
+    title: '重新計算總消費',
+    message: `確定要重新計算「${customer.name}」的總消費嗎？`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await crmApi.recalculateCustomerTotalSpent(customer.id!)
+      $q.notify({
+        type: 'positive',
+        message: '總消費已重新計算',
+        position: 'top'
+      })
+      loadCustomers()
+    } catch (error: any) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || '重新計算失敗',
+        position: 'top'
+      })
+    }
+  })
 }
 
 // 啟動客戶管理導覽

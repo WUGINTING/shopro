@@ -128,4 +128,19 @@ public class MemberController {
             @Parameter(description = "積點數量") @RequestParam Integer points) {
         return ApiResponse.success("積點已扣除", memberService.deductPoints(id, points));
     }
+
+    @PostMapping("/{id}/recalculate-total-spent")
+    @Operation(summary = "重新計算會員總消費", description = "從所有已付款或已完成的訂單中重新計算該會員的總消費")
+    public ApiResponse<MemberDTO> recalculateTotalSpent(
+            @Parameter(description = "會員 ID") @PathVariable Long id) {
+        memberService.recalculateTotalSpent(id);
+        return ApiResponse.success("總消費已重新計算", memberService.getMember(id));
+    }
+
+    @PostMapping("/recalculate-all-total-spent")
+    @Operation(summary = "重新計算所有會員總消費", description = "從所有已付款或已完成的訂單中重新計算所有會員的總消費")
+    public ApiResponse<String> recalculateAllTotalSpent() {
+        memberService.recalculateAllMembersTotalSpent();
+        return ApiResponse.success("所有會員的總消費已重新計算", null);
+    }
 }

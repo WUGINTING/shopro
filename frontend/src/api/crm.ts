@@ -77,6 +77,21 @@ export const crmApi = {
     return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/points/deduct`, null, {
       params: { points }
     })
+  },
+
+  // 刪除客戶
+  deleteCustomer: (id: number) => {
+    return axios.delete<any, ApiResponse<void>>(`/crm/members/${id}`)
+  },
+
+  // 重新計算單個客戶的總消費
+  recalculateCustomerTotalSpent: (id: number) => {
+    return axios.post<any, ApiResponse<Customer>>(`/crm/members/${id}/recalculate-total-spent`)
+  },
+
+  // 重新計算所有客戶的總消費
+  recalculateAllCustomersTotalSpent: () => {
+    return axios.post<any, ApiResponse<string>>('/crm/members/recalculate-all-total-spent')
   }
 }
 
