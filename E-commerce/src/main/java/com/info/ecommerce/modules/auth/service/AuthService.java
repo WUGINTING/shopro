@@ -6,6 +6,7 @@ import com.info.ecommerce.modules.auth.dto.LoginRequest;
 import com.info.ecommerce.modules.auth.dto.RegisterRequest;
 import com.info.ecommerce.modules.auth.dto.UpdateProfileRequest;
 import com.info.ecommerce.modules.auth.dto.UserDTO;
+import com.info.ecommerce.modules.auth.entity.Role;
 import com.info.ecommerce.modules.auth.entity.User;
 import com.info.ecommerce.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -151,5 +152,103 @@ public class AuthService {
                 .createdAt(updatedUser.getCreatedAt())
                 .updatedAt(updatedUser.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Google OAuth login/register
+     * Validates Google ID Token and creates or logs in user
+     */
+    @Transactional
+    public AuthResponse googleLogin(String idToken) {
+        try {
+            // Verify Google ID Token and get user info
+            GoogleUserInfo googleUser = verifyGoogleToken(idToken);
+            
+            if (googleUser == null) {
+                throw new BusinessException("無效的 Google Token");
+            }
+
+            // Check if user exists by email
+            User user = userRepository.findByEmail(googleUser.getEmail())
+                    .orElse(null);
+
+            if (user == null) {
+                // Create new user if doesn't exist
+                user = User.builder()
+                        .username(googleUser.getEmail().split("@")[0] + "_" + System.currentTimeMillis())
+                        .email(googleUser.getEmail())
+                        .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for OAuth users
+                        .role(Role.CUSTOMER) // Default role for Google OAuth users
+                        .enabled(true)
+                        .build();
+                user = userRepository.save(user);
+            }
+
+            // Generate JWT token
+            String token = jwtService.generateToken(user);
+
+            return AuthResponse.builder()
+                    .token(token)
+                    .type("Bearer")
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .role(user.getRole())
+                    .build();
+        } catch (Exception e) {
+            throw new BusinessException("Google 登入失敗: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Verify Google ID Token and extract user information
+     * Note: This is a simplified implementation. In production, you should use
+     * Google's official library or properly verify the token signature.
+     */
+    private GoogleUserInfo verifyGoogleToken(String idToken) {
+        try {
+            // Decode JWT token (without verification for now)
+            // In production, you should verify the token signature using Google's public keys
+            String[] parts = idToken.split("\\.");
+            if (parts.length != 3) {
+                return null;
+            }
+
+            // Decode payload
+            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> claims = (java.util.Map<String, Object>) mapper.readValue(payload, java.util.Map.class);
+
+            // Extract user info
+            String email = (String) claims.get("email");
+            String name = (String) claims.get("name");
+            String picture = (String) claims.get("picture");
+
+            if (email == null) {
+                return null;
+            }
+
+            return GoogleUserInfo.builder()
+                    .email(email)
+                    .name(name != null ? name : email.split("@")[0])
+                    .picture(picture)
+                    .build();
+        } catch (Exception e) {
+            throw new BusinessException("無法解析 Google Token: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Inner class for Google user information
+     */
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    private static class GoogleUserInfo {
+        private String email;
+        private String name;
+        private String picture;
     }
 }

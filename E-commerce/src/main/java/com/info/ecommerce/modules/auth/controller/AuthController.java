@@ -55,4 +55,10 @@ public class AuthController {
         String username = authentication.getName();
         return ApiResponse.success("個人資料更新成功", authService.updateCurrentUserProfile(username, request));
     }
+
+    @PostMapping("/google")
+    @Operation(summary = "Google SSO 登入/註冊", description = "使用 Google ID Token 進行登入或註冊")
+    public ApiResponse<AuthResponse> googleLogin(@Valid @RequestBody com.info.ecommerce.modules.auth.dto.GoogleLoginRequest request) {
+        return ApiResponse.success("登入成功", authService.googleLogin(request.getIdToken()));
+    }
 }

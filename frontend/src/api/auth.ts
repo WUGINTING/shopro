@@ -162,6 +162,17 @@ export const authApi = {
    */
   updateProfile: (data: UpdateProfileRequest) => {
     return axios.put<any, ApiResponse<User>>('/auth/profile', data)
+  },
+
+  /**
+   * Google SSO 登入/註冊
+   * @param {string} idToken - Google ID Token
+   * @returns {Promise<ApiResponse<AuthResponse>>} 登入回應
+   * @example
+   * const response = await authApi.googleLogin(idToken)
+   */
+  googleLogin: (idToken: string) => {
+    return axios.post<any, ApiResponse<AuthResponse>>('/auth/google', { idToken })
   }
 }
 
