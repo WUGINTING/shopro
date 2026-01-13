@@ -276,7 +276,7 @@
             v-if="authStore.canAccessStaff"
             icon="campaign"
             label="營銷管理"
-            :default-opened="isMenuActive(['marketing', 'promotions', 'points', 'edm'])"
+            :default-opened="isMenuActive(['marketing', 'promotions', 'points', 'edm', 'calendar'])"
             data-tour="marketing"
           >
             <q-item
@@ -333,6 +333,20 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>EDM 管理</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('calendar')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('calendar')"
+            >
+              <q-item-section avatar>
+                <q-icon name="calendar_month" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>行事曆管理</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>

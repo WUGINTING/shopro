@@ -183,6 +183,12 @@ const router = createRouter({
           name: 'members',
           component: () => import('../views/MemberView.vue'),
           meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+        },
+        {
+          path: 'calendar',
+          name: 'calendar',
+          component: () => import('../views/CalendarView.vue'),
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         }
       ]
     }

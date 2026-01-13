@@ -5,6 +5,7 @@ import '@/styles/tour.scss'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { Quasar, Notify, Dialog, Loading } from 'quasar'
+import quasarLangZhTW from 'quasar/lang/zh-TW'
 
 // Import icon libraries
 import '@quasar/extras/material-icons/material-icons.css'
@@ -35,7 +36,8 @@ app.use(Quasar, {
   config: {
     notify: {},
     loading: {}
-  }
+  },
+  lang: quasarLangZhTW
 })
 
 app.mount('#app')
