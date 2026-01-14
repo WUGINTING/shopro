@@ -485,6 +485,7 @@ GET /api/product-categories
       "parentId": null,
       "description": "各類服飾商品",
       "image": "/uploads/images/category-clothes.jpg",
+      "icon": "shopping_bag",
       "sortOrder": 1,
       "enabled": true
     },
@@ -494,6 +495,7 @@ GET /api/product-categories
       "parentId": 1,
       "description": "各類上衣",
       "image": null,
+      "icon": "checkroom",
       "sortOrder": 1,
       "enabled": true
     },
@@ -503,6 +505,7 @@ GET /api/product-categories
       "parentId": 1,
       "description": "各類褲子",
       "image": null,
+      "icon": "dry_cleaning",
       "sortOrder": 2,
       "enabled": true
     }
@@ -578,6 +581,7 @@ GET /api/product-categories/top
       "parentId": null,
       "description": "各類服飾商品",
       "image": "/uploads/images/category-clothes.jpg",
+      "icon": "shopping_bag",
       "sortOrder": 1,
       "enabled": true
     },
@@ -587,6 +591,7 @@ GET /api/product-categories/top
       "parentId": null,
       "description": "各類配件",
       "image": "/uploads/images/category-accessories.jpg",
+      "icon": "watch",
       "sortOrder": 2,
       "enabled": true
     }
@@ -633,6 +638,7 @@ GET /api/product-categories/1/children
       "parentId": 1,
       "description": "各類上衣",
       "image": null,
+      "icon": "checkroom",
       "sortOrder": 1,
       "enabled": true
     },
@@ -642,6 +648,7 @@ GET /api/product-categories/1/children
       "parentId": 1,
       "description": "各類褲子",
       "image": null,
+      "icon": "dry_cleaning",
       "sortOrder": 2,
       "enabled": true
     }
@@ -714,6 +721,7 @@ GET /api/product-categories/1
     "parentId": null,
     "description": "各類服飾商品",
     "image": "/uploads/images/category-clothes.jpg",
+    "icon": "shopping_bag",
     "sortOrder": 1,
     "enabled": true
   }
@@ -760,8 +768,16 @@ GET /api/product-categories/1
 | `parentId` | Long | 父分類 ID（null 表示頂層分類） |
 | `description` | String | 分類描述（最多 500 字） |
 | `image` | String | 分類圖片 URL |
+| `icon` | String | 分類圖標（Material Icons 名稱，最多 100 字） |
 | `sortOrder` | Integer | 排序順序 |
 | `enabled` | Boolean | 是否啟用 |
+
+**圖標欄位說明**：
+- `icon` 欄位使用 **Material Icons** 圖標庫的圖標名稱
+- 圖標名稱需符合 Material Icons 命名規範（例如：`shopping_bag`、`store`、`category`）
+- 可在前端使用 `<q-icon name="圖標名稱" />` 或 `<i class="material-icons">圖標名稱</i>` 顯示
+- 如果 `icon` 為 `null` 或空字串，前端可顯示預設圖標或僅顯示文字
+- 常用圖標範例：`shopping_bag`、`shopping_cart`、`store`、`category`、`local_mall`、`inventory_2` 等
 
 ### 商品狀態 (ProductStatus) 列舉
 
