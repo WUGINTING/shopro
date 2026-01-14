@@ -27,6 +27,10 @@ public class ProductCategoryDTO {
     @Schema(description = "分類圖片", example = "/images/category.jpg")
     private String image;
 
+    @Size(max = 100, message = "分類圖標最多 100 字")
+    @Schema(description = "分類圖標（Material Icons 名稱）", example = "shopping_bag")
+    private String icon;
+
     @Schema(description = "排序", example = "1")
     private Integer sortOrder;
 

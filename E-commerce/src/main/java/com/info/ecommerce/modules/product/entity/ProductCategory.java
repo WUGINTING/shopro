@@ -43,6 +43,10 @@ public class ProductCategory {
     @Column(length = 500)
     private String image;
 
+    // 分類圖標（Material Icons 名稱）
+    @Column(length = 100)
+    private String icon;
+
     // 排序
     @Column(name = "sort_order")
     private Integer sortOrder;

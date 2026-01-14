@@ -118,6 +118,8 @@ export interface ProductCategory {
   parentId?: number | null
   /** 分類圖片 */
   image?: string
+  /** 分類圖標（Material Icons 名稱） */
+  icon?: string
   /** 排序 */
   sortOrder?: number
   /** 是否啟用 */

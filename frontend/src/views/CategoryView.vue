@@ -91,6 +91,13 @@
           :filter="searchQuery"
           :filter-method="filterCategories"
         >
+          <template v-slot:body-cell-icon="props">
+            <q-td :props="props">
+              <q-icon v-if="props.row.icon" :name="props.row.icon" size="24px" color="primary" />
+              <q-icon v-else name="image" size="24px" color="grey-4" />
+            </q-td>
+          </template>
+
           <template v-slot:body-cell-enabled="props">
             <q-td :props="props">
               <q-badge :color="props.row.enabled ? 'positive' : 'grey'" :label="props.row.enabled ? '啟用' : '停用'" />
@@ -140,6 +147,12 @@
                 outlined
                 class="q-mb-md"
                 :rules="[val => !!val || '請輸入分類名稱']"
+              />
+
+              <IconPicker
+                v-model="form.icon"
+                label="分類圖標"
+                class="q-mb-md"
               />
 
               <q-select
@@ -204,6 +217,7 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { categoryApi, type ProductCategory } from '@/api'
 import { startCategoryTour, isCategoryTourCompleted } from '@/utils/categoryTour'
+import IconPicker from '@/components/IconPicker.vue'
 
 const $q = useQuasar()
 
@@ -219,11 +233,13 @@ const form = ref<ProductCategory>({
   description: '',
   parentId: null,
   sortOrder: 0,
-  enabled: true
+  enabled: true,
+  icon: undefined
 })
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left' as const, field: 'id', sortable: true },
+  { name: 'icon', label: '圖標', align: 'center' as const, field: 'icon' },
   { name: 'name', label: '分類名稱', align: 'left' as const, field: 'name', sortable: true },
   { name: 'parentId', label: '父分類', align: 'left' as const, field: 'parentId' },
   { name: 'description', label: '描述', align: 'left' as const, field: 'description' },
@@ -298,7 +314,8 @@ const handleAdd = () => {
     description: '',
     parentId: null,
     sortOrder: 0,
-    enabled: true
+    enabled: true,
+    icon: undefined
   }
   showDialog.value = true
 }
@@ -372,7 +389,8 @@ const closeDialog = () => {
     description: '',
     parentId: null,
     sortOrder: 0,
-    enabled: true
+    enabled: true,
+    icon: undefined
   }
 }
 
