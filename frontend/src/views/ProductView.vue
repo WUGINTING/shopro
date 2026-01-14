@@ -844,10 +844,23 @@ const loadProducts = async () => {
     }
     
     // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
-    products.value = productList.map(product => ({
-      ...product,
-      price: product.salePrice ?? product.basePrice ?? 0
-    }))
+    // 並將後端狀態值轉換為前端狀態值
+    products.value = productList.map(product => {
+      let status = product.status
+      // 後端狀態值轉換為前端狀態值
+      if (status === 'ACTIVE') {
+        status = 'PUBLISHED'
+      } else if (status === 'INACTIVE') {
+        status = 'UNPUBLISHED'
+      }
+      // DRAFT 保持不變
+      
+      return {
+        ...product,
+        status: status as 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED',
+        price: product.salePrice ?? product.basePrice ?? 0
+      }
+    })
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -862,8 +875,18 @@ const loadProducts = async () => {
 
 const handleEdit = async (product: Product) => {
   // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
+  // 並將後端狀態值轉換為前端狀態值
+  let status = product.status
+  if (status === 'ACTIVE') {
+    status = 'PUBLISHED'
+  } else if (status === 'INACTIVE') {
+    status = 'UNPUBLISHED'
+  }
+  // DRAFT 保持不變
+  
   form.value = {
     ...product,
+    status: status as 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED',
     price: product.salePrice ?? product.basePrice ?? 0
   }
   showDialog.value = true
@@ -979,14 +1002,23 @@ const handleSubmit = async () => {
     payload.salePrice = form.value.price
     payload.costPrice = 0 // 必須給個預設值，否則後端 @DecimalMin 檢查可能會擋
 
-    // 3. 移除後端不認識的欄位
+    // 3. 狀態值轉換：將前端狀態值轉換為後端可接受的狀態值
+    // 前端: PUBLISHED/UNPUBLISHED  -> 後端: ACTIVE/INACTIVE
+    if (payload.status === 'PUBLISHED') {
+      payload.status = 'ACTIVE'
+    } else if (payload.status === 'UNPUBLISHED') {
+      payload.status = 'INACTIVE'
+    }
+    // DRAFT 保持不變
+
+    // 4. 移除後端不認識的欄位
     delete payload.price // 後端沒有 'price' 欄位，刪掉避免報錯
 
     // !!! 注意 !!!
     // 如果您還沒在 Java DTO 加入 'stock' 欄位，請把下面這行取消註解，否則後端會報錯
     // delete payload.stock
 
-    // 4. 先創建或更新商品（需要先有商品ID才能添加圖片）
+    // 5. 先創建或更新商品（需要先有商品ID才能添加圖片）
     let productId = form.value.id
     if (!productId) {
       const response = await productApi.createProduct(payload)
@@ -999,7 +1031,7 @@ const handleSubmit = async () => {
       await productApi.updateProduct(productId, payload)
     }
 
-    // 5. 處理直接上傳的圖片（需要商品ID）
+    // 6. 處理直接上傳的圖片（需要商品ID）
     let uploadedImageId: number | null = null
     if (productImage.value && productId) {
       // 確保預設相冊存在
@@ -1032,7 +1064,7 @@ const handleSubmit = async () => {
       }
     }
 
-    // 6. 收集所有要添加到商品的圖片ID（包括新上傳的和已選中的相冊圖片）
+    // 7. 收集所有要添加到商品的圖片ID（包括新上傳的和已選中的相冊圖片）
     const imageIdsToAdd: number[] = []
     
     // 添加新上傳的圖片ID
@@ -1047,7 +1079,7 @@ const handleSubmit = async () => {
     
     imageIdsToAdd.push(...selectedImageIds)
 
-    // 7. 將所有圖片添加到商品
+    // 8. 將所有圖片添加到商品
     if (productId && imageIdsToAdd.length > 0) {
       try {
         await productApi.addAlbumImages(productId, imageIdsToAdd)
@@ -1061,14 +1093,14 @@ const handleSubmit = async () => {
       }
     }
 
-    // 8. 顯示成功訊息
+    // 9. 顯示成功訊息
     $q.notify({
       type: 'positive',
       message: productId ? '更新成功' : '創建成功',
       position: 'top'
     })
 
-    // 9. 重置圖片上傳欄位
+    // 10. 重置圖片上傳欄位
     productImage.value = null
 
     loadProducts()

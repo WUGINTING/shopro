@@ -41,7 +41,6 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "取得商品詳情")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<ProductDTO> getProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
         return ApiResponse.success(productService.getProduct(id));
@@ -58,7 +57,6 @@ public class ProductController {
 
     @GetMapping
     @Operation(summary = "分頁查詢商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<Page<ProductDTO>> listProducts(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
@@ -68,7 +66,6 @@ public class ProductController {
 
     @GetMapping("/category/{categoryId}")
     @Operation(summary = "依分類查詢商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<Page<ProductDTO>> listProductsByCategory(
             @Parameter(description = "分類 ID") @PathVariable Long categoryId,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
@@ -79,7 +76,6 @@ public class ProductController {
 
     @GetMapping("/status/{status}")
     @Operation(summary = "依狀態查詢商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<Page<ProductDTO>> listProductsByStatus(
             @Parameter(description = "商品狀態") @PathVariable ProductStatus status,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
@@ -90,7 +86,6 @@ public class ProductController {
 
     @GetMapping("/search")
     @Operation(summary = "搜尋商品")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<Page<ProductDTO>> searchProducts(
             @Parameter(description = "關鍵字") @RequestParam String keyword,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,

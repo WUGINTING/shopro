@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { Notify } from 'quasar';
+import cookies from './cookies.js';
+import { TokenKey } from '../config/constant.js';
 
 // 建立 axios 實例
 const service = axios.create({
@@ -13,11 +15,11 @@ const service = axios.create({
 // 請求攔截器
 service.interceptors.request.use(
   config => {
-    // 可以在這裡加入 token
-    // const token = getToken();
-    // if (token) {
-    //   config.headers['Authorization'] = `Bearer ${token}`;
-    // }
+    // 從 cookies 獲取 token 並添加到請求標頭
+    const token = cookies.get(TokenKey);
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   error => {

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,12 +23,14 @@ public class ProductSpecificationController {
 
     @PostMapping
     @Operation(summary = "添加商品規格")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<ProductSpecificationDTO> addSpecification(@Valid @RequestBody ProductSpecificationDTO dto) {
         return ApiResponse.success("規格已添加", specificationService.addSpecification(dto));
     }
 
     @PostMapping("/batch")
     @Operation(summary = "批量創建商品規格")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<List<ProductSpecificationDTO>> batchAddSpecifications(
             @Valid @RequestBody List<ProductSpecificationDTO> dtos) {
         return ApiResponse.success("規格已批量創建", specificationService.batchAddSpecifications(dtos));
@@ -35,6 +38,7 @@ public class ProductSpecificationController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新商品規格")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<ProductSpecificationDTO> updateSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id,
             @Valid @RequestBody ProductSpecificationDTO dto) {
@@ -43,6 +47,7 @@ public class ProductSpecificationController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除商品規格")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> deleteSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id) {
         specificationService.deleteSpecification(id);

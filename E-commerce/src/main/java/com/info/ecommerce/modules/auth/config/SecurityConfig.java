@@ -43,7 +43,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
-                                "/api/albums/images/**"  // 允許公開訪問相冊圖片
+                                "/api/albums/images/**",  // 允許公開訪問相冊圖片
+                                "/api/products",  // 商品列表（公開）
+                                "/api/products/**",  // 商品詳情、分類、狀態、搜尋（公開）
+                                "/api/product-categories",  // 商品分類列表（公開）
+                                "/api/product-categories/**",  // 商品分類詳情、啟用、頂層、子分類（公開）
+                                "/api/product-specifications/**"  // 商品規格查詢（公開，POST/PUT/DELETE 方法由 @PreAuthorize 保護）
                         ).permitAll()
                         // 管理員專屬 API
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

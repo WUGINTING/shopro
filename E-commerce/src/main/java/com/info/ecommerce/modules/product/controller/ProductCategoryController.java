@@ -39,7 +39,6 @@ public class ProductCategoryController {
 
     @GetMapping("/{id}")
     @Operation(summary = "取得分類詳情")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<ProductCategoryDTO> getCategory(
             @Parameter(description = "分類 ID") @PathVariable Long id) {
         return ApiResponse.success(categoryService.getCategory(id));
@@ -56,28 +55,24 @@ public class ProductCategoryController {
 
     @GetMapping
     @Operation(summary = "取得所有分類")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<List<ProductCategoryDTO>> listAllCategories() {
         return ApiResponse.success(categoryService.listAllCategories());
     }
 
     @GetMapping("/enabled")
     @Operation(summary = "取得已啟用的分類")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<List<ProductCategoryDTO>> listEnabledCategories() {
         return ApiResponse.success(categoryService.listEnabledCategories());
     }
 
     @GetMapping("/top")
     @Operation(summary = "取得頂層分類")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<List<ProductCategoryDTO>> listTopCategories() {
         return ApiResponse.success(categoryService.listTopCategories());
     }
 
     @GetMapping("/{parentId}/children")
     @Operation(summary = "取得子分類")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<List<ProductCategoryDTO>> listSubCategories(
             @Parameter(description = "父分類 ID") @PathVariable Long parentId) {
         return ApiResponse.success(categoryService.listSubCategories(parentId));
