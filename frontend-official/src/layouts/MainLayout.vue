@@ -23,7 +23,7 @@
           icon="menu"
           aria-label="Menu"
           class="lt-md"
-          @click="leftDrawerOpen = !leftDrawerOpen"
+          @click="windowStore.toggleLeftDrawer()"
         />
         <q-btn
           flat
@@ -32,7 +32,7 @@
           icon="design_services"
           aria-label="Design Menu"
           class="lt-md q-ml-sm"
-          @click="rightDrawerOpen = !rightDrawerOpen"
+          @click="windowStore.toggleRightDrawer()"
         />
       </q-toolbar>
     </q-header>
@@ -272,9 +272,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
 import ScrollToTopBtn from 'src/components/ScrollToTopBtn.vue';
+import { useWindowStore } from 'src/store/modules/window.js';
 import {
   leftMenuItems,
   rightMenuItems,
@@ -286,8 +288,18 @@ import {
 const img_logo = '/icons/logo.jpg';
 const img_logo_shop = '/icons/logo_shop.png';
 
-const leftDrawerOpen = ref(true);
-const rightDrawerOpen = ref(true);
+// 使用 window store
+const windowStore = useWindowStore();
+const { leftDrawerOpen, rightDrawerOpen } = storeToRefs(windowStore);
+
+// 初始化和清理
+onMounted(() => {
+  windowStore.init();
+});
+
+onUnmounted(() => {
+  windowStore.cleanup();
+});
 
 // 为 socialLinks 添加 action
 const socialLinksWithActions = socialLinks.map(link => ({

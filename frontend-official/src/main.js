@@ -13,6 +13,9 @@ import 'src/css/app.scss';
 // Import router
 import router from 'src/router/index';
 
+// Import Pinia store
+import pinia from 'src/store/index';
+
 // Import root component
 import App from './App.vue';
 
@@ -24,6 +27,7 @@ myApp.use(Quasar, {
   },
 });
 
+myApp.use(pinia);
 myApp.use(router);
 
 myApp.mount('#q-app');
