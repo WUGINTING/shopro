@@ -21,13 +21,15 @@ import App from './App.vue';
 
 const myApp = createApp(App);
 
+// 必須先註冊 Pinia，因為 router 或組件可能會在初始化時使用 store
+myApp.use(pinia);
+
 myApp.use(Quasar, {
   plugins: {
     // import Quasar plugins here
   },
 });
 
-myApp.use(pinia);
 myApp.use(router);
 
 myApp.mount('#q-app');

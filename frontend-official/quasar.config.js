@@ -11,7 +11,7 @@ export default configure(function (ctx) {
   return {
     supportTS: false,
 
-    boot: [],
+    boot: ['pinia'],
 
     css: ['app.scss', 'animate.scss'],
 
