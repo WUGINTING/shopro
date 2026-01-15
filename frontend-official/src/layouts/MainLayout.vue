@@ -40,9 +40,10 @@
     <!-- 側邊選單 -->
     <q-drawer
       v-model="leftDrawerOpen"
-      show-if-above
       :width="280"
       :breakpoint="1024"
+      :overlay="isMobile"
+      :behavior="isMobile ? 'mobile' : 'desktop'"
       bordered
       class="bg-white"
     >
@@ -110,10 +111,11 @@
     <!-- 右側選單 -->
     <q-drawer
       v-model="rightDrawerOpen"
-      show-if-above
       side="right"
       :width="280"
       :breakpoint="1024"
+      :overlay="isMobile"
+      :behavior="isMobile ? 'mobile' : 'desktop'"
       bordered
       class="bg-white"
     >
@@ -133,7 +135,7 @@
 
         <q-scroll-area class="drawer-scroll">
           <q-list>
-            <template v-for="item in rightMenuItems" :key="item.name">
+            <div v-for="item in rightMenuItems" :key="item.name">
               <q-expansion-item
                 v-if="item.children"
                 :label="item.label"
@@ -191,7 +193,7 @@
                   }}</q-item-label>
                 </q-item-section>
               </q-item>
-            </template>
+            </div>
           </q-list>
         </q-scroll-area>
 
@@ -290,7 +292,7 @@ const img_logo_shop = '/icons/logo_shop.png';
 
 // 使用 window store
 const windowStore = useWindowStore();
-const { leftDrawerOpen, rightDrawerOpen } = storeToRefs(windowStore);
+const { leftDrawerOpen, rightDrawerOpen, isMobile } = storeToRefs(windowStore);
 
 // 初始化和清理
 onMounted(() => {
@@ -394,6 +396,10 @@ $white-hover: rgba(255, 255, 255, 0.2);
 .q-drawer {
   border-right: 1px solid rgba(0, 0, 0, 0.05);
   border-left: 1px solid rgba(0, 0, 0, 0.05);
+  
+  // 保持絲滑的過渡動畫
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .drawer-content {
@@ -412,6 +418,8 @@ $white-hover: rgba(255, 255, 255, 0.2);
 }
 
 .q-item {
+  transition: background 0.2s ease, color 0.2s ease;
+  
   &:hover {
     background: $primary-hover;
   }
@@ -424,6 +432,8 @@ $white-hover: rgba(255, 255, 255, 0.2);
 .social-btn-drawer {
   min-width: 40px;
   min-height: 40px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  
   &:hover {
     transform: scale(1.1);
   }

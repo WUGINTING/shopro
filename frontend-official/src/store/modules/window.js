@@ -19,26 +19,6 @@ export const useWindowStore = defineStore('window', () => {
   // 計算屬性：是否為手機版
   const isMobile = computed(() => windowWidth.value < BREAKPOINT);
   
-  // 更新視窗尺寸
-  const updateWindowSize = () => {
-    const newWidth = window.innerWidth;
-    const oldWidth = windowWidth.value;
-    
-    windowWidth.value = newWidth;
-    windowHeight.value = window.innerHeight;
-    
-    // 當從手機版切換到桌面版時，自動打開 drawer
-    if (oldWidth < BREAKPOINT && newWidth >= BREAKPOINT) {
-      leftDrawerOpen.value = true;
-      rightDrawerOpen.value = true;
-    }
-    // 當從桌面版切換到手機版時，自動關閉 drawer
-    else if (oldWidth >= BREAKPOINT && newWidth < BREAKPOINT) {
-      leftDrawerOpen.value = false;
-      rightDrawerOpen.value = false;
-    }
-  };
-  
   // 初始化 drawer 狀態（根據當前視窗大小）
   const initDrawerState = () => {
     if (isDesktop.value) {
@@ -50,14 +30,26 @@ export const useWindowStore = defineStore('window', () => {
     }
   };
   
-  // 切換左側 drawer
+  // 切換左側 drawer (手機版時關閉右側)
   const toggleLeftDrawer = () => {
-    leftDrawerOpen.value = !leftDrawerOpen.value;
+    const willOpen = !leftDrawerOpen.value;
+    leftDrawerOpen.value = willOpen;
+    
+    // 手機版且左側要開啟時，關閉右側
+    if (isMobile.value && willOpen) {
+      rightDrawerOpen.value = false;
+    }
   };
   
-  // 切換右側 drawer
+  // 切換右側 drawer (手機版時關閉左側)
   const toggleRightDrawer = () => {
-    rightDrawerOpen.value = !rightDrawerOpen.value;
+    const willOpen = !rightDrawerOpen.value;
+    rightDrawerOpen.value = willOpen;
+    
+    // 手機版且右側要開啟時，關閉左側
+    if (isMobile.value && willOpen) {
+      leftDrawerOpen.value = false;
+    }
   };
   
   // 關閉左側 drawer
@@ -70,36 +62,83 @@ export const useWindowStore = defineStore('window', () => {
     rightDrawerOpen.value = false;
   };
   
-  // 開啟左側 drawer
+  // 開啟左側 drawer (手機版時關閉右側)
   const openLeftDrawer = () => {
     leftDrawerOpen.value = true;
+    if (isMobile.value) {
+      rightDrawerOpen.value = false;
+    }
   };
   
-  // 開啟右側 drawer
+  // 開啟右側 drawer (手機版時關閉左側)
   const openRightDrawer = () => {
     rightDrawerOpen.value = true;
+    if (isMobile.value) {
+      leftDrawerOpen.value = false;
+    }
   };
   
-  // 監聽視窗大小變化
+  // 使用 matchMedia 監聽 breakpoint 變化（立即響應）
+  let mediaQuery = null;
+  const handleBreakpointChange = (e) => {
+    const isNowDesktop = e.matches; // matches = true 表示 >= 1024px
+    const wasDesktop = isDesktop.value;
+    
+    if (!wasDesktop && isNowDesktop) {
+      // 從手機版切換到桌面版：立即打開兩側 drawer
+      leftDrawerOpen.value = true;
+      rightDrawerOpen.value = true;
+    } else if (wasDesktop && !isNowDesktop) {
+      // 從桌面版切換到手機版：立即關閉兩側 drawer
+      leftDrawerOpen.value = false;
+      rightDrawerOpen.value = false;
+    }
+  };
+  
+  // 監聽視窗大小變化（用於更新寬高，使用較短的 debounce）
   let resizeTimer = null;
   const handleResize = () => {
-    // 使用 debounce 避免過度觸發
+    // 使用 debounce 避免過度觸發，但縮短延遲提升響應速度
     if (resizeTimer) {
       clearTimeout(resizeTimer);
     }
     resizeTimer = setTimeout(() => {
-      updateWindowSize();
-    }, 150);
+      windowWidth.value = window.innerWidth;
+      windowHeight.value = window.innerHeight;
+    }, 100); // 從 150ms 減少到 100ms
   };
   
   // 初始化（在組件掛載時調用）
   const init = () => {
     initDrawerState();
+    
+    // 使用 matchMedia 監聽 breakpoint 變化（無延遲）
+    mediaQuery = window.matchMedia(`(min-width: ${BREAKPOINT}px)`);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleBreakpointChange);
+    } else {
+      // 兼容舊版瀏覽器
+      mediaQuery.addListener(handleBreakpointChange);
+    }
+    
+    // 監聽視窗大小變化（更新寬高）
     window.addEventListener('resize', handleResize);
   };
   
   // 清理（在組件卸載時調用）
   const cleanup = () => {
+    // 移除 matchMedia 監聽
+    if (mediaQuery) {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleBreakpointChange);
+      } else {
+        // 兼容舊版瀏覽器
+        mediaQuery.removeListener(handleBreakpointChange);
+      }
+      mediaQuery = null;
+    }
+    
+    // 移除 resize 監聽
     window.removeEventListener('resize', handleResize);
     if (resizeTimer) {
       clearTimeout(resizeTimer);
