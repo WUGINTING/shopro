@@ -307,7 +307,7 @@ export const features = [
 ];
 
 // 精選項目 (IndexPage.vue)
-export const featuredDishes = [
+export const featuredServices = [
   {
     name: '企業形象網站',
     description: '專業企業官網設計，提升品牌形象與網路曝光度',
@@ -567,110 +567,110 @@ export const faqData = {
 // 服務分類 (ServicePage.vue)
 export const serviceCategories = [
   {
-    id: 'yakitori',
-    name: '燒烤串燒',
-    description: '傳統炭火燒烤，保留食材原味',
+    id: 'web-design',
+    name: '網站設計',
+    description: '客製化網站設計，打造獨特品牌形象',
     services: [
       {
-        name: '招牌牛舌',
-        description: '厚切牛舌搭配特調醬料，口感Q彈有嚼勁',
-        price: 'NT$ 280',
+        name: '企業形象網站',
+        description: '專業企業官網設計，提升品牌形象與網路曝光度，打造專屬數位門面',
+        price: 'NT$ 25,000起',
         image:
-          'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '澳洲牛舌、海鹽、胡椒、特製醬料',
+          'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: 'RWD響應式設計、CMS內容管理系統、SEO基礎優化、SSL安全憑證',
         allergens: '無',
       },
       {
-        name: '雞腿肉串',
-        description: '嫩煎雞腿肉，外酥內嫩，香氣撲鼻',
-        price: 'NT$ 180',
+        name: '電商購物網站',
+        description: '完整的線上購物系統，包含購物車、金流串接與訂單管理功能',
+        price: 'NT$ 50,000起',
         image:
-          'https://images.unsplash.com/photo-1606728035253-49e8a23146de?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '台灣土雞腿肉、蒜泥、醬油',
-        allergens: '含大豆',
+          'https://images.unsplash.com/photo-1557821552-17105176677c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '會員系統、購物車功能、金流串接、訂單管理、庫存管理',
+        allergens: '無',
       },
       {
-        name: '豚五花串',
-        description: '油花分佈均勻的豬五花，炭火香味濃郁',
-        price: 'NT$ 200',
+        name: '一頁式網站',
+        description: '簡潔有力的單頁設計，適合產品展示或活動宣傳，快速上線',
+        price: 'NT$ 15,000起',
         image:
-          'https://images.unsplash.com/photo-1544025162-d76694265947?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '台灣豬五花肉、味噌醬',
-        allergens: '含大豆',
-      },
-    ],
-  },
-  {
-    id: 'sashimi',
-    name: '新鮮刺身',
-    description: '當日現撈海鮮，新鮮度第一',
-    services: [
-      {
-        name: '綜合刺身拼盤',
-        description: '鮭魚、鮪魚、甜蝦等多種海鮮組合',
-        price: 'NT$ 880',
-        image:
-          'https://images.unsplash.com/photo-1563612220849-3c44be9cb414?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '鮭魚、鮪魚、甜蝦、海膽、山葵',
-        allergens: '含甲殼類',
-      },
-      {
-        name: '炙燒鮭魚',
-        description: '表面炙燒的新鮮鮭魚，外焦內嫩',
-        price: 'NT$ 380',
-        image:
-          'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '挪威鮭魚、檸檬、海鹽',
+          'https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '視覺設計、動態效果、表單功能、行動裝置優化',
         allergens: '無',
       },
     ],
   },
   {
-    id: 'hot_dishes',
-    name: '熱食料理',
-    description: '溫暖身心的熱騰騰料理',
+    id: 'graphic-design',
+    name: '平面設計',
+    description: '專業視覺設計，強化品牌識別',
     services: [
       {
-        name: '特色茶碗蒸',
-        description: '嫩滑茶碗蒸配蛤蜊蝦仁，口感層次豐富',
-        price: 'NT$ 180',
+        name: 'LOGO設計',
+        description: '專業品牌標誌設計，創造獨特且具識別度的視覺形象',
+        price: 'NT$ 8,000起',
         image:
-          'https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '雞蛋、蛤蜊、蝦仁��高湯',
-        allergens: '含蛋類、甲殼類',
+          'https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '品牌分析、創意發想、3-5款初稿提案、修改調整、完稿交付',
+        allergens: '無',
       },
       {
-        name: '日式炸雞唐揚',
-        description: '酥脆外皮包裹鮮嫩雞肉，搭配特製沾醬',
-        price: 'NT$ 220',
+        name: '品牌識別設計',
+        description: '完整的品牌視覺規劃，建立一致性的品牌形象系統',
+        price: 'NT$ 20,000起',
         image:
-          'https://images.unsplash.com/photo-1562967916-eb82221dfb38?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '雞腿肉、太白粉、醬油、薑汁',
-        allergens: '含麩質、大豆',
+          'https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: 'LOGO設計、名片設計、信封信紙、品牌色彩計畫、字體規範',
+        allergens: '無',
       },
     ],
   },
   {
-    id: 'appetizers',
-    name: '開胃小菜',
-    description: '精緻小菜，開啟味蕾',
+    id: 'ui-ux',
+    name: 'UI/UX設計',
+    description: '使用者體驗設計，提升產品互動品質',
     services: [
       {
-        name: '涼拌海帶絲',
-        description: '清爽海帶絲配黃瓜，口感爽脆',
-        price: 'NT$ 120',
+        name: 'APP介面設計',
+        description: '專業的手機APP介面設計，提供流暢的使用者體驗',
+        price: 'NT$ 30,000起',
         image:
-          'https://images.unsplash.com/photo-1565299507177-b0ac66763828?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '海帶絲、黃瓜、芝麻油、醋',
-        allergens: '含芝麻',
+          'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '使用者研究、介面設計、互動原型、視覺設計、設計規範文件',
+        allergens: '無',
       },
       {
-        name: '醃製蘿蔔',
-        description: '傳統日式醃製蘿蔔，酸甜開胃',
-        price: 'NT$ 100',
+        name: '網站UX優化',
+        description: '改善網站使用者體驗，提升轉換率與使用者滿意度',
+        price: 'NT$ 18,000起',
         image:
-          'https://images.unsplash.com/photo-1606131731446-54db7c26c24b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '白蘿蔔、米醋、糖、鹽',
+          'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '網站分析、使用者測試、介面優化建議、互動流程改善',
+        allergens: '無',
+      },
+    ],
+  },
+  {
+    id: 'digital-marketing',
+    name: '數位行銷',
+    description: '整合行銷服務，提升品牌能見度',
+    services: [
+      {
+        name: 'SEO優化服務',
+        description: '搜尋引擎優化，提升網站排名，增加自然流量與曝光機會',
+        price: 'NT$ 12,000/月',
+        image:
+          'https://images.unsplash.com/photo-1571721795195-a2ca2d3370a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '關鍵字研究、內容優化、技術SEO、反向連結建立、數據分析',
+        allergens: '無',
+      },
+      {
+        name: '社群媒體管理',
+        description: '專業社群經營，提升品牌互動與粉絲黏著度',
+        price: 'NT$ 15,000/月',
+        image:
+          'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+        ingredients: '內容規劃、貼文設計、社群互動、數據追蹤、月度報告',
         allergens: '無',
       },
     ],
@@ -680,37 +680,37 @@ export const serviceCategories = [
 // 服務方案 (ServicePage.vue)
 export const servicePackages = [
   {
-    name: '精緻聚會套餐',
-    description: '適合小型聚會，精選經典菜色搭配',
-    people: '8-12',
-    duration: '2-3小時',
+    name: '基礎網站方案',
+    description: '適合小型企業與個人工作室，提供專業形象網站',
+    people: '小型企業',
+    duration: '3-4週',
     features: 8,
-    price: 'NT$ 4,800',
+    price: 'NT$ 35,000',
     popular: true,
     image:
-      'https://images.unsplash.com/photo-1574484284002-952d92456975?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
   {
-    name: '豪華宴會套餐',
-    description: '大型活動首選，豐富菜色滿足所有賓客',
-    people: '20-30',
-    duration: '3-4小時',
+    name: '進階電商方案',
+    description: '完整電商平台，含購物車、金流串接、會員系統',
+    people: '中型企業',
+    duration: '6-8週',
     features: 15,
-    price: 'NT$ 12,800',
+    price: 'NT$ 98,000',
     popular: false,
     image:
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
   {
-    name: '企業會議套餐',
-    description: '商務會議專用，簡約精緻不失禮貌',
-    people: '15-25',
-    duration: '2小時',
-    features: 10,
-    price: 'NT$ 8,500',
+    name: '企業旗艦方案',
+    description: '大型企業專用，客製化功能與完整技術支援',
+    people: '大型企業',
+    duration: '10-12週',
+    features: 20,
+    price: 'NT$ 180,000',
     popular: false,
     image:
-      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
 ];
 

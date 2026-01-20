@@ -1,10 +1,10 @@
 <template>
   <q-page>
-    <!-- 餐點介紹英雄區 -->
+    <!-- 印刷設計服務英雄區 -->
     <section class="hero-section hero-medium hero-orange relative-position">
       <div class="hero-background">
         <q-img
-          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+          src="https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
           class="full-height full-width"
           style="height: 400px"
         />
@@ -13,13 +13,13 @@
 
       <div class="hero-content absolute-center text-center">
         <div class="fade-in-up">
-          <h1 class="text-h1 text-weight-bold q-mb-md text-shadow">精緻餐點</h1>
-          <p class="text-h5 text-shadow">嚴選食材，匠心烹調每一道菜</p>
+          <h1 class="text-h1 text-weight-bold q-mb-md text-shadow">印刷設計服務</h1>
+          <p class="text-h5 text-shadow">專業印刷品設計，打造精緻視覺呈現</p>
         </div>
       </div>
     </section>
 
-    <!-- 菜單分類 -->
+    <!-- 設計服務分類 -->
     <section class="section-padding">
       <div class="container q-mx-auto">
         <!-- 分類選單 -->
@@ -41,7 +41,7 @@
           </q-tabs>
         </div>
 
-        <!-- 餐點展示 -->
+        <!-- 服務展示 -->
         <div class="menu-content">
           <div
             v-for="category in categories"
@@ -230,7 +230,7 @@ import { serviceCategories, servicePackages } from 'src/utils/testData.js';
 
 const router = useRouter();
 const $q = useQuasar();
-const activeCategory = ref('yakitori');
+const activeCategory = ref('web-design');
 const serviceDialog = ref(false);
 const selectedService = ref(null);
 
@@ -350,19 +350,19 @@ const categories_old = [
 ];
 */
 
-const openServiceDetails = service => {
+const openServiceDialog = service => {
   selectedService.value = service;
   serviceDialog.value = true;
 };
 
 const addToServiceList = () => {
   $q.notify({
-    message: '已加入外燴清單！',
+    message: '已加入詢問清單！',
     color: 'primary',
     position: 'top',
     timeout: 2000,
   });
-  dishDialog.value = false;
+  serviceDialog.value = false;
 };
 
 const contactUs = () => {

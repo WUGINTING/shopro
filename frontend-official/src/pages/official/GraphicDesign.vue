@@ -4,7 +4,7 @@
     <section class="hero-section hero-medium hero-orange relative-position">
       <div class="hero-background">
         <q-img
-          src="https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+          src="https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
           class="full-height full-width"
           style="height: 400px"
         />
@@ -19,7 +19,7 @@
       </div>
     </section>
 
-    <!-- 菜單分類 -->
+    <!-- 設計服務分類 -->
     <section class="section-padding">
       <div class="container q-mx-auto">
         <!-- 分類選單 -->
@@ -59,28 +59,28 @@
 
             <div class="row q-gutter-lg">
               <div
-                v-for="(dish, index) in category.dishes"
+                v-for="(service, index) in category.services"
                 :key="index"
                 class="col-12 col-sm-6 col-lg-4 slide-in"
                 :style="{ 'animation-delay': `${index * 0.1}s` }"
               >
-                <menu-card :dish="dish" @click="openDishDialog(dish)" />
+                <menu-card :dish="service" @click="openDishDialog(service)" />
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 外燴套餐推薦 -->
+        <!-- 服務方案推薦 -->
         <section class="section-padding">
           <div class="text-center q-mb-xl fade-in-up">
-            <h2 class="text-h2 text-weight-bold q-mb-md">外燴套餐推薦</h2>
+            <h2 class="text-h2 text-weight-bold q-mb-md">服務方案推薦</h2>
             <div class="story-divider q-mx-auto q-mb-lg"></div>
-            <p class="text-body1 text-grey-4">專為聚會活動設計的套餐組合</p>
+            <p class="text-body1 text-grey-4">為您打造專屬的設計解決方案</p>
           </div>
 
           <div class="row q-gutter-lg justify-center">
             <div
-              v-for="(package_, index) in cateringPackages"
+              v-for="(package_, index) in servicePackages"
               :key="index"
               class="col-12 col-md-6 col-lg-4 fade-in-up"
               :style="{ 'animation-delay': `${index * 0.2}s` }"
@@ -130,8 +130,8 @@
                       <span class="text-body2">{{ package_.duration }}</span>
                     </div>
                     <div class="detail-item">
-                      <Icon icon="mdi:food" class="text-secondary q-mr-sm" />
-                      <span class="text-body2">{{ package_.dishes }}道菜</span>
+                      <Icon icon="mdi:palette" class="text-secondary q-mr-sm" />
+                      <span class="text-body2">{{ package_.features }}項功能</span>
                     </div>
                   </div>
 
@@ -151,7 +151,7 @@
       </div>
     </section>
 
-    <!-- 餐點詳情對話框 -->
+    <!-- 服務詳情對話框 -->
     <q-dialog v-model="dishDialog" class="dish-dialog">
       <q-card
         class="glass dish-card"
@@ -226,15 +226,15 @@ import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { Icon } from '@iconify/vue';
 import MenuCard from 'src/components/official/MenuCard.vue';
-import { menuCategories, cateringPackages } from 'src/utils/testData.js';
+import { serviceCategories, servicePackages } from 'src/utils/testData.js';
 
 const router = useRouter();
 const $q = useQuasar();
-const activeCategory = ref('yakitori');
+const activeCategory = ref('web-design');
 const dishDialog = ref(false);
 const selectedDish = ref(null);
 
-const categories = menuCategories;
+const categories = serviceCategories;
 
 /*
 const categories_old = [

@@ -4,7 +4,7 @@
     <section class="hero-section hero-medium hero-red relative-position">
       <div class="hero-background">
         <q-img
-          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
           class="full-height full-width"
           style="height: 400px"
         />
