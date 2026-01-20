@@ -8,22 +8,18 @@ const routes = [
         path: '/about',
         component: () => import('pages/official/AboutPage.vue'),
       },
-      { path: '/menu', component: () => import('pages/official/MenuPage.vue') },
+      { path: '/graphic-design', component: () => import('pages/official/GraphicDesign.vue') },
+      { path: '/print-design', component: () => import('pages/official/PrintDesign.vue') },
       {
-        path: '/cases',
-        component: () => import('pages/official/CasesPage.vue'),
+        path: '/web-design',
+        component: () => import('pages/official/WebDesign.vue'),
       },
       {
         path: '/contact',
         component: () => import('pages/official/ContactPage.vue'),
       },
       { path: '/faq', component: () => import('pages/official/FaqPage.vue') },
-    ],
-  },
-  {
-    path: '/shop',
-    component: () => import('layouts/MainLayoutShop.vue'),
-    children: [
+      // 商店頁面整合到 MainLayout
       { path: '/shop', component: () => import('pages/shop/IndexPage.vue') },
       {
         path: '/shop/introduce',

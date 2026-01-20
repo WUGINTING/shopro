@@ -9,7 +9,7 @@
           <h2 class="text-h2 text-weight-bold q-mb-md">伸遠國際特色</h2>
           <div class="story-divider q-mx-auto q-mb-lg"></div>
           <p class="text-body1 text-grey-4 max-width-md q-mx-auto">
-            傳承家族料理精神，結合現代創新手法，為您打造最難忘的美食體驗
+            專業網站設計團隊，結合創新技術，為您打造最優質的數位品牌體驗
           </p>
         </div>
 
@@ -46,22 +46,22 @@
         <div class="row items-center q-gutter-xl">
           <div class="col-12 col-md-5 fade-in-up">
             <h2 class="text-h2 text-weight-bold text-orange-8 q-mb-lg">
-              專業外燴服務
+              專業網站設計服務
             </h2>
             <p class="text-body1 text-grey-4 q-mb-md">
-              不論是企業活動、私人聚會，或是特殊節慶，我們都能為您量身打造最適合的餐飲服務。
+              不論是企業形象網站、購物平台，或是客製化系統，我們都能為您量身打造最適合的數位解決方案。
             </p>
             <div class="q-mb-md">
               <Icon icon="mdi:check" class="text-primary q-mr-sm" />
-              <span>專業廚師團隊到府服務</span>
+              <span>專業設計與開發團隊</span>
             </div>
             <div class="q-mb-md">
               <Icon icon="mdi:check" class="text-primary q-mr-sm" />
-              <span>新鮮食材當日採購</span>
+              <span>最新技術架構與框架</span>
             </div>
             <div class="q-mb-md">
               <Icon icon="mdi:check" class="text-primary q-mr-sm" />
-              <span>客製化菜單設計</span>
+              <span>客製化功能開發</span>
             </div>
           </div>
 
@@ -76,8 +76,8 @@
               <div
                 class="absolute-bottom q-pa-md bg-gradient-primary text-white"
               >
-                <div class="text-h6 text-weight-bold">專業外燴服務</div>
-                <div class="text-caption">讓每個聚會都成為美好回憶</div>
+                <div class="text-h6 text-weight-bold">專業網站設計</div>
+                <div class="text-caption">讓每個品牌都有獨特的數位形象</div>
               </div>
             </div>
           </div>
@@ -89,14 +89,14 @@
     <section class="section-padding">
       <div class="container q-mx-auto">
         <div class="text-center q-mb-xl fade-in-up">
-          <h2 class="text-h2 text-weight-bold q-mb-md">精選餐點</h2>
+          <h2 class="text-h2 text-weight-bold q-mb-md">精選服務</h2>
           <div class="story-divider q-mx-auto q-mb-lg"></div>
-          <p class="text-body1 text-grey-4">嚴選優質食材，用心烹調每一道菜</p>
+          <p class="text-body1 text-grey-4">專業技術與用心服務，打造優質網站</p>
         </div>
 
         <div class="row q-gutter-lg justify-center">
           <div
-            v-for="(dish, index) in featuredDishes"
+            v-for="(service, index) in featuredServices"
             :key="index"
             class="col-12 col-sm-6 col-md-4 slide-in"
             :style="{ 'animation-delay': `${index * 0.15}s` }"
@@ -108,14 +108,14 @@
               @click="router.push('/menu')"
             >
               <div class="image-container">
-                <q-img :src="dish.image" class="responsive-img" loading="lazy">
+                <q-img :src="service.image" class="responsive-img" loading="lazy">
                   <div class="absolute-bottom-right q-pa-sm">
                     <q-chip
                       :color="
-                        dish.category === '招牌' ? 'primary' : 'secondary'
+                        service.category === '熱門' ? 'primary' : 'secondary'
                       "
                       text-color="white"
-                      :label="dish.category"
+                      :label="service.category"
                     />
                   </div>
                 </q-img>
@@ -123,13 +123,13 @@
 
               <q-card-section class="q-pa-md">
                 <div class="text-h6 text-weight-bold q-mb-sm">
-                  {{ dish.name }}
+                  {{ service.name }}
                 </div>
                 <p class="text-body2 text-grey-4 q-mb-sm">
-                  {{ dish.description }}
+                  {{ service.description }}
                 </p>
                 <div class="text-h6 text-primary text-weight-bold">
-                  {{ dish.price }}
+                  {{ service.price }}
                 </div>
               </q-card-section>
             </q-card>
@@ -140,8 +140,8 @@
           <q-btn
             class="btn-secondary"
             size="lg"
-            label="查看完整菜單"
-            @click="router.push('/menu')"
+            label="查看更多服務"
+            @click="router.push('/web-design')"
           />
         </div>
       </div>
@@ -202,7 +202,7 @@
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import HeroCarousel from 'src/components/official/HeroCarousel.vue';
-import { features, featuredDishes, reviews } from 'src/utils/testData.js';
+import { features, featuredServices, reviews } from 'src/utils/testData.js';
 
 const router = useRouter();
 </script>

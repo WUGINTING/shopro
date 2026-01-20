@@ -1,6 +1,6 @@
-// ==================== 购物商城相关数据 ====================
+// ==================== 購物商城相關資料 ====================
 
-// 轮播图数据 (shop/IndexPage.vue)
+// 輪播圖資料 (shop/IndexPage.vue)
 export const shopHeroSlides = [
   {
     id: 1,
@@ -25,7 +25,7 @@ export const shopHeroSlides = [
   },
 ];
 
-// 弹窗广告数据 (shop/IndexPage.vue)
+// 彈窗廣告資料 (shop/IndexPage.vue)
 export const shopPopupData = {
   title: '歡迎光臨 遇日小舖',
   description: '註冊會員立即獲得 $100 購物金，首購再享免運優惠！',
@@ -33,7 +33,7 @@ export const shopPopupData = {
   buttonText: '立即領取',
 };
 
-// 优惠券数据 (shop/IndexPage.vue)
+// 優惠券資料 (shop/IndexPage.vue)
 export const shopCoupons = [
   {
     id: 1,
@@ -61,7 +61,7 @@ export const shopCoupons = [
   },
 ];
 
-// 热销商品数据 (shop/IndexPage.vue)
+// 熱銷商品資料 (shop/IndexPage.vue)
 export const shopHotProducts = [
   {
     id: 1,
@@ -110,7 +110,7 @@ export const shopHotProducts = [
   },
 ];
 
-// 最新商品数据 (shop/IndexPage.vue)
+// 最新商品資料 (shop/IndexPage.vue)
 export const shopNewProducts = [
   {
     id: 11,
@@ -156,7 +156,7 @@ export const shopNewProducts = [
   },
 ];
 
-// 商品列表数据 (shop/product/list.vue)
+// 商品列表資料 (shop/product/list.vue)
 export const shopAllProducts = [
   {
     id: 'bath-ball',
@@ -280,94 +280,94 @@ export const shopAllProducts = [
   },
 ];
 
-// ==================== 首页相关数据 ====================
+// ==================== 首頁相關資料 ====================
 
 // 特色功能 (IndexPage.vue)
 export const features = [
   {
-    icon: 'mdi:chef-hat',
-    title: '專業廚師',
-    description: '擁有豐富經驗的專業廚師團隊，傳承正宗日式料理技法',
+    icon: 'mdi:web',
+    title: '專業團隊',
+    description: '擁有豐富經驗的網站設計與開發團隊，打造頂尖數位解決方案',
   },
   {
-    icon: 'mdi:leaf',
-    title: '新鮮食材',
-    description: '堅持使用當日新鮮食材，確保每道菜品的最佳品質',
+    icon: 'mdi:responsive',
+    title: '響應式設計',
+    description: '確保網站在各種裝置上都能完美呈現，提供最佳使用體驗',
   },
   {
-    icon: 'mdi:home-heart',
-    title: '到府服務',
-    description: '提供專業到府外燴服務，讓您在家也能享受餐廳級料理',
+    icon: 'mdi:speedometer',
+    title: '高效能',
+    description: '採用最新技術架構，確保網站載入速度快速、運行流暢',
   },
   {
-    icon: 'mdi:star',
-    title: '客製菜單',
-    description: '根據客戶需求量身打造專屬菜單，滿足不同場合需求',
+    icon: 'mdi:cog-outline',
+    title: '客製化開發',
+    description: '根據客戶需求量身打造專屬解決方案，滿足不同產業需求',
   },
 ];
 
-// 精选菜品 (IndexPage.vue)
+// 精選項目 (IndexPage.vue)
 export const featuredDishes = [
   {
-    name: '招牌燒烤拼盤',
-    description: '精選牛舌、雞腿、豬五花等多種燒烤，搭配特製醬料',
-    price: 'NT$ 680',
-    category: '招牌',
+    name: '企業形象網站',
+    description: '專業企業官網設計，提升品牌形象與網路曝光度',
+    price: 'NT$ 25,000 起',
+    category: '熱門',
     image:
-      'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
   {
-    name: '鮮美刺身拼盤',
-    description: '當日現撈海鮮製作，包含鮭魚、鮪魚、甜蝦等',
-    price: 'NT$ 880',
-    category: '刺身',
+    name: '電商購物平台',
+    description: '完整的線上購物系統，包含金流串接與訂單管理功能',
+    price: 'NT$ 50,000 起',
+    category: '客製',
     image:
-      'https://images.unsplash.com/photo-1563612220849-3c44be9cb414?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1557821552-17105176677c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
   {
-    name: '特色茶碗蒸',
-    description: '嫩滑茶碗蒸配上蛤蜊、蝦仁，口感豐富層次分明',
-    price: 'NT$ 180',
-    category: '熱食',
+    name: 'RWD響應式網頁',
+    description: '跨平台完美呈現，手機、平板、電腦一次搞定',
+    price: 'NT$ 18,000 起',
+    category: '設計',
     image:
-      'https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
   },
 ];
 
-// 客户评价 (IndexPage.vue)
+// 客戶評價 (IndexPage.vue)
 export const reviews = [
   {
     name: '陳先生',
     rating: 5,
-    comment: '外燴服務非常專業，食物新鮮美味，賓客都讚不絕口！',
+    comment: '網站設計非常專業，頁面精美且功能完善，客戶反應都很好！',
     date: '2024年8月',
   },
   {
     name: '李小姐',
     rating: 5,
-    comment: '居酒屋氛圍很棒，料理道道精緻，是聚餐的好選擇。',
+    comment: '團隊很用心，從規劃到上線都很順利，是值得信賴的合作夥伴。',
     date: '2024年7月',
   },
   {
     name: '王經理',
     rating: 5,
-    comment: '公司活動選擇双台的外燴服務，同事們都很滿意，推薦！',
+    comment: '公司官網改版後，詢問度大增，網站效能也提升很多，推薦！',
     date: '2024年8月',
   },
 ];
 
-// ==================== 案例页面数据 ====================
+// ==================== 案例頁面資料 ====================
 
-// 分类选项 (CasesPage.vue)
+// 分類選項 (CasesPage.vue)
 export const caseCategoryOptions = [
   { label: '全部案例', value: 'all' },
-  { label: '企業活動', value: 'corporate' },
-  { label: '婚宴慶典', value: 'wedding' },
-  { label: '生日派對', value: 'birthday' },
-  { label: '私人聚會', value: 'private' },
+  { label: '企業網站', value: 'corporate' },
+  { label: '購物平台', value: 'ecommerce' },
+  { label: '客製系統', value: 'custom' },
+  { label: '形象網站', value: 'branding' },
 ];
 
-// 统计数据 (CasesPage.vue)
+// 統計數據 (CasesPage.vue)
 export const caseStatistics = [
   { number: '500+', label: '成功案例', icon: 'mdi:check-circle' },
   { number: '98%', label: '客戶滿意度', icon: 'mdi:heart' },
@@ -375,169 +375,169 @@ export const caseStatistics = [
   { number: '5', label: '專業年資', icon: 'mdi:star' },
 ];
 
-// 案例数据 (CasesPage.vue)
+// 案例資料 (CasesPage.vue)
 export const cases = [
   {
     id: 1,
-    title: '科技公司年末尾牙',
+    title: '科技公司企業官網',
     description:
-      '為科技公司提供300人的年末尾牙外燴服務，融合日式與台式料理，獲得員工一致好評。',
+      '為科技公司打造專業的企業形象網站，整合產品展示、最新消息與聯絡功能，提升品牌專業度。',
     category: 'corporate',
     image:
-      'https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     date: '2024-01-15',
     location: '台北信義區',
     guests: 300,
     budget: '150,000',
-    services: ['日式料理', '台式熱炒', '專業服務團隊', '現場料理表演'],
+    services: ['RWD響應式設計', 'CMS內容管理', 'SEO優化', '多語系支援'],
     gallery: [
-      'https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
     ],
   },
   {
     id: 2,
-    title: '浪漫戶外婚禮',
+    title: '精品電商購物平台',
     description:
-      '在陽明山上為新人打造夢幻的戶外婚禮宴席，精緻的擺盤與溫馨的氛圍讓賓客印象深刻。',
-    category: 'wedding',
+      '為精品品牌打造完整的線上購物系統，包含會員系統、購物車、金流串接與訂單管理。',
+    category: 'ecommerce',
     image:
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1557821552-17105176677c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     date: '2024-02-20',
-    location: '陽明山',
+    location: '台中',
     guests: 80,
-    budget: '120,000',
-    services: ['婚禮佈置', '精緻套餐', '專業攝影', '音響設備'],
+    budget: '250,000',
+    services: ['購物車系統', '金流串接', '會員管理', '訂單追蹤'],
     gallery: [
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1557821552-17105176677c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
     ],
   },
   {
     id: 3,
-    title: '60大壽慶生會',
+    title: '預約系統客製開發',
     description:
-      '為長輩舉辦的溫馨生日聚會，準備了長輩喜愛的傳統料理與現代創新菜色。',
-    category: 'birthday',
+      '為服務業客戶開發專屬的線上預約系統，整合日曆、提醒通知與客戶管理功能。',
+    category: 'custom',
     image:
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
     date: '2024-03-10',
     location: '新北板橋',
     guests: 50,
-    budget: '60,000',
-    services: ['生日蛋糕', '長壽麵線', '傳統料理', '家庭聚會佈置'],
+    budget: '180,000',
+    services: ['預約管理', '自動提醒', '客戶資料庫', '報表分析'],
     gallery: [
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
     ],
   },
 ];
 
-// ==================== FAQ页面数据 ====================
+// ==================== FAQ頁面資料 ====================
 
-// FAQ分类选项 (FaqPage.vue)
+// FAQ分類選項 (FaqPage.vue)
 export const faqCategoryOptions = [
   { label: '全部問題', value: 'all' },
-  { label: '外燴服務', value: 'catering' },
-  { label: '餐廳用餐', value: 'dining' },
-  { label: '預約相關', value: 'booking' },
+  { label: '網站設計', value: 'design' },
+  { label: '系統開發', value: 'development' },
+  { label: '專案流程', value: 'process' },
   { label: '其他問題', value: 'others' },
 ];
 
-// FAQ数据 (FaqPage.vue)
+// FAQ資料 (FaqPage.vue)
 export const faqData = {
-  catering: {
-    title: '外燴服務',
-    description: '關於外燴服務的相關問題',
-    icon: 'mdi:truck-delivery',
+  design: {
+    title: '網站設計',
+    description: '關於網站設計的相關問題',
+    icon: 'mdi:web',
     items: [
       {
-        question: '外燴服務的服務範圍包括哪些地區？',
+        question: '網站設計的服務範圍包括哪些？',
         answer:
-          '我們的外燴服務主要涵蓋雲林縣及鄰近地區，包括彰化、嘉義等縣市。其他地區請與我們聯繫討論，我們會盡力配合您的需求。',
+          '我們的網站設計服務包含企業形象網站、購物平台、客製化系統開發等。服務範圍涵蓋全台灣，也可以線上溝通配合遠端客戶的需求。',
       },
       {
-        question: '需要提前多久預約外燴服務？',
+        question: '需要提前多久開始規劃網站專案？',
         answer:
-          '建議至少提前一週預約，讓我們有充足時間準備食材和安排人力。如果是大型活動或特殊節日，建議提前2-4週預約。',
+          '建議至少提前一個月開始規劃，讓我們有充足時間了解需求並進行設計。如果是大型專案或有特殊需求，建議提前2-3個月開始討論。',
       },
       {
-        question: '外燴服務是否包含餐具和桌椅？',
+        question: '網站設計是否包含主機與網域？',
         answer:
-          '我們提供基本餐具、保溫設備等。桌椅需要另外租借，我們可以協助推薦合作的租賃商，或您也可以自行準備。',
+          '我們提供網站設計與開發服務。主機與網域可以另外購買，我們可以協助推薦合作的主機商，或協助您管理既有的主機。',
       },
       {
-        question: '如何計算外燴服務的費用？',
+        question: '如何計算網站設計的費用？',
         answer:
-          '費用主要依據人數、菜單內容、服務時間和地點距離計算。我們會根據您的需求提供詳細報價，確保透明公開。',
+          '費用主要依據網站規模、功能需求、設計複雜度和開發時間計算。我們會根據您的需求提供詳細報價，確保透明公開。',
       },
       {
-        question: '可以客製化菜單嗎？',
+        question: '可以客製化網站功能嗎？',
         answer:
-          '當然可以！我們會根據您的預算、人數、口味偏好和特殊需求（如素食、過敏原）來設計專屬菜單。',
+          '當然可以！我們會根據您的預算、需求、目標受眾來設計專屬的網站功能與介面。',
       },
       {
-        question: '外燴服務當天的流程是什麼？',
+        question: '網站開發的流程是什麼？',
         answer: [
-          '提前2-3小時到場佈置',
-          '準備食材並開始料理',
-          '按時上菜，確保食物溫度',
-          '活動結束後清理現場',
-          '確認客戶滿意度後離場',
+          '需求訪談與規劃',
+          '視覺設計與確認',
+          '前後端程式開發',
+          '測試與修正',
+          '上線與教育訓練',
         ],
       },
     ],
   },
-  dining: {
-    title: '餐廳用餐',
-    description: '關於店內用餐的相關問題',
-    icon: 'mdi:silverware-fork-knife',
+  development: {
+    title: '系統開發',
+    description: '關於系統開發的相關問題',
+    icon: 'mdi:code-tags',
     items: [
       {
-        question: '餐廳的營業時間是什麼？',
+        question: '使用什麼技術開發網站？',
         answer:
-          '中午：11:00 - 13:00，下午：17:00 - 01:00。每週一公休。特殊節日營業時間可能有調整，請事先致電確認。',
+          '我們使用現代化的前端框架（如 Vue.js、React）和後端技術（如 Spring Boot、Node.js），確保網站效能與安全性。',
       },
       {
-        question: '需要預約嗎？',
+        question: '網站完成後需要維護嗎？',
         answer:
-          '建議事先預約，特別是週末和節假日。我們也接受現場候位，但可能需要等待。',
+          '建議定期維護，包含內容更新、安全性更新、效能優化等。我們提供年度維護合約，也可以按次計費。',
       },
       {
-        question: '餐廳有停車場嗎？',
+        question: '可以提供手機APP嗎？',
         answer:
-          '餐廳附近有路邊停車格，我們也與鄰近停車場合作，可為客人提供停車優惠。',
+          '可以的！我們提供手機APP開發服務，包含 iOS 和 Android 平台。',
       },
       {
-        question: '餐廳可以容納多少人？',
+        question: '網站可以整合既有系統嗎？',
         answer:
-          '我們的餐廳可容納約40-50人，有包廂可供10-15人的聚會使用。大型聚會建議提前預約。',
+          '可以！我們有豐富的系統整合經驗，可以與ERP、CRM等既有系統進行串接。',
       },
       {
-        question: '有提供素食選項嗎？',
+        question: '提供SEO優化服務嗎？',
         answer:
-          '有的！我們提供多種素食料理，包括素食燒烤、蔬菜料理等。請在預約時告知素食需求。',
+          '有的！我們在網站開發時會進行基本的SEO優化，也提供進階的SEO顧問服務。',
       },
     ],
   },
-  booking: {
-    title: '預約相關',
-    description: '關於預約流程的相關問題',
+  process: {
+    title: '專案流程',
+    description: '關於專案流程的相關問題',
     icon: 'mdi:calendar-clock',
     items: [
       {
-        question: '如何進行預約？',
+        question: '如何開始合作？',
         answer:
-          '您可以透過電話 05-5880870、LINE官方帳號或臉書私訊進行預約。請提供用餐日期、時間、人數等資訊。',
+          '您可以透過電話 0988-178-713、LINE官方帳號或填寫線上表單聯繫我們。我們會安排時間進行需求訪談。',
       },
       {
-        question: '可以臨時取消或更改預約嗎？',
+        question: '可以修改設計稿嗎？',
         answer:
-          '可以的，但請至少提前一天通知我們。如果是外燴服務，建議提前3天告知以便我們調整食材準備。',
+          '可以的！在設計階段我們會提供修改次數，確保設計符合您的期待。具體修改次數會在合約中註明。',
       },
       {
-        question: '預約需要支付訂金嗎？',
+        question: '專案需要支付訂金嗎？',
         answer:
-          '餐廳用餐不需要訂金。外燴服務視活動規模可能需要支付30%訂金以確保雙方權益。',
+          '是的，專案開始前需要支付30%訂金，設計完成後支付40%，網站上線後支付尾款30%。',
       },
     ],
   },
@@ -548,29 +548,29 @@ export const faqData = {
     items: [
       {
         question: '接受哪些付款方式？',
-        answer: '我們接受現金、信用卡、LINE Pay、街口支付等多種付款方式。',
+        answer: '我們接受銀行轉帳、信用卡、LINE Pay等付款方式。',
       },
       {
         question: '有提供發票嗎？',
-        answer: '有的，我們提供統一發票，如需三聯式發票請在結帳時告知。',
+        answer: '有的，我們提供統一發票，如需三聯式發票請在簽約時告知。',
       },
       {
-        question: '可以自帶酒水嗎？',
-        answer: '可以的，但會收取基本開瓶費。詳細費用請諮詢現場服務人員。',
+        question: '完成的網站原始碼歸誰？',
+        answer: '網站完成並結清款項後，原始碼所有權歸客戶所有，我們會提供完整的程式碼與文件。',
       },
     ],
   },
 };
 
-// ==================== 菜单页面数据 ====================
+// ==================== 服務頁面資料 ====================
 
-// 菜品分类 (MenuPage.vue)
-export const menuCategories = [
+// 服務分類 (ServicePage.vue)
+export const serviceCategories = [
   {
     id: 'yakitori',
     name: '燒烤串燒',
     description: '傳統炭火燒烤，保留食材原味',
-    dishes: [
+    services: [
       {
         name: '招牌牛舌',
         description: '厚切牛舌搭配特調醬料，口感Q彈有嚼勁',
@@ -604,7 +604,7 @@ export const menuCategories = [
     id: 'sashimi',
     name: '新鮮刺身',
     description: '當日現撈海鮮，新鮮度第一',
-    dishes: [
+    services: [
       {
         name: '綜合刺身拼盤',
         description: '鮭魚、鮪魚、甜蝦等多種海鮮組合',
@@ -629,7 +629,7 @@ export const menuCategories = [
     id: 'hot_dishes',
     name: '熱食料理',
     description: '溫暖身心的熱騰騰料理',
-    dishes: [
+    services: [
       {
         name: '特色茶碗蒸',
         description: '嫩滑茶碗蒸配蛤蜊蝦仁，口感層次豐富',
@@ -654,7 +654,7 @@ export const menuCategories = [
     id: 'appetizers',
     name: '開胃小菜',
     description: '精緻小菜，開啟味蕾',
-    dishes: [
+    services: [
       {
         name: '涼拌海帶絲',
         description: '清爽海帶絲配黃瓜，口感爽脆',
@@ -677,14 +677,14 @@ export const menuCategories = [
   },
 ];
 
-// 外烩套餐 (MenuPage.vue)
-export const cateringPackages = [
+// 服務方案 (ServicePage.vue)
+export const servicePackages = [
   {
     name: '精緻聚會套餐',
     description: '適合小型聚會，精選經典菜色搭配',
     people: '8-12',
     duration: '2-3小時',
-    dishes: 8,
+    features: 8,
     price: 'NT$ 4,800',
     popular: true,
     image:
@@ -695,7 +695,7 @@ export const cateringPackages = [
     description: '大型活動首選，豐富菜色滿足所有賓客',
     people: '20-30',
     duration: '3-4小時',
-    dishes: 15,
+    features: 15,
     price: 'NT$ 12,800',
     popular: false,
     image:
@@ -706,7 +706,7 @@ export const cateringPackages = [
     description: '商務會議專用，簡約精緻不失禮貌',
     people: '15-25',
     duration: '2小時',
-    dishes: 10,
+    features: 10,
     price: 'NT$ 8,500',
     popular: false,
     image:
@@ -714,67 +714,67 @@ export const cateringPackages = [
   },
 ];
 
-// ==================== 关于页面数据 ====================
+// ==================== 關於頁面資料 ====================
 
-// 时间线数据 (AboutPage.vue)
+// 時間線資料 (AboutPage.vue)
 export const timeline = [
   {
     year: '創業初期',
-    title: '街弄炭烤起家',
+    title: '工作室成立',
     description:
-      '以前單炭烤串燒於街弄興起的自創品牌，老闆秉持爺爺奶奶白手起家，刻苦耐勞的精神',
-    icon: 'mdi:grill',
+      '從小型設計工作室起步，專注於平面設計與品牌視覺規劃，累積了豐富的設計經驗',
+    icon: 'mdi:palette',
   },
   {
     year: '發展期',
-    title: '行動餐車服務',
+    title: '網頁設計服務',
     description:
-      '因應顧客多元需求，而創立行動餐車，學習一碗白飯，一顆煎蛋，在樸實簡單中，也能嚐到最幸福的味道',
-    icon: 'mdi:truck',
+      '因應數位化趨勢，開始提供網頁設計服務，學習最新的前端技術與使用者體驗設計',
+    icon: 'mdi:web',
   },
   {
     year: '2022年',
-    title: '疫情轉機',
+    title: '技術提升',
     description:
-      '西元2022疫情蔓延，我們一同經歷了艱辛時刻，老闆不氣餒的把握時間，化危機為轉機到各地學習各種料理',
-    icon: 'mdi:school',
+      '西元2022疫情帶來轉機，團隊把握時間學習最新的網站開發技術，提供全方位數位解決方案',
+    icon: 'mdi:code-tags',
   },
   {
     year: '現在',
     title: '伸遠國際成立',
     description:
-      '轉型為精緻居酒屋與中日式外燴服務，提供專業到府私廚料理，讓客戶在舒適環境中享受高品質餐飲',
-    icon: 'mdi:store',
+      '轉型為專業網站架設公司，提供企業形象網站、購物平台、客製化系統開發等完整服務',
+    icon: 'mdi:rocket-launch',
   },
 ];
 
-// 核心价值 (AboutPage.vue)
+// 核心價值 (AboutPage.vue)
 export const coreValues = [
   {
     icon: 'mdi:heart-multiple',
-    title: '傳承精神',
-    description: '傳承家族料理技藝，保留傳統美食的精髓與溫度',
+    title: '用心服務',
+    description: '以客戶需求為優先，用心打造每一個數位專案',
   },
   {
     icon: 'mdi:lightbulb-on',
-    title: '創新研發',
-    description: '持續研發新菜色，融合現代烹飪技法與傳統風味',
+    title: '創新思維',
+    description: '持續學習最新技術，提供創新的網站解決方案',
   },
   {
     icon: 'mdi:certificate',
-    title: '品質堅持',
-    description: '嚴選新鮮食材，堅持每道菜品的最高品質標準',
+    title: '品質保證',
+    description: '嚴格品質控管，確保每個專案都達到最高標準',
   },
   {
     icon: 'mdi:account-heart',
-    title: '用心服務',
-    description: '以客為尊，用心服務每一位客戶，創造美好用餐體驗',
+    title: '專業支援',
+    description: '提供完善的售後服務與技術支援，確保網站長期穩定運行',
   },
 ];
 
-// ==================== 创始人页面数据 ====================
+// ==================== 創始人頁面資料 ====================
 
-// 服务项目 (FounderPage.vue)
+// 服務項目 (FounderPage.vue)
 export const founderServices = [
   {
     icon: 'mdi:party-popper',
@@ -839,7 +839,7 @@ export const portfolioWorks = [
   },
 ];
 
-// 统计数据 (FounderPage.vue)
+// 統計數據 (FounderPage.vue)
 export const founderStats = [
   {
     number: '20+',
@@ -855,59 +855,44 @@ export const founderStats = [
   },
 ];
 
-// ==================== 轮播组件数据 ====================
+// ==================== 輪播組件資料 ====================
 
-// Hero轮播 (HeroCarousel.vue)
+// Hero輪播 (HeroCarousel.vue)
 export const heroSlides = [
   {
     title: '伸遠國際',
-    subtitle: '傳承家族料理精神，創新美食體驗',
+    subtitle: '專業網站架設，打造您的數位品牌',
     buttonText: '品牌介紹',
     buttonLink: '/about',
     buttonClass: 'btn-primary',
     image:
-      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
   },
   {
-    title: '專業外燴服務',
-    subtitle: '到府私廚，讓每個聚會都精彩難忘',
-    buttonText: '查看菜單',
-    buttonLink: '/menu',
+    title: '專業設計服務',
+    subtitle: '從平面到網頁，全方位設計解決方案',
+    buttonText: '服務項目',
+    buttonLink: '/graphic-design',
     buttonClass: 'btn-secondary',
     image:
-      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
   },
   {
-    title: '精緻料理',
-    subtitle: '新鮮食材，匠心烹調每一道菜',
-    buttonText: '成功案例',
-    buttonLink: '/cases',
+    title: '客製化開發',
+    subtitle: '打造專屬於您的網站系統',
+    buttonText: '聯絡我們',
+    buttonLink: '/contact',
     buttonClass: 'btn-primary',
     image:
-      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
   },
 ];
 
-// ==================== 布局组件数据 ====================
+// ==================== 布局組件資料 ====================
 
-// 左侧菜单 (MainLayout.vue)
+// 左側選單 (MainLayout.vue)
 export const leftMenuItems = [
   { name: 'about', label: '品牌介紹', path: '/about', icon: 'mdi:information' },
-  { name: 'shop1', label: '遇日小舖', path: '/shop1', icon: 'mdi:store' },
-  {
-    name: 'shop2',
-    label: '遇日角鋪',
-    path: '/shop2',
-    icon: 'mdi:store-outline',
-  },
-  { name: 'menu', label: '餐點介紹', path: '/menu', icon: 'mdi:food' },
-  { name: 'cases', label: '成功案例', path: '/cases', icon: 'mdi:star' },
-  { name: 'faq', label: '常見問題', path: '/faq', icon: 'mdi:help-circle' },
-  { name: 'contact', label: '聯絡我們', path: '/contact', icon: 'mdi:phone' },
-];
-
-// 右侧菜单 (MainLayout.vue)
-export const rightMenuItems = [
   {
     name: 'graphic',
     label: '平面設計',
@@ -945,9 +930,49 @@ export const rightMenuItems = [
       },
     ],
   },
+  { name: 'faq', label: '常見問題', path: '/faq', icon: 'mdi:help-circle' },
+  { name: 'contact', label: '聯絡我們', path: '/contact', icon: 'mdi:phone' },
 ];
 
-// 社交链接 (MainLayout.vue)
+// 右側選單 (MainLayout.vue)
+export const rightMenuItems = [
+  { name: 'shop-introduce', label: '商店介紹', path: '/shop/introduce', icon: 'mdi:store' },
+  { name: 'shop-news', label: '最新消息', path: '/shop/news', icon: 'mdi:newspaper' },
+  {
+    name: 'shop-products',
+    label: '產品清單',
+    icon: 'mdi:shopping',
+    children: [
+      {
+        name: 'shop-products-all',
+        label: '所有商品',
+        path: '/shop/product/list?category=all',
+        icon: 'mdi:view-grid',
+      },
+      {
+        name: 'shop-products-dessert',
+        label: '甜筒',
+        path: '/shop/product/list?category=dessert',
+        icon: 'mdi:ice-cream',
+      },
+      {
+        name: 'shop-products-japanese',
+        label: '日系產品',
+        path: '/shop/product/list?category=japanese',
+        icon: 'mdi:torii-gate',
+      },
+      {
+        name: 'shop-products-other',
+        label: '其他',
+        path: '/shop/product/list?category=other',
+        icon: 'mdi:dots-horizontal',
+      },
+    ],
+  },
+  { name: 'shop-member', label: '會員中心', path: '#', icon: 'mdi:account' },
+];
+
+// 社交連結 (MainLayout.vue)
 export const socialLinks = [
   {
     name: 'facebook',
@@ -966,43 +991,43 @@ export const socialLinks = [
   },
 ];
 
-// 页脚区块 (MainLayout.vue)
+// 頁腳區塊 (MainLayout.vue)
 export const footerSections = [
   {
     title: '聯絡我們',
     items: [
-      { icon: 'mdi:phone', text: '05-5880870' },
+      { icon: 'mdi:phone', text: '0988-178-713' },
       { icon: 'mdi:map-marker', text: '648雲林縣西螺鎮光復西路333-1號' },
     ],
   },
   {
     title: '服務項目',
     items: [
-      { text: '• 居酒屋餐點' },
-      { text: '• 中日式外燴' },
-      { text: '• 到府私廚' },
-      { text: '• 活動餐飲' },
+      { text: '• 企業形象網站' },
+      { text: '• 購物平台開發' },
+      { text: '• 平面設計' },
+      { text: '• 印刷設計' },
     ],
   },
   {
     title: '營業時間',
     items: [
-      { text: '中午:11:00 - 13:00' },
-      { text: '下午:17:00 - 01:00' },
-      { text: '外燴服務:全年無休' },
+      { text: '週一至週五：09:00 - 18:00' },
+      { text: '週六：10:00 - 17:00' },
+      { text: '週日及國定假日：休息' },
     ],
   },
 ];
 
-// 版权信息 (MainLayout.vue)
+// 版權資訊 (MainLayout.vue)
 export const copyrightText = [
   'Copyright © 2024 伸遠國際 All rights reserved.',
   '網站設計：幸運草設計工作室',
 ];
 
-// ==================== 联系页面数据 ====================
+// ==================== 聯繫頁面資料 ====================
 
-// 活动类型 (ContactPage.vue)
+// 活動類型 (ContactPage.vue)
 export const eventTypes = [
   { label: '企業活動', value: 'corporate' },
   { label: '婚宴慶典', value: 'wedding' },

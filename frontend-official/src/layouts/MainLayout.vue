@@ -37,175 +37,25 @@
       </q-toolbar>
     </q-header>
 
-    <!-- 側邊選單 -->
-    <q-drawer
+    <!-- 左側選單 -->
+    <DrawerMenu
       v-model="leftDrawerOpen"
-      :width="280"
-      :breakpoint="1024"
-      :overlay="isMobile"
-      :behavior="isMobile ? 'mobile' : 'desktop'"
-      bordered
-      class="bg-white"
-    >
-      <div class="drawer-content">
-        <q-scroll-area class="drawer-scroll">
-          <div
-            class="q-pa-md border-bottom logo-container logo-container-left"
-            @click="$router.push('/')"
-          >
-            <q-img
-              :src="img_logo"
-              alt="logo"
-              class="logo-img-left"
-              fit="contain"
-              spinner-color="primary"
-            />
-            <div class="text-h6 text-weight-bold text-primary logo-text">
-              伸遠國際
-            </div>
-          </div>
-
-          <q-list>
-            <q-item
-              v-for="item in leftMenuItems"
-              :key="item.name"
-              :to="item.path"
-              clickable
-              v-ripple
-              exact
-              class="text-primary"
-              active-class="bg-primary text-white"
-            >
-              <q-item-section avatar>
-                <Icon :icon="item.icon" class="icon-lg" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-weight-medium">{{
-                  item.label
-                }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-scroll-area>
-
-        <!-- 社群按鈕區域 -->
-        <div class="social-footer q-pa-md text-center border-top">
-          <div class="text-caption text-grey-6">關注我們</div>
-          <div class="q-gutter-sm">
-            <q-btn
-              v-for="social in socialLinksWithActions"
-              :key="social.name"
-              round
-              flat
-              size="md"
-              class="text-primary social-btn-drawer"
-              @click="social.action"
-            >
-              <Icon :icon="social.icon" class="icon-lg" />
-            </q-btn>
-          </div>
-        </div>
-      </div>
-    </q-drawer>
+      side="left"
+      :is-mobile="isMobile"
+      :menu-items="leftMenuItems"
+      :header-config="leftHeaderConfig"
+      :footer-config="leftFooterConfig"
+    />
 
     <!-- 右側選單 -->
-    <q-drawer
+    <DrawerMenu
       v-model="rightDrawerOpen"
       side="right"
-      :width="280"
-      :breakpoint="1024"
-      :overlay="isMobile"
-      :behavior="isMobile ? 'mobile' : 'desktop'"
-      bordered
-      class="bg-white"
-    >
-      <div class="drawer-content">
-        <div
-          class="q-pa-md text-center border-bottom logo-container logo-container-right"
-          @click="$router.push('/shop')"
-        >
-          <q-img
-            :src="img_logo_shop"
-            alt="logo"
-            class="logo-img-right"
-            fit="contain"
-            spinner-color="primary"
-          />
-        </div>
-
-        <q-scroll-area class="drawer-scroll">
-          <q-list>
-            <div v-for="item in rightMenuItems" :key="item.name">
-              <q-expansion-item
-                v-if="item.children"
-                :label="item.label"
-                class="text-primary"
-                expand-separator
-              >
-                <template v-slot:header>
-                  <q-item-section avatar>
-                    <Icon :icon="item.icon" class="text-primary icon-lg" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-medium text-primary">{{
-                      item.label
-                    }}</q-item-label>
-                  </q-item-section>
-                </template>
-                <q-list>
-                  <q-item
-                    v-for="child in item.children"
-                    :key="child.name"
-                    :to="child.path"
-                    clickable
-                    v-ripple
-                    exact
-                    class="text-primary q-pl-lg"
-                    active-class="bg-primary text-white"
-                  >
-                    <q-item-section avatar>
-                      <Icon :icon="child.icon" class="icon-md" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-weight-regular">{{
-                        child.label
-                      }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-expansion-item>
-
-              <q-item
-                v-else
-                :to="item.path"
-                clickable
-                v-ripple
-                exact
-                class="text-primary"
-                active-class="bg-primary text-white"
-              >
-                <q-item-section avatar>
-                  <Icon :icon="item.icon" class="icon-lg" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">{{
-                    item.label
-                  }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </div>
-          </q-list>
-        </q-scroll-area>
-
-        <!-- 聯絡資訊 -->
-        <div class="social-footer q-pa-md text-center border-top">
-          <div class="text-caption text-grey-6">聯絡我們</div>
-          <div class="text-body2 text-primary q-mt-sm">
-            <Icon icon="mdi:phone" class="q-mr-xs icon-sm" />0988-178-713
-          </div>
-        </div>
-      </div>
-    </q-drawer>
+      :is-mobile="isMobile"
+      :menu-items="rightMenuItems"
+      :header-config="rightHeaderConfig"
+      :footer-config="rightFooterConfig"
+    />
 
     <!-- 主要內容區域 -->
     <q-page-container class="main-content-area">
@@ -274,10 +124,12 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
 import ScrollToTopBtn from 'src/components/ScrollToTopBtn.vue';
+import DrawerMenu from 'src/components/DrawerMenu.vue';
 import { useWindowStore } from 'src/store/modules/window.js';
 import {
   leftMenuItems,
@@ -289,6 +141,8 @@ import {
 
 const img_logo = '/icons/logo.jpg';
 const img_logo_shop = '/icons/logo_shop.png';
+
+const router = useRouter();
 
 // 使用 window store
 const windowStore = useWindowStore();
@@ -308,19 +162,40 @@ const socialLinksWithActions = socialLinks.map(link => ({
   ...link,
   action: () => window.open(link.url, '_blank'),
 }));
+
+// 左側選單配置
+const leftHeaderConfig = computed(() => ({
+  logo: img_logo,
+  logoClass: 'logo-img-left',
+  title: '伸遠國際',
+  onClick: () => router.push('/'),
+}));
+
+const leftFooterConfig = computed(() => ({
+  title: '關注我們',
+  socialLinks: socialLinksWithActions,
+}));
+
+// 右側選單配置
+const rightHeaderConfig = computed(() => ({
+  logo: img_logo_shop,
+  logoClass: 'logo-img-right',
+  class: 'text-center',
+  onClick: () => router.push('/shop'),
+}));
+
+const rightFooterConfig = computed(() => ({
+  title: '聯絡我們',
+  contact: {
+    icon: 'mdi:phone',
+    text: '0988-178-713',
+  },
+}));
 </script>
 
 <style lang="scss" scoped>
 $border-color: rgba(0, 0, 0, 0.08);
-$primary-hover: rgba(240, 131, 4, 0.1);
 $white-hover: rgba(255, 255, 255, 0.2);
-
-.border-bottom {
-  border-bottom: 1px solid $border-color;
-}
-.border-top {
-  border-top: 1px solid $border-color;
-}
 
 // Header styles
 .header-title {
@@ -331,47 +206,21 @@ $white-hover: rgba(255, 255, 255, 0.2);
   max-width: 70px;
 }
 
-// Logo container styles
-.logo-container-left {
-  cursor: pointer;
-  min-height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.logo-container-right {
-  cursor: pointer;
-  min-height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.logo-img-left {
+// Logo sizes for drawer
+:deep(.logo-img-left) {
   width: 60px;
   height: 60px;
   flex-shrink: 0;
 }
 
-.logo-img-right {
+:deep(.logo-img-right) {
   width: 120px;
   height: 60px;
-}
-
-.logo-text {
-  line-height: 1.3;
 }
 
 // Icon sizes
 .icon-lg {
   font-size: 1.5em;
-}
-
-.icon-md {
-  font-size: 1.2em;
 }
 
 .icon-sm {
@@ -393,57 +242,15 @@ $white-hover: rgba(255, 255, 255, 0.2);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.q-drawer {
-  border-right: 1px solid rgba(0, 0, 0, 0.05);
-  border-left: 1px solid rgba(0, 0, 0, 0.05);
-  
-  // 保持絲滑的過渡動畫
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.drawer-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.drawer-scroll {
-  flex: 1;
-  min-height: 0;
-}
-
-.social-footer {
-  flex-shrink: 0;
-}
-
-.q-item {
-  transition: background 0.2s ease, color 0.2s ease;
-  
-  &:hover {
-    background: $primary-hover;
-  }
-  &.q-router-link--active {
-    background: $primary;
-  }
-}
-
-.social-btn,
-.social-btn-drawer {
+.social-btn {
   min-width: 40px;
   min-height: 40px;
   transition: transform 0.2s ease, background 0.2s ease;
   
   &:hover {
     transform: scale(1.1);
+    background: $white-hover;
   }
-}
-
-.social-btn:hover {
-  background: $white-hover;
-}
-.social-btn-drawer:hover {
-  background: $primary-hover;
 }
 
 @media (max-width: 1024px) {

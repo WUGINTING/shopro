@@ -15,7 +15,7 @@
         <div class="fade-in-up">
           <h1 class="text-h1 text-weight-bold q-mb-md text-shadow">伸遠國際</h1>
           <p class="text-h5 q-mb-lg text-shadow">
-            傳承家族料理精神，創新美食體驗
+            專業網站架設，創新數位體驗
           </p>
           <div class="text-h6 text-shadow">西元2022年新創立</div>
         </div>
@@ -37,16 +37,16 @@
               <div class="text-h4 text-weight-bold q-mb-lg">品牌理念</div>
               <div class="text-body1 text-grey-4 line-height-lg">
                 <p class="q-mb-md">
-                  新世紀的來臨，大家對美食的品味非常講究，我們團隊意識到維持傳統也得改革創新，
-                  便由夜市型態串燒炭烤，轉變為精緻燒烤，到現今居酒屋與中日式外燴。
+                  數位時代的來臨，企業對品牌形象的要求非常講究，我們團隊意識到維持傳統也得改革創新，
+                  便由小型工作室設計，轉變為全方位數位服務，到現今的企業網站與購物平台開發。
                 </p>
                 <p class="q-mb-md">
-                  除了保留原有的串燒優點，持續不斷的研發新菜色，向外學習各式料理，
-                  讓每個客戶感受到團隊的堅持及創新的佳餚。
+                  除了保留原有的設計優點，持續不斷的學習新技術，向外學習各式系統開發，
+                  讓每個客戶感受到團隊的堅持及創新的解決方案。
                 </p>
                 <p>
-                  除此之外，為了讓客戶能在舒適自在的環境舉行聚餐活動，不用煩惱上哪找餐廳、飯館，
-                  我們提供到府私廚料理的服務，讓您在府上亦能品嘗與餐廳同等級的新鮮餐餚。
+                  除此之外，為了讓客戶能在線上展現完整的品牌形象，不用煩惱上哪找合適的網站公司，
+                  我們提供客製化網站開發的服務，讓您擁有與大型企業同等級的專業網站。
                 </p>
               </div>
             </q-card>
@@ -106,7 +106,7 @@
           <div class="text-center q-mb-xl fade-in-up">
             <h3 class="text-h3 text-weight-bold q-mb-md">發展歷程</h3>
             <div class="story-divider q-mx-auto q-mb-lg"></div>
-            <p class="text-body1 text-grey-4">從街弄起家到專業外燴服務</p>
+            <p class="text-body1 text-grey-4">從工作室起家到專業網站公司</p>
           </div>
 
           <div class="timeline">
@@ -144,7 +144,7 @@
             <h3 class="text-h3 text-weight-bold q-mb-md">創辦人的話</h3>
             <div class="story-divider q-mx-auto q-mb-lg"></div>
             <p class="text-body1 text-grey-4">
-              傳承父親的料理精神，創造屬於我們的美食傳奇
+              傳承前輩的專業精神，打造數位品牌的未來
             </p>
           </div>
 
@@ -166,13 +166,13 @@
             <div class="founder-content max-width-lg q-mx-auto">
               <div class="text-body1 text-grey-4 line-height-lg q-mb-lg">
                 <p class="q-mb-md">
-                  開啟我料理生涯的正是我的父親，他是一個煎炒滷拌烤蒸的料理達人，
-                  也是一個家喻戶曉的西點麵包師傅，亦是一位流水席宴指定的總鋪師，
-                  在家中掌廚猶如辦桌一般，滿漢全席乃為家常便飯。
+                  開啟我設計生涯的是我的師長，他是一位專業的平面設計師，
+                  也是一位在業界有名的品牌設計顧問，亦是一位標案指定的總總設計，
+                  他的設計作品充滿創意且兼備實用性。
                 </p>
                 <p class="q-mb-md">
-                  人生無常，父親的離開。點醒了沉浸於悲傷中的我，
-                  我將帶著父親未完成的遺願，把他料理的味道，停留在最美的那一刻，並延續下去...
+                  隨著時代變遷，我明白到數位轉型的重要性，
+                  我將帶著前輩傳承的設計精神，結合最新的網站技術，並延續下去...
                 </p>
               </div>
             </div>

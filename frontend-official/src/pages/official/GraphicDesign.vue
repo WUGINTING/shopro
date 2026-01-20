@@ -1,10 +1,10 @@
 <template>
   <q-page>
-    <!-- 餐點介紹英雄區 -->
+    <!-- 平面設計英雄區 -->
     <section class="hero-section hero-medium hero-orange relative-position">
       <div class="hero-background">
         <q-img
-          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+          src="https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
           class="full-height full-width"
           style="height: 400px"
         />
@@ -13,8 +13,8 @@
 
       <div class="hero-content absolute-center text-center">
         <div class="fade-in-up">
-          <h1 class="text-h1 text-weight-bold q-mb-md text-shadow">精緻餐點</h1>
-          <p class="text-h5 text-shadow">嚴選食材，匠心烹調每一道菜</p>
+          <h1 class="text-h1 text-weight-bold q-mb-md text-shadow">平面設計服務</h1>
+          <p class="text-h5 text-shadow">專業設計，打造獨特品牌視覺</p>
         </div>
       </div>
     </section>
