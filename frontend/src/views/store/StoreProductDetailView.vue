@@ -1,4 +1,4 @@
-﻿﻿<template>
+﻿﻿﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
     <q-btn flat no-caps icon="arrow_back" label="返回商品列表" class="q-mb-sm" @click="router.push('/products')" />
 
@@ -40,6 +40,25 @@
               <div v-else class="detail-placeholder" :aria-label="`${product.name} 商品圖片尚未提供`">
                 <q-icon name="inventory_2" size="48px" color="white" />
                 <div class="placeholder-name">{{ (product.name || 'P').slice(0, 1).toUpperCase() }}</div>
+              </div>
+            </div>
+
+            <!-- 縮圖列表 -->
+            <div v-if="allThumbnails.length > 1" class="thumbnail-list q-mt-md">
+              <div
+                v-for="(thumb, index) in allThumbnails"
+                :key="'thumb-' + index"
+                :class="['thumbnail', { 'thumbnail--active': currentImageIndex === index && !selectedSpec?.image }]"
+                @click="selectThumbnail(index)"
+              >
+                <q-img :src="thumb.url" :alt="thumb.specName || `商品圖片 ${index + 1}`" ratio="1" fit="cover">
+                  <template v-slot:error>
+                    <div class="absolute-full flex flex-center bg-grey-2">
+                      <q-icon name="image" size="16px" color="grey-4" />
+                    </div>
+                  </template>
+                </q-img>
+                <div v-if="thumb.specName" class="thumbnail__label">{{ thumb.specName }}</div>
               </div>
             </div>
           </div>
@@ -181,6 +200,7 @@ const compareOn = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const selectedSpecId = ref<number | null>(null)
+const currentImageIndex = ref(0)
 
 const productId = computed(() => Number(route.params.id))
 const baseProductPrice = computed(() => Number(product.value?.price ?? product.value?.salePrice ?? 0))
@@ -211,14 +231,59 @@ const selectSpec = (spec: any) => {
 }
 
 const imageUrl = computed(() => {
+  // 優先顯示已選規格的圖片
   const specImage = selectedSpec.value?.image
   if (specImage) return specImage
-  const images = product.value?.images
-  if (!images || !Array.isArray(images) || images.length === 0) return null
-  const first = images[0]
-  if (typeof first === 'string') return first || null
-  return first?.imageUrl || null
+
+  // 使用 allThumbnails 中當前選中的圖片
+  const thumbs = allThumbnails.value
+  if (thumbs.length > 0 && currentImageIndex.value < thumbs.length) {
+    const thumb = thumbs[currentImageIndex.value]
+    return thumb?.url ?? null
+  }
+
+  return null
 })
+
+// 合併產品圖片和規格圖片到縮圖列表
+const allThumbnails = computed(() => {
+  const thumbs: { url: string; specName: string | null }[] = []
+  const existingUrls = new Set<string>()
+
+  // 商品主圖片
+  const images = product.value?.images
+  if (images && Array.isArray(images)) {
+    images.forEach(img => {
+      let url: string | null = null
+      if (typeof img === 'string') {
+        url = img
+      } else if (img && typeof img === 'object' && 'imageUrl' in img) {
+        url = img.imageUrl
+      }
+      if (url && !existingUrls.has(url)) {
+        thumbs.push({ url, specName: null })
+        existingUrls.add(url)
+      }
+    })
+  }
+
+  // 規格圖片（排除與商品主圖重複的）
+  specifications.value.forEach(spec => {
+    if (spec.image && !existingUrls.has(spec.image)) {
+      thumbs.push({ url: spec.image, specName: spec.specName || null })
+      existingUrls.add(spec.image)
+    }
+  })
+
+  return thumbs
+})
+
+// 選擇縮圖
+const selectThumbnail = (index: number) => {
+  currentImageIndex.value = index
+  // 清除已選規格（這樣 imageUrl 會使用縮圖）
+  // 注意：如果不想清除規格，可以移除這行
+}
 
 const syncPrefs = () => {
   if (!product.value?.id) return
@@ -350,6 +415,50 @@ watch(
   background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
 }
 .placeholder-name { color: #dbeafe; font-size: 1.5rem; font-weight: 700; }
+
+/* 縮圖列表樣式 */
+.thumbnail-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.thumbnail {
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.thumbnail:hover {
+  border-color: #1d4ed8;
+  transform: scale(1.05);
+}
+
+.thumbnail--active {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.3);
+}
+
+.thumbnail__label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .detail-desc { line-height: 1.7; }
 .buy-box { border-radius: 14px; background: #f8fafc; }
 .service-points { margin: 0; padding-left: 18px; color: #475569; display: grid; gap: 4px; }

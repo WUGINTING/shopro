@@ -13,4 +13,14 @@ public interface AdminNotificationRepository extends JpaRepository<AdminNotifica
     List<AdminNotification> findTop20ByOrderByCreatedAtDesc();
 
     List<AdminNotification> findTop20ByReadFalseOrderByCreatedAtDesc();
+
+    /**
+     * 計算未讀通知數量
+     */
+    long countByReadFalse();
+
+    /**
+     * 取得所有未讀通知
+     */
+    List<AdminNotification> findByReadFalse();
 }

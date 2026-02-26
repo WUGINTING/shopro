@@ -1,10 +1,10 @@
-﻿<template>
+﻿﻿<template>
   <q-layout view="hHh lpR fFf" class="admin-shell">
     <!-- Header -->
     <q-header elevated class="bg-primary text-white admin-header">
       <q-toolbar class="admin-toolbar">
         <q-btn dense flat round icon="menu" aria-label="切換側邊導覽" @click="toggleLeftDrawer" />
-        
+
         <q-toolbar-title>
           <q-icon name="shopping_cart" size="sm" class="q-mr-sm" />
           Shopro 商城 - 管理後台
@@ -13,11 +13,11 @@
         <q-space />
 
         <!-- 新手導覽 -->
-        <q-btn 
-          flat 
-          dense 
-          round 
-          icon="help_outline" 
+        <q-btn
+          flat
+          dense
+          round
+          icon="help_outline"
           aria-label="開啟新手導覽"
           @click="handleStartTour"
           class="q-mr-sm"
@@ -26,25 +26,69 @@
         </q-btn>
 
         <!-- 通知選單 -->
-        <q-btn flat dense round icon="notifications" aria-label="查看通知" data-tour="notifications">
-          <q-badge color="red" floating>3</q-badge>
-          <q-menu>
-            <q-list style="min-width: 300px">
+        <q-btn flat dense round icon="notifications" aria-label="查看通知" data-tour="notifications" @click="fetchNotifications">
+          <q-badge v-if="unreadCount > 0" color="red" floating>{{ unreadCount > 99 ? '99+' : unreadCount }}</q-badge>
+          <q-menu @show="fetchNotifications">
+            <q-list style="min-width: 350px; max-width: 400px;">
               <q-item>
                 <q-item-section>
                   <q-item-label class="text-weight-bold">通知</q-item-label>
                 </q-item-section>
+                <q-item-section side>
+                  <q-btn
+                    v-if="unreadCount > 0"
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    label="全部已讀"
+                    @click.stop="handleMarkAllAsRead"
+                  />
+                </q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-close-popup>
-                <q-item-section avatar>
-                  <q-avatar color="primary" text-color="white" icon="shopping_bag" />
-                </q-item-section>
+
+              <!-- 載入中 -->
+              <q-item v-if="notificationsLoading">
                 <q-item-section>
-                  <q-item-label>新訂單 #12345</q-item-label>
-                  <q-item-label caption>5 分鐘前</q-item-label>
+                  <div class="row justify-center q-pa-md">
+                    <q-spinner color="primary" size="2em" />
+                  </div>
                 </q-item-section>
               </q-item>
+
+              <!-- 無通知 -->
+              <q-item v-else-if="notifications.length === 0">
+                <q-item-section>
+                  <q-item-label class="text-center text-grey q-pa-md">
+                    暫無通知
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <!-- 通知列表 -->
+              <template v-else>
+                <q-item
+                  v-for="notification in notifications"
+                  :key="notification.id"
+                  clickable
+                  v-close-popup
+                  :class="{ 'bg-blue-1': !notification.read }"
+                  @click="handleNotificationClick(notification)"
+                >
+                  <q-item-section avatar>
+                    <q-avatar :color="getNotificationColor(notification.type)" text-color="white" :icon="getNotificationIcon(notification.type)" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label :class="{ 'text-weight-bold': !notification.read }">{{ notification.title }}</q-item-label>
+                    <q-item-label caption lines="2">{{ notification.message }}</q-item-label>
+                    <q-item-label caption class="text-grey-6">{{ formatTimeAgo(notification.createdAt) }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="!notification.read">
+                    <q-badge color="blue" rounded />
+                  </q-item-section>
+                </q-item>
+              </template>
             </q-list>
           </q-menu>
         </q-btn>
@@ -479,7 +523,7 @@
 
           <!-- 分隔線 -->
           <q-separator v-if="authStore.canAccessStaff" class="q-my-md" />
-          
+
           <q-item
             v-if="authStore.canAccessManager"
             clickable
@@ -572,12 +616,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useQuasar } from 'quasar'
 import { startTour, isTourCompleted, resetTour } from '@/utils/tour'
 import { adminGlossary } from '@/constants/adminGlossary'
+import notificationsApi, { type AdminNotificationDTO, type AdminNotificationType } from '@/api/notifications'
 
 const router = useRouter()
 const route = useRoute()
@@ -585,6 +630,12 @@ const authStore = useAuthStore()
 const $q = useQuasar()
 
 const leftDrawerOpen = ref(true)
+
+// 通知相關狀態
+const notifications = ref<AdminNotificationDTO[]>([])
+const unreadCount = ref(0)
+const notificationsLoading = ref(false)
+let notificationPollingInterval: ReturnType<typeof setInterval> | null = null
 
 const userName = computed(() => authStore.user?.username || '使用者')
 const userRole = computed(() => authStore.user?.role || 'ADMIN')
@@ -645,11 +696,127 @@ const restartTour = () => {
   })
 }
 
+// 通知相關方法
+const fetchUnreadCount = async () => {
+  try {
+    const response = await notificationsApi.getUnreadCount()
+    unreadCount.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch unread count:', error)
+  }
+}
+
+const fetchNotifications = async () => {
+  notificationsLoading.value = true
+  try {
+    const response = await notificationsApi.getNotifications()
+    notifications.value = response.data
+    // 同時更新未讀數量
+    await fetchUnreadCount()
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error)
+  } finally {
+    notificationsLoading.value = false
+  }
+}
+
+const handleNotificationClick = async (notification: AdminNotificationDTO) => {
+  // 標記為已讀
+  if (!notification.read) {
+    try {
+      await notificationsApi.markAsRead(notification.id)
+      notification.read = true
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
+    }
+  }
+
+  // 根據通知類型導航到相應頁面
+  if (notification.orderId) {
+    router.push({ name: 'orders' })
+  } else if (notification.productId) {
+    router.push({ name: 'products' })
+  }
+}
+
+const handleMarkAllAsRead = async () => {
+  try {
+    await notificationsApi.markAllAsRead()
+    notifications.value.forEach(n => n.read = true)
+    unreadCount.value = 0
+    $q.notify({
+      type: 'positive',
+      message: '已將所有通知標記為已讀',
+      position: 'top'
+    })
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error)
+    $q.notify({
+      type: 'negative',
+      message: '操作失敗，請稍後再試',
+      position: 'top'
+    })
+  }
+}
+
+const getNotificationIcon = (type: AdminNotificationType): string => {
+  const iconMap: Record<AdminNotificationType, string> = {
+    ORDER_CREATED: 'shopping_bag',
+    PAYMENT_COMPLETED: 'payments',
+    ORDER_CANCELLED: 'cancel',
+    ORDER_QA: 'question_answer',
+    STOCK_LOW: 'inventory_2'
+  }
+  return iconMap[type] || 'notifications'
+}
+
+const getNotificationColor = (type: AdminNotificationType): string => {
+  const colorMap: Record<AdminNotificationType, string> = {
+    ORDER_CREATED: 'primary',
+    PAYMENT_COMPLETED: 'positive',
+    ORDER_CANCELLED: 'negative',
+    ORDER_QA: 'info',
+    STOCK_LOW: 'warning'
+  }
+  return colorMap[type] || 'grey'
+}
+
+const formatTimeAgo = (dateString: string): string => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return '剛剛'
+  if (diffMins < 60) return `${diffMins} 分鐘前`
+  if (diffHours < 24) return `${diffHours} 小時前`
+  if (diffDays < 7) return `${diffDays} 天前`
+
+  return date.toLocaleDateString('zh-TW')
+}
+
 onMounted(() => {
   if (!isTourCompleted()) {
     setTimeout(() => {
       startTour()
     }, 1000)
+  }
+
+  // 初始獲取未讀通知數量
+  fetchUnreadCount()
+
+  // 每 30 秒輪詢一次未讀通知數量
+  notificationPollingInterval = setInterval(fetchUnreadCount, 30000)
+})
+
+onUnmounted(() => {
+  // 清理輪詢定時器
+  if (notificationPollingInterval) {
+    clearInterval(notificationPollingInterval)
+    notificationPollingInterval = null
   }
 })
 </script>

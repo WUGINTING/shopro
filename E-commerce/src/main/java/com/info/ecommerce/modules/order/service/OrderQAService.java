@@ -3,6 +3,8 @@ package com.info.ecommerce.modules.order.service;
 import com.info.ecommerce.modules.order.dto.OrderQADTO;
 import com.info.ecommerce.modules.order.entity.OrderQA;
 import com.info.ecommerce.modules.order.repository.OrderQARepository;
+import com.info.ecommerce.modules.system.enums.AdminNotificationType;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 public class OrderQAService {
 
     private final OrderQARepository orderQARepository;
+    private final AdminNotificationService adminNotificationService;
 
     /**
      * 新增問題
@@ -30,6 +33,19 @@ public class OrderQAService {
     public OrderQADTO askQuestion(OrderQADTO dto) {
         OrderQA qa = convertToEntity(dto);
         qa = orderQARepository.save(qa);
+
+        // 發送訂單問答通知
+        adminNotificationService.createNotification(
+            AdminNotificationType.ORDER_QA,
+            qa.getOrderId(),
+            null,
+            "訂單問答",
+            "訂單 #" + qa.getOrderId() + " 收到新的客戶提問：" +
+                (dto.getQuestion() != null && dto.getQuestion().length() > 50
+                    ? dto.getQuestion().substring(0, 50) + "..."
+                    : dto.getQuestion())
+        );
+
         return convertToDTO(qa);
     }
 
@@ -40,12 +56,12 @@ public class OrderQAService {
     public OrderQADTO answerQuestion(Long qaId, String answer, Long answererId, String answererName) {
         OrderQA qa = orderQARepository.findById(qaId)
             .orElseThrow(() -> new RuntimeException("問題不存在"));
-        
+
         qa.setAnswer(answer);
         qa.setAnswererId(answererId);
         qa.setAnswererName(answererName);
         qa.setAnsweredAt(LocalDateTime.now());
-        
+
         qa = orderQARepository.save(qa);
         return convertToDTO(qa);
     }

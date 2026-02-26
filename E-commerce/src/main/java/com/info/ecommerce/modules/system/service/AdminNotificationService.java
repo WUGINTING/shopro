@@ -52,6 +52,24 @@ public class AdminNotificationService {
         });
     }
 
+    /**
+     * 取得未讀通知數量
+     */
+    @Transactional(readOnly = true)
+    public long getUnreadCount() {
+        return repository.countByReadFalse();
+    }
+
+    /**
+     * 全部標記為已讀
+     */
+    @Transactional
+    public void markAllAsRead() {
+        List<AdminNotification> unreadNotifications = repository.findByReadFalse();
+        unreadNotifications.forEach(notification -> notification.setRead(true));
+        repository.saveAll(unreadNotifications);
+    }
+
     private AdminNotificationDTO toDto(AdminNotification entity) {
         return AdminNotificationDTO.builder()
                 .id(entity.getId())

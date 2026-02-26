@@ -144,16 +144,16 @@ public class OrderService {
         // 確保 specificationId 被正確設置
         if (dto.getSpecificationId() != null) {
             item.setSpecificationId(dto.getSpecificationId());
-            
+
             // 從規格中獲取信息
             ProductSpecification spec = productSpecificationRepository.findById(dto.getSpecificationId())
                     .orElseThrow(() -> new BusinessException("商品規格不存在: " + dto.getSpecificationId()));
-            
+
             // 驗證規格是否屬於該商品
             if (!spec.getProductId().equals(dto.getProductId())) {
                 throw new BusinessException("商品規格不屬於該商品");
             }
-            
+
             // 從規格中獲取信息
             if (spec.getSku() != null && !spec.getSku().isEmpty()) {
                 item.setProductSku(spec.getSku());
@@ -223,7 +223,7 @@ public class OrderService {
         order.setOrderNumber(orderNumber);
         order.setStatus(dto.getStatus() != null ? dto.getStatus() : OrderStatus.PENDING_PAYMENT);
         order.setIsDraft(dto.getIsDraft() != null ? dto.getIsDraft() : false);
-        
+
         // 確保客戶信息被正確設置（即使有 customerId，也保存客戶信息用於顯示）
         if (dto.getCustomerName() != null) {
             order.setCustomerName(dto.getCustomerName());
@@ -256,6 +256,15 @@ public class OrderService {
         // 記錄歷史
         orderHistoryService.recordHistory(orderId, "CREATE", "訂單已建立", null,
             order.getStatus().name(), null, null);
+
+        // 發送訂單新增通知
+        adminNotificationService.createNotification(
+            AdminNotificationType.ORDER_CREATED,
+            orderId,
+            null,
+            "新訂單",
+            "收到新訂單 #" + order.getOrderNumber() + "，金額：NT$" + order.getTotalAmount()
+        );
 
         // 如果訂單創建時狀態就是已付款或已完成，更新客戶總消費
         if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.PAID) {
@@ -317,9 +326,9 @@ public class OrderService {
         if (oldStatus != dto.getStatus()) {
             orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
                 oldStatus.name(), dto.getStatus().name(), null, null);
-            
+
             // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
-            if ((dto.getStatus() == OrderStatus.COMPLETED || dto.getStatus() == OrderStatus.PAID) 
+            if ((dto.getStatus() == OrderStatus.COMPLETED || dto.getStatus() == OrderStatus.PAID)
                 && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
                 try {
                     memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
@@ -426,8 +435,27 @@ public class OrderService {
         orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
             oldStatus.name(), newStatus.name(), operatorId, operatorName);
 
+        // 發送狀態變更通知
+        if (newStatus == OrderStatus.PAID) {
+            adminNotificationService.createNotification(
+                AdminNotificationType.PAYMENT_COMPLETED,
+                id,
+                null,
+                "收款完成",
+                "訂單 #" + order.getOrderNumber() + " 已完成付款，金額：NT$" + order.getTotalAmount()
+            );
+        } else if (newStatus == OrderStatus.CANCELLED) {
+            adminNotificationService.createNotification(
+                AdminNotificationType.ORDER_CANCELLED,
+                id,
+                null,
+                "訂單取消",
+                "訂單 #" + order.getOrderNumber() + " 已被取消"
+            );
+        }
+
         // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
-        if ((newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.PAID) 
+        if ((newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.PAID)
             && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
             try {
                 memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());

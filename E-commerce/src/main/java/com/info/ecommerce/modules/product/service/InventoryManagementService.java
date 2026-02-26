@@ -10,6 +10,8 @@ import com.info.ecommerce.modules.product.repository.InventoryAlertRepository;
 import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
 import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.StockNotificationRepository;
+import com.info.ecommerce.modules.system.enums.AdminNotificationType;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class InventoryManagementService {
     private final InventoryAlertRepository alertRepository;
     private final InventoryMovementLogRepository movementLogRepository;
     private final StockNotificationRepository notificationRepository;
+    private final AdminNotificationService adminNotificationService;
 
     /**
      * 檢查庫存並創建警示
@@ -36,15 +39,15 @@ public class InventoryManagementService {
     @Transactional
     public void checkInventoryAndCreateAlerts() {
         List<ProductInventory> inventories = inventoryRepository.findAll();
-        
+
         for (ProductInventory inventory : inventories) {
             AlertLevel alertLevel = inventory.checkAlertLevel();
-            
+
             if (alertLevel != null) {
                 // 檢查是否已有未解決的警示
                 List<InventoryAlert> existingAlerts = alertRepository
                         .findByProductIdAndResolvedFalse(inventory.getProductId());
-                
+
                 if (existingAlerts.isEmpty()) {
                     // 創建新警示
                     InventoryAlert alert = InventoryAlert.builder()
@@ -56,8 +59,18 @@ public class InventoryManagementService {
                             .message(generateAlertMessage(alertLevel, inventory))
                             .resolved(false)
                             .build();
-                    
+
                     alertRepository.save(alert);
+
+                    // 發送庫存不足通知
+                    adminNotificationService.createNotification(
+                        AdminNotificationType.STOCK_LOW,
+                        null,
+                        inventory.getProductId(),
+                        "庫存不足",
+                        "商品庫存不足警示：目前庫存 " + inventory.getAvailableStock() +
+                            "，安全庫存 " + inventory.getSafetyStock()
+                    );
                 }
             }
         }
@@ -70,7 +83,7 @@ public class InventoryManagementService {
     public void resolveAlert(Long alertId) {
         InventoryAlert alert = alertRepository.findById(alertId)
                 .orElseThrow(() -> new BusinessException("警示不存在"));
-        
+
         alert.setResolved(true);
         alert.setResolvedAt(LocalDateTime.now());
         alertRepository.save(alert);
@@ -108,7 +121,7 @@ public class InventoryManagementService {
      * 訂閱貨到通知
      */
     @Transactional
-    public void subscribeStockNotification(Long productId, Long specificationId, 
+    public void subscribeStockNotification(Long productId, Long specificationId,
                                           String email, String phone) {
         StockNotification notification = StockNotification.builder()
                 .productId(productId)
@@ -117,7 +130,7 @@ public class InventoryManagementService {
                 .userPhone(phone)
                 .notified(false)
                 .build();
-        
+
         notificationRepository.save(notification);
     }
 
@@ -126,16 +139,16 @@ public class InventoryManagementService {
      */
     @Transactional
     public void processStockNotifications(Long productId) {
-        List<StockNotification> notifications = 
+        List<StockNotification> notifications =
                 notificationRepository.findByProductIdAndNotifiedFalse(productId);
-        
+
         for (StockNotification notification : notifications) {
             // TODO: 整合郵件或簡訊服務來發送實際通知
             // 暫時只標記為已通知
             notification.setNotified(true);
             notification.setNotifiedAt(LocalDateTime.now());
         }
-        
+
         notificationRepository.saveAll(notifications);
     }
 
@@ -235,9 +248,9 @@ public class InventoryManagementService {
     private String generateAlertMessage(AlertLevel level, ProductInventory inventory) {
         return switch (level) {
             case OUT_OF_STOCK -> String.format("商品 ID %d 已無庫存", inventory.getProductId());
-            case CRITICAL -> String.format("商品 ID %d 庫存嚴重不足，當前庫存: %d", 
+            case CRITICAL -> String.format("商品 ID %d 庫存嚴重不足，當前庫存: %d",
                     inventory.getProductId(), inventory.getAvailableStock());
-            case LOW -> String.format("商品 ID %d 庫存偏低，當前庫存: %d，安全庫存: %d", 
+            case LOW -> String.format("商品 ID %d 庫存偏低，當前庫存: %d，安全庫存: %d",
                     inventory.getProductId(), inventory.getAvailableStock(), inventory.getSafetyStock());
         };
     }

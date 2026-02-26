@@ -41,4 +41,17 @@ public class AdminNotificationController {
         notificationService.markAsRead(id);
         return ApiResponse.success(null);
     }
+
+    @GetMapping("/count")
+    @Operation(summary = "取得未讀通知數量")
+    public ApiResponse<Long> getUnreadCount() {
+        return ApiResponse.success(notificationService.getUnreadCount());
+    }
+
+    @PutMapping("/read-all")
+    @Operation(summary = "全部標記為已讀")
+    public ApiResponse<Void> markAllAsRead() {
+        notificationService.markAllAsRead();
+        return ApiResponse.success(null);
+    }
 }
