@@ -33,7 +33,11 @@
               v-for="order in orders"
               :key="order.id"
               class="cursor-pointer"
-              @click="order.id && router.push(`/account/orders/${order.id}`)"
+              role="link"
+              tabindex="0"
+              @click="openOrder(order.id)"
+              @keydown.enter.prevent="openOrder(order.id)"
+              @keydown.space.prevent="openOrder(order.id)"
             >
               <td class="text-weight-medium">
                 <q-btn
@@ -80,6 +84,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 const orders = ref<Order[]>([])
 const loading = ref(false)
+
+const openOrder = (orderId?: number) => {
+  if (!orderId) return
+  router.push(`/account/orders/${orderId}`)
+}
 
 const normalizeOrders = (payload: unknown): Order[] => {
   if (Array.isArray(payload)) return payload as Order[]

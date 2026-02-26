@@ -1,10 +1,15 @@
-<template>
+﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
     <section class="q-mb-md">
       <q-card flat bordered class="flow-card">
         <q-card-section class="q-py-sm">
           <div class="flow-wrap">
-            <div v-for="step in flowSteps" :key="step.key" class="flow-step" :class="{ 'flow-step--active': step.active, 'flow-step--done': step.done }">
+            <div
+              v-for="step in flowSteps"
+              :key="step.key"
+              class="flow-step"
+              :class="{ 'flow-step--active': step.active, 'flow-step--done': step.done }"
+            >
               <div class="flow-step__dot"><q-icon :name="step.done ? 'check' : step.icon" size="16px" /></div>
               <span>{{ step.label }}</span>
             </div>
@@ -19,13 +24,13 @@
           <q-card-section>
             <div class="row items-center justify-between q-mb-md q-gutter-sm">
               <div>
-                <h1 class="text-h5 text-weight-bold q-mb-xs">結帳資訊</h1>
-                <p class="text-grey-7 q-mb-none">系統會在本機暫存最近使用的電話與地址，方便下次更快完成結帳。</p>
+                <h1 class="text-h5 text-weight-bold q-mb-xs">填寫結帳資料</h1>
+                <p class="text-grey-7 q-mb-none">請確認收件人資訊、配送方式與付款方式，送出後將建立訂單並導向付款頁面。</p>
               </div>
               <q-btn flat no-caps icon="history" label="套用暫存資料" @click="applySavedDraft" />
             </div>
 
-            <q-form @submit.prevent="submitCheckout" class="q-gutter-md" ref="checkoutFormRef">
+            <q-form ref="checkoutFormRef" class="q-gutter-md" @submit.prevent="submitCheckout">
               <q-input
                 v-model="form.customerName"
                 outlined
@@ -39,12 +44,12 @@
                 v-model="form.customerPhone"
                 type="tel"
                 outlined
-                label="收件人手機"
+                label="收件人電話"
                 name="customer-phone"
                 autocomplete="tel"
                 inputmode="numeric"
-                hint="若有暫存資料，會自動帶入上次結帳資訊"
-                :rules="[(val: string) => !!val || '請輸入收件人手機']"
+                hint="此欄位會自動暫存，方便下次結帳快速帶入。"
+                :rules="[(val: string) => !!val || '請輸入聯絡電話']"
               />
 
               <q-input
@@ -52,11 +57,11 @@
                 outlined
                 type="textarea"
                 autogrow
-                label="配送地址"
+                label="收件地址"
                 name="shipping-address"
                 autocomplete="street-address"
-                hint="若有暫存資料，會自動帶入上次結帳資訊"
-                :rules="[(val: string) => !!val || '請輸入配送地址']"
+                hint="此欄位會自動暫存，送出前請再次確認內容正確。"
+                :rules="[(val: string) => !!val || '請輸入收件地址']"
               />
 
               <div class="row q-col-gutter-md">
@@ -84,10 +89,17 @@
 
               <q-banner rounded class="bg-blue-1 text-primary">
                 <template #avatar><q-icon name="lock" /></template>
-                安全結帳流程。若選擇 ECPay，建立訂單後會自動導向付款頁完成交易。
+                訂單建立後若選擇 ECPay，系統會導向 ECPay 付款頁完成付款；請勿關閉或重整頁面直到導轉完成。
               </q-banner>
 
-              <q-btn color="primary" no-caps label="送出訂單" type="submit" :disable="items.length === 0 || submitting" :loading="submitting" />
+              <q-btn
+                color="primary"
+                no-caps
+                label="送出訂單並前往付款"
+                type="submit"
+                :disable="items.length === 0 || submitting"
+                :loading="submitting"
+              />
             </q-form>
           </q-card-section>
         </q-card>
@@ -97,7 +109,7 @@
         <q-card bordered class="summary-card sticky-summary">
           <q-card-section>
             <div class="text-subtitle1 text-weight-bold q-mb-md">訂單摘要</div>
-            <div v-if="items.length === 0" class="text-grey-7">購物車目前沒有商品，請先加入商品後再結帳。</div>
+            <div v-if="items.length === 0" class="text-grey-7">購物車目前沒有商品，請先回到商品列表加入商品後再進行結帳。</div>
             <div v-else>
               <div v-for="item in items" :key="item.productId" class="row justify-between q-mb-sm text-body2">
                 <span>{{ item.name }} x {{ item.quantity }}</span>
@@ -110,9 +122,9 @@
               <span class="text-primary">NT$ {{ formatPrice(total) }}</span>
             </div>
             <div class="trust-list q-mt-md">
-              <div class="trust-item"><q-icon name="verified" color="positive" /> 付款回傳狀態追蹤</div>
-              <div class="trust-item"><q-icon name="local_shipping" color="primary" /> 配送狀態可見</div>
-              <div class="trust-item"><q-icon name="support_agent" color="amber-8" /> 可從聯絡頁快速取得支援</div>
+              <div class="trust-item"><q-icon name="verified" color="positive" /> 付款資訊於安全流程處理</div>
+              <div class="trust-item"><q-icon name="local_shipping" color="primary" /> 配送方式可於下單前確認</div>
+              <div class="trust-item"><q-icon name="support_agent" color="amber-8" /> 如需協助可聯絡客服</div>
             </div>
           </q-card-section>
         </q-card>
@@ -149,7 +161,7 @@ const paymentOptions = [
 ]
 
 const shippingOptions = [
-  { label: '宅配', value: 'DELIVERY' },
+  { label: '宅配到府', value: 'DELIVERY' },
   { label: '門市自取', value: 'STORE_PICKUP' }
 ]
 
@@ -162,10 +174,10 @@ const form = ref({
 })
 
 const flowSteps = computed(() => [
-  { key: 'cart', label: 'Cart', icon: 'shopping_cart', done: true, active: false },
-  { key: 'checkout', label: 'Checkout', icon: 'edit_note', done: false, active: true },
-  { key: 'payment', label: 'Payment', icon: 'payments', done: false, active: false },
-  { key: 'done', label: 'Done', icon: 'task_alt', done: false, active: false }
+  { key: 'cart', label: '購物車', icon: 'shopping_cart', done: true, active: false },
+  { key: 'checkout', label: '填寫資料', icon: 'edit_note', done: false, active: true },
+  { key: 'payment', label: '付款', icon: 'payments', done: false, active: false },
+  { key: 'done', label: '完成', icon: 'task_alt', done: false, active: false }
 ])
 
 const formatPrice = (value: number) => value.toLocaleString('zh-TW', { maximumFractionDigits: 0 })
@@ -175,7 +187,7 @@ const applySavedDraft = () => {
   form.value.customerName = form.value.customerName || draft.customerName || authStore.user?.username || ''
   form.value.customerPhone = draft.customerPhone || form.value.customerPhone
   form.value.shippingAddress = draft.shippingAddress || form.value.shippingAddress
-  $q.notify({ type: 'info', message: '已套用暫存結帳資料（若有）。' })
+  $q.notify({ type: 'info', message: '已套用先前暫存的結帳資料。' })
 }
 
 watch(
@@ -223,7 +235,7 @@ const submitCheckout = async () => {
     }
 
     if (!customerId) {
-      throw new Error('缺少顧客資料，請重新登入後再試。')
+      throw new Error('無法取得會員資訊，請重新登入後再試。')
     }
 
     trackEvent('checkout_submit', {

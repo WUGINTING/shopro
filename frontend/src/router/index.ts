@@ -23,6 +23,9 @@ const router = createRouter({
         { path: 'products', name: 'storeProducts', component: () => import('@/views/store/StoreProductListView.vue') },
         { path: 'products/:id', name: 'storeProductDetail', component: () => import('@/views/store/StoreProductDetailView.vue') },
         { path: 'cart', name: 'cart', component: () => import('@/views/store/CartView.vue') },
+        { path: 'promotions', name: 'storePromotions', component: () => import('@/views/store/StorePromotionsView.vue') },
+        { path: 'blog', name: 'storeBlog', component: () => import('@/views/store/StoreBlogListView.vue') },
+        { path: 'blog/:slug', name: 'storeBlogDetail', component: () => import('@/views/store/StoreBlogDetailView.vue') },
         {
           path: 'checkout',
           name: 'checkout',
@@ -57,25 +60,25 @@ const router = createRouter({
           path: '',
           name: 'home',
           component: () => import('@/views/HomeView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'products',
           name: 'products',
           component: () => import('@/views/ProductView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/CategoryView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'orders',
           name: 'orders',
           component: () => import('@/views/OrderView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'customers',
@@ -87,7 +90,7 @@ const router = createRouter({
           path: 'about',
           name: 'about',
           component: () => import('@/views/AboutView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'order-discounts',
@@ -129,7 +132,7 @@ const router = createRouter({
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER'] }
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
           path: 'albums',
@@ -230,14 +233,12 @@ const router = createRouter({
       ]
     },
     // Legacy admin paths redirect to /admin/*
-    { path: '/products', redirect: '/admin/products' },
     { path: '/categories', redirect: '/admin/categories' },
     { path: '/orders', redirect: '/admin/orders' },
     { path: '/customers', redirect: '/admin/customers' },
     { path: '/about', redirect: '/admin/about' },
     { path: '/order-discounts', redirect: '/admin/order-discounts' },
     { path: '/member-levels', redirect: '/admin/member-levels' },
-    { path: '/blog', redirect: '/admin/blog' },
     { path: '/order-qa', redirect: '/admin/order-qa' },
     { path: '/operation-logs', redirect: '/admin/operation-logs' },
     { path: '/users', redirect: '/admin/users' },
@@ -254,7 +255,6 @@ const router = createRouter({
     { path: '/system-settings', redirect: '/admin/system-settings' },
     { path: '/edm', redirect: '/admin/edm' },
     { path: '/points', redirect: '/admin/points' },
-    { path: '/promotions', redirect: '/admin/promotions' },
     { path: '/member-groups', redirect: '/admin/member-groups' },
     { path: '/members', redirect: '/admin/members' },
     { path: '/calendar', redirect: '/admin/calendar' },
@@ -269,6 +269,13 @@ const router = createRouter({
 
 let loadingTimer: ReturnType<typeof setTimeout> | null = null
 
+
+const legacyAdminRedirects: Record<string, string> = {
+  '/products': '/admin/products',
+  '/blog': '/admin/blog',
+  '/promotions': '/admin/promotions'
+}
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
@@ -279,7 +286,7 @@ router.beforeEach((to, from, next) => {
 
   loadingTimer = setTimeout(() => {
     Loading.show({
-      message: '?�面載入�?..',
+      message: '頁面載入中...',
       spinnerSize: 40
     })
   }, 200)
@@ -290,6 +297,17 @@ router.beforeEach((to, from, next) => {
 
   const requiresAuth = to.meta.requiresAuth !== false
   const isAuthenticated = authStore.isAuthenticated
+
+  const legacyTarget = legacyAdminRedirects[to.path]
+  if (legacyTarget) {
+    const isAdminUser = ['ADMIN', 'MANAGER', 'STAFF'].includes(authStore.userRole || '')
+    if (isAuthenticated && isAdminUser) {
+      next(legacyTarget)
+      return
+    }
+    next()
+    return
+  }
 
   if (requiresAuth && !isAuthenticated) {
     next({ name: 'login' })
@@ -305,6 +323,18 @@ router.beforeEach((to, from, next) => {
     return
   }
 
+  const isAdminRoute = to.path.startsWith('/admin')
+  if (isAuthenticated && authStore.userRole === 'CUSTOMER' && isAdminRoute) {
+    Notify.create({
+      type: 'warning',
+      message: '顧客帳號無法使用後台功能，已為你導回前台首頁。',
+      position: 'top'
+    })
+
+    next({ name: 'storeHome' })
+    return
+  }
+
   const allowedRoles = to.meta.roles as string[] | undefined
   if (allowedRoles && allowedRoles.length > 0 && isAuthenticated) {
     const userRole = authStore.userRole
@@ -314,8 +344,8 @@ router.beforeEach((to, from, next) => {
       Notify.create({
         type: 'warning',
         message: isStoreCustomerRoute
-          ? 'This page is for customer accounts only. Please login with a customer account.'
-          : 'You do not have permission to access this page.',
+          ? '你的帳號沒有權限使用此頁面，請以顧客帳號完成前台操作。'
+          : '你的帳號沒有權限存取此頁面。',
         position: 'top'
       })
 
@@ -355,7 +385,7 @@ router.onError((error) => {
   console.error('Router Error:', error)
   Notify.create({
     type: 'negative',
-    message: '?�面載入失�?，�?稍�??�試',
+    message: '頁面導覽發生錯誤，請稍後再試。',
     position: 'top'
   })
 })

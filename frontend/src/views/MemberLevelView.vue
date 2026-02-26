@@ -28,21 +28,79 @@
         </div>
       </div>
 
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="level-metric-card admin-metric-card">
+            <q-card-section>
+              <div class="text-caption text-grey-7">等級總數</div>
+              <div class="level-metric-card__value">{{ levels.length }}</div>
+              <div class="text-caption text-grey-6">目前已建立的會員等級</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="level-metric-card level-metric-card--green admin-metric-card">
+            <q-card-section>
+              <div class="text-caption text-grey-7">啟用等級</div>
+              <div class="level-metric-card__value">{{ levelMetrics.enabled }}</div>
+              <div class="text-caption text-grey-6">目前可用的會員等級</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="level-metric-card level-metric-card--blue admin-metric-card">
+            <q-card-section>
+              <div class="text-caption text-grey-7">平均折扣率</div>
+              <div class="level-metric-card__value">{{ (levelMetrics.avgDiscountRate * 100).toFixed(0) }}%</div>
+              <div class="text-caption text-grey-6">所有等級平均折扣比例</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="level-metric-card level-metric-card--amber admin-metric-card">
+            <q-card-section>
+              <div class="text-caption text-grey-7">最高積分倍率</div>
+              <div class="level-metric-card__value">{{ levelMetrics.maxPointsMultiplier || 0 }}x</div>
+              <div class="text-caption text-grey-6">目前等級規則中的最高倍率</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
       <!-- Member Levels Table -->
-      <q-card>
+      <q-card class="level-table-card admin-data-card">
         <q-table
+          class="level-admin-table"
           :rows="levels"
           :columns="columns"
           row-key="id"
           :loading="loading"
           :pagination="pagination"
+          :rows-per-page-options="[10, 20, 50]"
+          wrap-cells
           flat
         >
+          <template v-slot:top>
+            <div class="admin-table-toolbar level-table-toolbar full-width">
+              <div>
+                <div class="text-subtitle1 text-weight-bold">會員等級列表</div>
+                <div class="text-caption text-grey-7">顯示 {{ levels.length }} 個等級規則</div>
+              </div>
+              <div class="row items-center q-gutter-xs">
+                <q-chip dense color="green-1" text-color="green-10">啟用 {{ levelMetrics.enabled }}</q-chip>
+                <q-chip dense color="grey-2" text-color="grey-8">停用 {{ levelMetrics.disabled }}</q-chip>
+              </div>
+            </div>
+          </template>
+
           <template v-slot:body-cell-name="props">
             <q-td :props="props">
-              <div class="row items-center">
+              <div class="row items-center no-wrap q-gutter-sm">
                 <q-icon v-if="props.row.iconUrl" name="verified" size="24px" :color="getLevelColor(props.row.levelOrder)" class="q-mr-sm" />
-                <span class="text-weight-bold">{{ props.row.name }}</span>
+                <div class="column">
+                  <span class="text-weight-bold">{{ props.row.name }}</span>
+                  <span class="text-caption text-grey-6">{{ props.row.description || '無等級描述' }}</span>
+                </div>
               </div>
             </q-td>
           </template>
@@ -55,7 +113,7 @@
 
           <template v-slot:body-cell-minSpendAmount="props">
             <q-td :props="props">
-              <span v-if="props.row.minSpendAmount">${{ props.row.minSpendAmount.toFixed(2) }}</span>
+              <span v-if="props.row.minSpendAmount">{{ formatCurrency(props.row.minSpendAmount) }}</span>
               <span v-else class="text-grey-6">-</span>
             </q-td>
           </template>
@@ -76,44 +134,61 @@
 
           <template v-slot:body-cell-enabled="props">
             <q-td :props="props">
-              <q-toggle
-                :model-value="props.row.enabled"
-                @update:model-value="handleToggleEnabled(props.row.id)"
-                color="positive"
-              />
+              <div class="column items-center q-gutter-xs">
+                <q-toggle
+                  :model-value="props.row.enabled"
+                  @update:model-value="handleToggleEnabled(props.row.id)"
+                  color="positive"
+                />
+                <span class="text-caption" :class="props.row.enabled ? 'text-positive' : 'text-grey-6'">
+                  {{ props.row.enabled ? '啟用' : '停用' }}
+                </span>
+              </div>
             </q-td>
           </template>
 
           <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
+            <q-td :props="props" class="level-actions-cell">
+              <q-btn flat dense round icon="edit" color="primary" size="sm" class="level-row-icon-btn" @click="handleEdit(props.row)">
                 <q-tooltip>編輯</q-tooltip>
               </q-btn>
-              <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row.id)">
+              <q-btn flat dense round icon="delete" color="negative" size="sm" class="level-row-icon-btn" @click="handleDelete(props.row.id)">
                 <q-tooltip>刪除</q-tooltip>
               </q-btn>
             </q-td>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="text-center text-grey-6 q-py-lg">
+              <div class="text-subtitle2 q-mb-xs">尚無會員等級資料</div>
+              <div class="text-caption">建立第一個等級規則以啟用會員權益設定</div>
+            </div>
           </template>
         </q-table>
       </q-card>
 
       <!-- Add/Edit Dialog -->
       <q-dialog v-model="showDialog" persistent>
-        <q-card style="min-width: 600px">
-          <q-card-section class="row items-center q-pb-none">
+        <q-card class="level-dialog-card" style="min-width: 600px">
+          <q-card-section class="row items-center q-pb-none level-dialog-card__header">
             <div class="text-h6">{{ form.id ? '編輯會員等級' : '新增會員等級' }}</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="level-dialog-card__body">
             <q-form>
+              <q-banner rounded dense class="level-dialog-banner q-mb-md">
+                等級順序、折扣率與積分倍率會直接影響會員權益，請確認規則一致性。
+              </q-banner>
               <div class="row q-col-gutter-md">
                 <div class="col-6">
                   <q-input
                     v-model="form.name"
                     label="等級名稱 *"
                     outlined
+                    name="member-level-name"
+                    autocomplete="off"
                     :rules="[val => !!val || '請輸入等級名稱']"
                   />
                 </div>
@@ -124,6 +199,7 @@
                     label="等級順序 *"
                     outlined
                     type="number"
+                    inputmode="numeric"
                     :rules="[val => val > 0 || '等級順序必須大於0']"
                   />
                 </div>
@@ -131,11 +207,12 @@
                 <div class="col-6">
                   <q-input
                     v-model.number="form.minSpendAmount"
-                    label="最低消费金额"
+                    label="最低消費金額"
                     outlined
                     type="number"
                     step="0.01"
-                    prefix="$"
+                    prefix="NT$"
+                    inputmode="decimal"
                   />
                 </div>
 
@@ -160,6 +237,7 @@
                     outlined
                     type="number"
                     step="0.1"
+                    inputmode="decimal"
                     hint="例如: 1.5 表示1.5倍積分"
                     :rules="[
                       val => val === undefined || val === null || (val > 0 && val <= 9.99) || '積分倍率必須在0到9.99之間'
@@ -170,8 +248,10 @@
                 <div class="col-6">
                   <q-input
                     v-model="form.iconUrl"
-                    label="图标URL"
+                    label="圖示 URL"
                     outlined
+                    name="member-level-icon-url"
+                    autocomplete="off"
                   />
                 </div>
 
@@ -196,7 +276,7 @@
             </q-form>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-card-actions align="right" class="q-px-md q-pb-md level-dialog-card__actions">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
             <q-btn unelevated label="保存" color="primary" @click="handleSubmit" />
           </q-card-actions>
@@ -207,7 +287,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberLevelApi, type MemberLevel, type PageResponse } from '@/api'
 import { startMemberLevelTour, isMemberLevelTourCompleted } from '@/utils/memberLevelTour'
@@ -244,6 +324,24 @@ const columns = [
   { name: 'enabled', label: '狀態', align: 'center' as const, field: 'enabled' },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
+
+const levelMetrics = computed(() => ({
+  enabled: levels.value.filter(l => l.enabled).length,
+  disabled: levels.value.filter(l => !l.enabled).length,
+  avgDiscountRate: levels.value.length
+    ? levels.value.reduce((sum, l) => sum + (Number(l.discountRate) || 0), 0) / levels.value.length
+    : 0,
+  maxPointsMultiplier: levels.value.reduce((max, l) => Math.max(max, Number(l.pointsMultiplier) || 0), 0)
+}))
+
+const formatCurrency = (value?: number | null) => {
+  const amount = Number(value) || 0
+  return new Intl.NumberFormat('zh-TW', {
+    style: 'currency',
+    currency: 'TWD',
+    maximumFractionDigits: 2
+  }).format(amount)
+}
 
 const loadLevels = async () => {
   loading.value = true
@@ -393,3 +491,99 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.level-metric-card {
+  border-radius: 16px;
+}
+
+.level-metric-card__value {
+  margin: 6px 0 4px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.level-metric-card--green {
+  border-color: rgba(34,197,94,.22);
+  background: linear-gradient(180deg, rgba(240,253,244,.98), rgba(236,253,245,.96));
+}
+
+.level-metric-card--blue {
+  border-color: rgba(59,130,246,.2);
+  background: linear-gradient(180deg, rgba(239,246,255,.98), rgba(238,242,255,.96));
+}
+
+.level-metric-card--amber {
+  border-color: rgba(245,158,11,.24);
+  background: linear-gradient(180deg, rgba(255,251,235,.98), rgba(255,247,237,.96));
+}
+
+.level-table-card,
+.level-dialog-card {
+  border-radius: 18px;
+}
+
+.level-admin-table :deep(.q-table__top) {
+  padding: 14px 16px 8px;
+}
+
+.level-actions-cell {
+  min-width: 92px;
+}
+
+.level-row-icon-btn {
+  margin-right: 4px;
+}
+
+.level-dialog-card__header {
+  border-bottom: 1px solid rgba(148,163,184,.14);
+}
+
+.level-dialog-card__body {
+  padding-top: 14px;
+}
+
+.level-dialog-card__actions {
+  border-top: 1px solid rgba(148,163,184,.12);
+}
+
+.level-dialog-banner {
+  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(34,197,94,.08));
+  color: #0f172a;
+  border: 1px solid rgba(59,130,246,.12);
+}
+
+@media (max-width: 1023px) {
+  .level-admin-table :deep(.q-table__middle) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .level-admin-table :deep(table) {
+    min-width: 940px;
+  }
+}
+
+@media (max-width: 599px) {
+  .level-metric-card__value {
+    font-size: 1.28rem;
+  }
+
+  .level-dialog-card {
+    min-width: unset !important;
+    width: calc(100vw - 24px);
+  }
+
+  .level-dialog-card__actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .level-dialog-card__actions :deep(.q-btn) {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+}
+</style>

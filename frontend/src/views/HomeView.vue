@@ -14,7 +14,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- Stats Row (?恣????撌亙閬? -->
+      <!-- Stats Row (staff / admin dashboard only) -->
       <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-sm-6 col-md-3">
           <q-card class="card-hover card-border-top border-primary">
@@ -88,7 +88,7 @@
               <div class="row items-center q-gutter-md">
                 <q-icon name="attach_money" size="40px" color="green" />
                 <div>
-                  <div class="text-h4 text-weight-bold">${{ formatCurrency(stats.monthlySales) }}</div>
+                  <div class="text-h4 text-weight-bold">NT$ {{ formatCurrency(stats.monthlySales) }}</div>
                   <div class="text-caption text-grey-7">本月銷售額</div>
                 </div>
               </div>
@@ -105,7 +105,7 @@
         </div>
       </div>
 
-      <!-- Quick Actions (?恣????撌亙閬? -->
+      <!-- Quick Actions (staff / admin dashboard only) -->
       <q-card v-if="authStore.userRole !== 'CUSTOMER'" class="q-mb-md">
         <q-card-section>
           <div class="text-h6 text-weight-bold">快速操作</div>
@@ -128,14 +128,14 @@
         </q-card-section>
       </q-card>
 
-      <!-- Recent Activity (?恣????撌亙閬? -->
+      <!-- Recent Activity (staff / admin dashboard only) -->
       <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md">
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
                 <div class="text-h6 text-weight-bold">近期訂單</div>
-                <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/orders')" />
+                <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/admin/orders')" />
               </div>
             </q-card-section>
             <q-card-section class="q-pt-none">
@@ -149,7 +149,7 @@
                   :color="getStatusColor(order.status)"
                 >
                   <div>客戶: {{ order.customerName }}</div>
-                  <div class="text-weight-bold">金額: ${{ order.totalAmount }}</div>
+                  <div class="text-weight-bold">金額: NT$ {{ formatCurrency(Number(order.totalAmount || 0)) }}</div>
                 </q-timeline-entry>
               </q-timeline>
               <div v-else class="text-center text-grey-7 q-py-md">暫無訂單資料</div>
@@ -162,7 +162,7 @@
             <q-card-section>
               <div class="row items-center justify-between">
                 <div class="text-h6 text-weight-bold">熱門商品</div>
-                <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/products')" />
+                <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/admin/products')" />
               </div>
             </q-card-section>
             <q-card-section class="q-pt-none">
@@ -179,7 +179,7 @@
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label class="text-primary text-weight-bold">
-                      ${{ product.price }}
+                      NT$ {{ formatCurrency(Number(product.price || 0)) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -190,7 +190,7 @@
         </div>
       </div>
 
-      <!-- CUSTOMER 撠惇?批捆 -->
+      <!-- Customer quick links -->
       <div v-if="authStore.userRole === 'CUSTOMER'" class="row q-col-gutter-md">
         <div class="col-12 col-md-6">
           <q-card>
@@ -204,7 +204,7 @@
                 label="查看我的訂單"
                 icon="receipt"
                 unelevated
-                @click="$router.push('/orders')"
+                @click="$router.push('/account/orders')"
               />
             </q-card-section>
           </q-card>
@@ -256,7 +256,7 @@ const loading = ref(false)
 
 const currentDate = computed(() => {
   const date = new Date()
-  return date.toLocaleDateString('zh-CN', { 
+  return date.toLocaleDateString('zh-TW', {
     year: 'numeric', 
     month: 'long', 
     day: 'numeric',
@@ -269,44 +269,44 @@ const quickActions = [
     icon: 'add_circle',
     label: adminGlossary.actions.createProduct,
     color: 'primary',
-    onClick: () => router.push('/products')
+    onClick: () => router.push('/admin/products')
   },
   {
     icon: 'receipt',
     label: adminGlossary.actions.manageOrders,
     color: 'orange',
-    onClick: () => router.push('/orders')
+    onClick: () => router.push('/admin/orders')
   },
   {
     icon: 'person_add',
     label: adminGlossary.actions.addMember,
     color: 'teal',
-    onClick: () => router.push('/customers')
+    onClick: () => router.push('/admin/customers')
   },
   {
     icon: 'photo_library',
     label: adminGlossary.actions.mediaLibrary,
     color: 'purple',
-    onClick: () => router.push('/albums')
+    onClick: () => router.push('/admin/albums')
   },
   {
     icon: 'bar_chart',
     label: adminGlossary.actions.analytics,
     color: 'green',
-    onClick: () => {}
+    onClick: () => router.push('/admin/statistics')
   },
   {
     icon: 'settings',
     label: adminGlossary.actions.systemSettings,
     color: 'blue-grey',
-    onClick: () => {}
+    onClick: () => router.push('/admin/system-settings')
   }
 ]
 
 const loadDashboardData = async () => {
-  // ?芣?蝞∠??～????∪極?臭誑閮芸??銵冽蝯梯?
+  // Customer accounts do not load admin dashboard data.
   if (authStore.userRole === 'CUSTOMER') {
-    // CUSTOMER 閫銝＊蝷箏?銵冽蝯梯?
+    // Keep customer view lightweight and skip admin API calls.
     loading.value = false
     return
   }
@@ -360,17 +360,17 @@ const loadDashboardData = async () => {
 
 const formatNumber = (num: number | undefined) => {
   if (num === undefined || num === null) return '0'
-  return num.toLocaleString('zh-CN')
+  return num.toLocaleString('zh-TW')
 }
 
 const formatCurrency = (amount: number | undefined) => {
   if (amount === undefined || amount === null) return '0.00'
-  return amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return amount.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString('zh-TW', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

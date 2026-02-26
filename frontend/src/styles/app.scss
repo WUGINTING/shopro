@@ -238,6 +238,37 @@ h4,
   background: #e9edf5;
 }
 
+.admin-shell .admin-data-card {
+  border-radius: 18px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-shell .admin-metric-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.admin-shell .admin-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+}
+
+.admin-shell .admin-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-shell .admin-table-toolbar .q-chip {
+  font-weight: 600;
+}
+
 .admin-shell .text-caption,
 .admin-shell .text-grey-7 {
   color: var(--admin-muted) !important;
@@ -276,6 +307,10 @@ h4,
 
   .admin-shell .q-card {
     border-radius: 14px;
+  }
+
+  .admin-shell .admin-table-toolbar {
+    align-items: flex-start;
   }
 
   .admin-shell .q-table__middle {

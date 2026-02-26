@@ -636,7 +636,7 @@ export const menuCategories = [
         price: 'NT$ 180',
         image:
           'https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
-        ingredients: '雞蛋、蛤蜊、蝦仁��高湯',
+        ingredients: '雞蛋、蛤蜊、蝦仁?高湯',
         allergens: '含蛋類、甲殼類',
       },
       {

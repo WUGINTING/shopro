@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -101,32 +103,45 @@ public class AlbumService {
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new BusinessException("相冊不存在"));
 
-        // 儲存檔案
-        String filename = fileStorageService.storeFile(file);
-        String imageUrl = "/api/albums/images/" + filename;
+        String filename = null;
+        try {
+            // 儲存檔案
+            filename = fileStorageService.storeFile(file);
+            String imageUrl = "/api/albums/images/" + filename;
 
-        // 創建圖片記錄
-        AlbumImage image = AlbumImage.builder()
-                .album(album)
-                .imageUrl(imageUrl)
-                .fileName(filename)
-                .title(title)
-                .description(description)
-                .fileSize(file.getSize())
-                .fileType(file.getContentType())
-                .sortOrder(album.getImages().size())
-                .build();
+            // 創建圖片記錄
+            AlbumImage image = AlbumImage.builder()
+                    .album(album)
+                    .imageUrl(imageUrl)
+                    .fileName(filename)
+                    .title(title)
+                    .description(description)
+                    .fileSize(file.getSize())
+                    .fileType(file.getContentType())
+                    .sortOrder(album.getImages().size())
+                    .build();
 
-        album.addImage(image);
-        albumRepository.save(album);
+            album.addImage(image);
+            albumRepository.saveAndFlush(album);
 
-        // 如果相冊沒有封面，設定第一張圖片為封面
-        if (album.getCoverImageUrl() == null || album.getCoverImageUrl().isEmpty()) {
-            album.setCoverImageUrl(imageUrl);
-            albumRepository.save(album);
+            // 如果相冊沒有封面，設定第一張圖片為封面
+            if (album.getCoverImageUrl() == null || album.getCoverImageUrl().isEmpty()) {
+                album.setCoverImageUrl(imageUrl);
+                albumRepository.saveAndFlush(album);
+            }
+
+            return toImageDTO(image);
+        } catch (Exception e) {
+            // DB 寫入失敗時回滾已儲存的實體檔，避免殘留孤兒檔案
+            if (filename != null) {
+                try {
+                    fileStorageService.deleteFile(filename);
+                } catch (Exception cleanupError) {
+                    log.warn("圖片上傳失敗後清理檔案失敗: {}, 錯誤: {}", filename, cleanupError.getMessage());
+                }
+            }
+            throw e;
         }
-
-        return toImageDTO(image);
     }
 
     /**
@@ -165,6 +180,64 @@ public class AlbumService {
             }
             albumRepository.save(album);
         }
+    }
+
+    /**
+     * 設定相冊封面圖片
+     */
+    @Transactional
+    public AlbumDTO setCoverImage(Long albumId, Long imageId) {
+        Album album = albumRepository.findById(albumId)
+                .orElseThrow(() -> new BusinessException("相冊不存在"));
+
+        AlbumImage image = albumImageRepository.findByIdAndAlbumId(imageId, albumId)
+                .orElseThrow(() -> new BusinessException("圖片不存在或不屬於此相冊"));
+
+        album.setCoverImageUrl(image.getImageUrl());
+        albumRepository.save(album);
+        return toDTO(album);
+    }
+
+    /**
+     * 更新相冊圖片排序（以 imageIds 的順序為準）
+     */
+    @Transactional
+    public List<AlbumImageDTO> reorderImages(Long albumId, List<Long> imageIds) {
+        if (imageIds == null || imageIds.isEmpty()) {
+            throw new BusinessException("排序資料不能為空");
+        }
+
+        albumRepository.findById(albumId)
+                .orElseThrow(() -> new BusinessException("相冊不存在"));
+
+        List<AlbumImage> images = albumImageRepository.findByAlbumIdOrderBySortOrderAsc(albumId);
+        if (images.isEmpty()) {
+            throw new BusinessException("相冊中沒有可排序的圖片");
+        }
+
+        if (images.size() != imageIds.size()) {
+            throw new BusinessException("排序圖片數量不一致");
+        }
+
+        Set<Long> existingIds = images.stream().map(AlbumImage::getId).collect(Collectors.toSet());
+        Set<Long> requestedIds = Set.copyOf(imageIds);
+        if (!existingIds.equals(requestedIds)) {
+            throw new BusinessException("排序資料包含無效圖片或缺少圖片");
+        }
+
+        Map<Long, AlbumImage> imageMap = images.stream()
+                .collect(Collectors.toMap(AlbumImage::getId, image -> image));
+
+        for (int i = 0; i < imageIds.size(); i++) {
+            AlbumImage image = imageMap.get(imageIds.get(i));
+            image.setSortOrder(i);
+        }
+
+        List<AlbumImage> saved = albumImageRepository.saveAll(images);
+        return saved.stream()
+                .sorted(java.util.Comparator.comparing(AlbumImage::getSortOrder, java.util.Comparator.nullsLast(Integer::compareTo)))
+                .map(this::toImageDTO)
+                .collect(Collectors.toList());
     }
 
     /**

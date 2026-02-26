@@ -1,8 +1,9 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
+    <div class="row items-center justify-between q-mb-md">
       <div class="col">
         <h4 class="q-my-none" data-tour="title">積點管理</h4>
+        <div class="text-caption text-grey-7 q-mt-xs">管理積點紀錄、批次發放與兌換/過期狀態</div>
       </div>
       <div class="col-auto">
         <div class="row q-gutter-sm">
@@ -30,7 +31,7 @@
     <!-- 統計卡片 -->
     <div class="row q-col-gutter-md q-mb-md" data-tour="stats-cards">
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
+        <q-card class="point-metric-card admin-metric-card">
           <q-card-section>
             <div class="text-h6 text-primary q-mb-xs">
               總發放積點
@@ -40,7 +41,7 @@
         </q-card>
       </div>
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
+        <q-card class="point-metric-card point-metric-card--warning admin-metric-card">
           <q-card-section>
             <div class="text-h6 text-warning q-mb-xs">
               已兌換積點
@@ -50,7 +51,7 @@
         </q-card>
       </div>
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
+        <q-card class="point-metric-card point-metric-card--info admin-metric-card">
           <q-card-section>
             <div class="text-h6 text-info q-mb-xs">
               待過期積點
@@ -60,7 +61,7 @@
         </q-card>
       </div>
       <div class="col-12 col-sm-6 col-md-3">
-        <q-card>
+        <q-card class="point-metric-card point-metric-card--success admin-metric-card">
           <q-card-section>
             <div class="text-h6 text-success q-mb-xs">
               活動記錄
@@ -72,8 +73,17 @@
     </div>
 
     <!-- 搜尋欄 -->
-    <q-card class="q-mb-md" data-tour="search-card">
-      <q-card-section>
+    <q-card class="q-mb-md point-filter-card admin-data-card" data-tour="search-card">
+      <q-card-section class="point-filter-card__header">
+        <div class="row items-center justify-between q-mb-sm">
+          <div>
+            <div class="text-h6">搜尋與篩選</div>
+            <div class="text-caption text-grey-7">先選會員再看類型，能更快定位積點異動來源</div>
+          </div>
+          <q-chip dense color="grey-2" text-color="grey-8" icon="history">
+            {{ records.length }} 筆 / 總計 {{ pagination.rowsNumber || 0 }} 筆
+          </q-chip>
+        </div>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-sm-6">
             <q-select
@@ -85,6 +95,8 @@
               outlined
               dense
               clearable
+              name="point-member-filter"
+              autocomplete="off"
               map-options
               emit-value
               @update:model-value="onSearch"
@@ -100,6 +112,8 @@
               outlined
               dense
               clearable
+              name="point-type-filter"
+              autocomplete="off"
               map-options
               emit-value
               @update:model-value="onSearch"
@@ -110,6 +124,7 @@
               color="primary"
               label="重置"
               outline
+              class="full-width full-height"
               @click="resetSearch"
             />
           </div>
@@ -118,13 +133,14 @@
     </q-card>
 
     <!-- 積點紀錄列表 -->
-    <q-card data-tour="points-table">
+    <q-card class="point-table-card admin-data-card" data-tour="points-table">
       <q-linear-progress
         v-if="loading"
         indeterminate
         color="primary"
       />
       <q-table
+        class="point-admin-table"
         :rows="records"
         :columns="columns"
         row-key="id"
@@ -134,9 +150,28 @@
         flat
         bordered
       >
+        <template #top>
+          <div class="admin-table-toolbar point-table-toolbar full-width">
+            <div>
+              <div class="text-subtitle1 text-weight-bold">積點紀錄列表</div>
+              <div class="text-caption text-grey-7">依會員與類型查看積點變化與結餘</div>
+            </div>
+            <div class="row items-center q-gutter-xs">
+              <q-chip dense color="green-1" text-color="green-10">發放 {{ stats.totalEarned || 0 }}</q-chip>
+              <q-chip dense color="red-1" text-color="red-10">兌換 {{ stats.totalRedeemed || 0 }}</q-chip>
+            </div>
+          </div>
+        </template>
+
+        <template #body-cell-memberId="props">
+          <q-td :props="props">
+            <q-chip dense square color="grey-2" text-color="grey-8">#{{ props.row.memberId }}</q-chip>
+          </q-td>
+        </template>
+
         <template #body-cell-points="props">
           <q-td :props="props">
-            <span :class="getPointsClass(props.row.pointType)">
+            <span :class="getPointsClass(props.row.pointType)" class="point-value-text">
               {{ getPointsSign(props.row.pointType) }}{{ props.row.points }}
             </span>
           </q-td>
@@ -150,7 +185,16 @@
 
         <template #body-cell-createdAt="props">
           <q-td :props="props">
-            {{ formatDate(props.row.createdAt) }}
+            <div class="column q-gutter-xs">
+              <span>{{ formatDate(props.row.createdAt) }}</span>
+              <span class="text-caption text-grey-6">{{ props.row.reason ? '含操作原因' : '無原因說明' }}</span>
+            </div>
+          </q-td>
+        </template>
+
+        <template #body-cell-balanceAfter="props">
+          <q-td :props="props">
+            <span class="text-weight-medium">{{ props.row.balanceAfter ?? '-' }}</span>
           </q-td>
         </template>
 
@@ -164,8 +208,8 @@
 
     <!-- 批次發放對話框 -->
     <q-dialog v-model="showBatchGrantDialog">
-      <q-card style="width: 500px; max-width: 90vw" data-tour="batch-dialog">
-        <q-card-section class="row items-center q-pb-none">
+      <q-card class="point-dialog-card" style="width: 500px; max-width: 90vw" data-tour="batch-dialog">
+        <q-card-section class="row items-center q-pb-none point-dialog-card__header">
           <div class="text-h6">批次發放積點</div>
           <q-space />
           <q-btn
@@ -179,8 +223,11 @@
 
         <q-separator />
 
-        <q-card-section class="q-pt-none">
+        <q-card-section class="q-pt-none point-dialog-card__body">
           <q-form ref="batchForm" @submit="executeBatchGrant">
+            <q-banner rounded dense class="point-dialog-banner q-mb-md">
+              批次發放會立即生效，請確認會員名單與發放原因。
+            </q-banner>
             <q-select
               v-model="batchData.memberIds"
               :options="memberOptions"
@@ -197,6 +244,8 @@
               emit-value
               @filter="filterMembers"
               class="q-mb-md"
+              name="point-batch-members"
+              autocomplete="off"
               :rules="[val => val && val.length > 0 || '請至少選擇一個會員']"
             >
               <template v-slot:no-option>
@@ -216,6 +265,8 @@
               type="number"
               min="1"
               class="q-mb-md"
+              name="point-batch-amount"
+              inputmode="numeric"
               :rules="[val => val && val > 0 || '請輸入正整數']"
             />
 
@@ -225,10 +276,12 @@
               outlined
               dense
               class="q-mb-md"
+              name="point-batch-reason"
+              autocomplete="off"
               :rules="[val => !!val || '請輸入發放原因']"
             />
 
-            <div class="row q-gutter-md">
+            <div class="row q-gutter-md point-dialog-card__actions-row">
               <q-btn
                 label="取消"
                 flat
@@ -534,3 +587,74 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.point-metric-card {
+  border-radius: 16px;
+}
+
+.point-metric-card--warning {
+  border-color: rgba(245,158,11,.24);
+  background: linear-gradient(180deg, rgba(255,251,235,.98), rgba(255,247,237,.96));
+}
+
+.point-metric-card--info {
+  border-color: rgba(59,130,246,.2);
+  background: linear-gradient(180deg, rgba(239,246,255,.98), rgba(238,242,255,.96));
+}
+
+.point-metric-card--success {
+  border-color: rgba(34,197,94,.22);
+  background: linear-gradient(180deg, rgba(240,253,244,.98), rgba(236,253,245,.96));
+}
+
+.point-filter-card,
+.point-table-card,
+.point-dialog-card {
+  border-radius: 18px;
+}
+
+.point-filter-card__header {
+  padding-bottom: 12px;
+}
+
+.point-admin-table :deep(.q-table__top) {
+  padding: 14px 16px 8px;
+}
+
+.point-value-text {
+  font-size: 0.95rem;
+}
+
+.point-dialog-card__header {
+  border-bottom: 1px solid rgba(148,163,184,.14);
+}
+
+.point-dialog-card__body {
+  padding-top: 14px;
+}
+
+.point-dialog-banner {
+  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(34,197,94,.08));
+  color: #0f172a;
+  border: 1px solid rgba(59,130,246,.12);
+}
+
+@media (max-width: 1023px) {
+  .point-admin-table :deep(.q-table__middle) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .point-admin-table :deep(table) {
+    min-width: 860px;
+  }
+}
+
+@media (max-width: 599px) {
+  .point-dialog-card {
+    width: calc(100vw - 24px) !important;
+    max-width: unset !important;
+  }
+}
+</style>

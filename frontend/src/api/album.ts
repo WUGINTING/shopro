@@ -158,6 +158,20 @@ export const albumApi = {
   },
 
   /**
+   * 設定相冊封面圖片
+   */
+  setCoverImage: (albumId: number, imageId: number) => {
+    return axios.put<any, ApiResponse<Album>>(`/albums/${albumId}/images/${imageId}/cover`)
+  },
+
+  /**
+   * 更新相冊圖片排序（傳入依序排列的圖片 ID 清單）
+   */
+  reorderImages: (albumId: number, imageIds: number[]) => {
+    return axios.put<any, ApiResponse<AlbumImage[]>>(`/albums/${albumId}/images/sort`, imageIds)
+  },
+
+  /**
    * 獲取圖片 URL
    * @param {string} filename - 檔案名稱
    * @returns {string} 圖片 URL

@@ -5,7 +5,7 @@
       <div class="row items-center justify-between q-mb-md">
         <div>
           <div class="text-h5 text-weight-bold">商品管理</div>
-          <div class="text-caption text-grey-7">管理商品資訊、上架狀態和庫存</div>
+          <div class="text-caption text-grey-7">管理商品資料、價格、庫存與上架狀態</div>
         </div>
         <div class="row q-gutter-sm">
           <q-btn
@@ -16,7 +16,7 @@
             color="grey-7"
             @click="handleStartTour"
           >
-            <q-tooltip>商品管理教學</q-tooltip>
+            <q-tooltip>商品管理導覽</q-tooltip>
           </q-btn>
           <q-btn
             color="primary"
@@ -34,16 +34,16 @@
             <q-card-section>
               <div class="metric-label">商品總數</div>
               <div class="metric-value">{{ productMetrics.total }}</div>
-              <div class="metric-sub">所有商品資料（含草稿）</div>
+              <div class="metric-sub">目前列表中的商品筆數</div>
             </q-card-section>
           </q-card>
         </div>
         <div class="col-12 col-sm-6 col-lg-3">
           <q-card class="metric-card metric-card--green">
             <q-card-section>
-              <div class="metric-label">已上架</div>
+              <div class="metric-label">已上架商品</div>
               <div class="metric-value">{{ productMetrics.published }}</div>
-              <div class="metric-sub">目前可售商品數</div>
+              <div class="metric-sub">目前對外可販售商品</div>
             </q-card-section>
           </q-card>
         </div>
@@ -52,7 +52,7 @@
             <q-card-section>
               <div class="metric-label">草稿商品</div>
               <div class="metric-value">{{ productMetrics.draft }}</div>
-              <div class="metric-sub">待補資料 / 待上架</div>
+              <div class="metric-sub">尚未上架或待補資料</div>
             </q-card-section>
           </q-card>
         </div>
@@ -61,7 +61,7 @@
             <q-card-section>
               <div class="metric-label">低庫存商品</div>
               <div class="metric-value">{{ productMetrics.lowStock }}</div>
-              <div class="metric-sub">庫存 ≤ 10</div>
+              <div class="metric-sub">庫存小於等於 10</div>
             </q-card-section>
           </q-card>
         </div>
@@ -72,8 +72,8 @@
         <q-card-section>
           <div class="filter-card__top q-mb-md">
             <div>
-              <div class="text-subtitle1 text-weight-bold">快速篩選</div>
-              <div class="text-caption text-grey-7">先用名稱搜尋，再用狀態與分類縮小範圍，降低操作時間。</div>
+              <div class="text-subtitle1 text-weight-bold">搜尋與篩選</div>
+              <div class="text-caption text-grey-7">可依商品名稱、狀態與分類快速篩選，提升管理效率</div>
             </div>
             <q-chip dense square color="blue-1" text-color="blue-9">
               目前顯示 {{ products.length }} 筆
@@ -125,7 +125,7 @@
               />
             </div>
             <div class="col-12 col-sm-6 col-md-2">
-              <q-btn color="primary" unelevated class="full-width" label="搜尋" icon="search" />
+              <q-btn color="primary" unelevated class="full-width" label="查詢" icon="search" />
             </div>
           </div>
         </q-card-section>
@@ -144,13 +144,19 @@
           class="product-table"
           aria-label="商品列表"
         >
-          <!-- 手機版卡片模式 -->
+          <!-- 行動版卡片 -->
           <template v-slot:item="props">
             <div class="q-pa-xs col-xs-12 col-sm-6">
               <q-card flat bordered class="mobile-product-card">
                 <q-card-section class="row items-center">
                   <q-avatar v-if="getProductImageUrl(props.row)" rounded size="60px" class="q-mr-md">
-                    <q-img :src="getProductImageUrl(props.row)" :ratio="1" loading="lazy" />
+                    <q-img :src="getProductImageUrl(props.row)" :ratio="1" loading="lazy" @error="handleImageError($event, props.row)">
+                      <template v-slot:error>
+                        <div class="absolute-full flex flex-center bg-grey-3">
+                          <q-icon name="broken_image" color="grey-6" size="24px" />
+                        </div>
+                      </template>
+                    </q-img>
                   </q-avatar>
                   <q-avatar v-else rounded size="60px" color="grey-3" class="q-mr-md">
                     <q-icon name="image" />
@@ -196,10 +202,15 @@
                   :src="getProductImageUrl(props.row)"
                   :ratio="1"
                   loading="lazy"
-                  @error="(err) => console.error('圖片載入失敗:', getProductImageUrl(props.row), err, props.row)"
+                  @error="handleImageError($event, props.row)"
                 >
                   <template v-slot:loading>
                     <q-spinner-dots color="primary" />
+                  </template>
+                  <template v-slot:error>
+                    <div class="absolute-full flex flex-center bg-grey-3">
+                      <q-icon name="broken_image" color="grey-6" size="24px" />
+                    </div>
                   </template>
                 </q-img>
               </q-avatar>
@@ -267,11 +278,11 @@
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section>
+          <q-card-section class="product-dialog-card__body">
             <q-tabs v-model="dialogTab" class="text-grey product-dialog-tabs" active-color="primary" indicator-color="primary" align="left">
-              <q-tab name="basic" label="基本資訊" />
+              <q-tab name="basic" label="基本資料" />
               <q-tab name="specifications" label="商品規格（SKU）" :disable="!form.id" />
-              <q-tab name="description" label="描述區塊" :disable="!form.id" />
+              <q-tab name="description" label="商品描述區塊" :disable="!form.id" />
             </q-tabs>
 
             <q-tab-panels v-model="dialogTab" animated>
@@ -303,7 +314,7 @@
                     outlined
                     type="number"
                     prefix="$"
-                    :rules="[val => val >= 0 || '價格不能為負數']"
+                    :rules="[val => val >= 0 || '價格不可小於 0']"
                   />
                 </div>
                 <div class="col-6">
@@ -312,7 +323,7 @@
                     label="庫存 *"
                     outlined
                     type="number"
-                    :rules="[val => val >= 0 || '庫存不能為負數']"
+                    :rules="[val => val >= 0 || '庫存不可小於 0']"
                   />
                 </div>
               </div>
@@ -359,57 +370,183 @@
                 </div>
               </div>
 
-              <q-file
-                v-model="productImage"
-                label="商品圖片"
-                outlined
-                accept="image/*"
-                class="q-mb-md"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="image" />
-                </template>
-              </q-file>
-
-              <!-- Album Images Section -->
-              <div class="q-mb-md">
-                <div class="text-subtitle2 q-mb-sm">從相冊選擇圖片</div>
-                <q-btn
-                  outline
-                  color="primary"
-                  icon="photo_library"
-                  label="選擇相冊圖片"
-                  @click="showAlbumSelector = true"
-                  :disable="!form.id"
-                />
-                <div class="text-caption text-grey-7 q-mt-xs" v-if="!form.id">
-                  請先保存商品後再添加相冊圖片
-                </div>
-
-                <!-- Selected Album Images Preview -->
-                <div v-if="form.id && selectedAlbumImages.length > 0" class="q-mt-md">
-                  <div class="text-caption q-mb-sm">已選擇的相冊圖片：</div>
-                  <div class="row q-col-gutter-sm">
-                    <div v-for="img in selectedAlbumImages" :key="img.id" class="col-auto">
-                      <q-img
-                        :src="img.imageUrl"
-                        style="width: 80px; height: 80px"
-                        class="rounded-borders"
-                      >
-                        <q-btn
-                          round
-                          dense
-                          flat
-                          icon="close"
-                          size="xs"
-                          color="white"
-                          class="absolute-top-right q-ma-xs"
-                          @click="removeSelectedImage(img.id)"
-                        />
-                      </q-img>
+              <div class="product-image-setup q-mb-md">
+                <div class="row items-start justify-between q-col-gutter-md">
+                  <div class="col-12 col-md">
+                    <div class="text-subtitle1 text-weight-bold">商品圖片設定</div>
+                    <div class="text-caption text-grey-7">
+                      第 1 張圖片會作為主圖顯示在商品列表與商品頁。
                     </div>
                   </div>
+                  <div class="col-12 col-md-auto">
+                    <q-chip dense square color="blue-1" text-color="blue-9" icon="collections">
+                      已選 {{ selectedImageCount }} 張
+                    </q-chip>
+                  </div>
                 </div>
+
+                <q-banner dense rounded class="bg-blue-1 text-blue-10 q-mt-sm">
+                  建議主圖使用清晰正方形圖片（例如 1200 x 1200），可提升前台列表辨識度。
+                </q-banner>
+
+                <div class="row q-col-gutter-md q-mt-sm">
+                  <div class="col-12 col-md-6">
+                    <q-card flat bordered class="image-setup-card">
+                      <q-card-section class="q-pb-sm">
+                        <div class="text-subtitle2 text-weight-medium">直接上傳圖片</div>
+                        <div class="text-caption text-grey-7">上傳後會加入本次商品圖片清單。</div>
+                      </q-card-section>
+                      <q-card-section class="q-pt-none">
+                        <q-file
+                          v-model="productImage"
+                          label="上傳商品圖片"
+                          name="product-image-upload"
+                          outlined
+                          accept="image/*"
+                          class="q-mb-sm"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="image" />
+                          </template>
+                        </q-file>
+                        <div class="text-caption text-grey-7" v-if="selectedProductImageFileName">
+                          已選檔案：{{ selectedProductImageFileName }}
+                        </div>
+                        <div class="text-caption text-grey-6" v-else>
+                          可選 jpg / png / webp 等圖片格式
+                        </div>
+                      </q-card-section>
+                    </q-card>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-card flat bordered class="image-setup-card">
+                      <q-card-section class="q-pb-sm">
+                        <div class="text-subtitle2 text-weight-medium">從相簿選圖</div>
+                        <div class="text-caption text-grey-7">適合重複使用品牌圖、活動圖或商品情境圖。</div>
+                      </q-card-section>
+                      <q-card-section class="q-pt-none">
+                        <q-btn
+                          outline
+                          color="primary"
+                          icon="photo_library"
+                          label="開啟相簿選圖"
+                          class="full-width"
+                          @click="showAlbumSelector = true"
+                          :disable="!form.id"
+                        />
+                        <div class="text-caption text-grey-7 q-mt-xs" v-if="!form.id">
+                          請先儲存商品，再從相簿選擇圖片。
+                        </div>
+                        <div class="text-caption text-positive q-mt-xs" v-else>
+                          已儲存商品後，可從相簿加入多張圖片。
+                        </div>
+                      </q-card-section>
+                    </q-card>
+                  </div>
+                </div>
+
+                <q-card flat bordered class="image-setup-card q-mt-md">
+                  <q-card-section class="row items-center justify-between q-pb-sm">
+                    <div>
+                      <div class="text-subtitle2 text-weight-medium">已選圖片清單</div>
+                      <div class="text-caption text-grey-7">可調整順序、設定主圖、移除不需要的圖片。</div>
+                    </div>
+                    <q-btn
+                      flat
+                      dense
+                      color="negative"
+                      icon="clear_all"
+                      label="清空"
+                      :disable="selectedAlbumImages.length === 0"
+                      @click="clearSelectedImages"
+                    />
+                  </q-card-section>
+
+                  <q-card-section class="q-pt-none">
+                    <div v-if="form.id && selectedAlbumImages.length > 0" class="row q-col-gutter-sm">
+                      <div
+                        v-for="(img, index) in selectedAlbumImages"
+                        :key="img.id"
+                        class="col-12 col-sm-6 col-md-4 col-lg-3"
+                      >
+                        <div class="selected-image-card" :class="{ 'selected-image-card--primary': isPrimarySelectedImage(index) }">
+                          <q-img :src="img.imageUrl" :ratio="1" class="selected-image-card__thumb">
+                            <div class="absolute-top-left q-pa-xs row q-gutter-xs">
+                              <q-chip
+                                dense
+                                square
+                                size="sm"
+                                :color="isPrimarySelectedImage(index) ? 'primary' : 'grey-3'"
+                                :text-color="isPrimarySelectedImage(index) ? 'white' : 'grey-8'"
+                              >
+                                {{ isPrimarySelectedImage(index) ? '主圖' : `#${index + 1}` }}
+                              </q-chip>
+                            </div>
+                            <div class="absolute-top-right q-pa-xs">
+                              <q-btn
+                                round
+                                flat
+                                color="white"
+                                icon="close"
+                                size="sm"
+                                @click="removeSelectedImage(img.id)"
+                                aria-label="移除圖片"
+                              >
+                                <q-tooltip>移除圖片</q-tooltip>
+                              </q-btn>
+                            </div>
+                          </q-img>
+
+                          <div class="selected-image-card__actions">
+                            <q-btn
+                              flat
+                              dense
+                              size="sm"
+                              icon="star"
+                              color="amber-8"
+                              label="設為主圖"
+                              :disable="isPrimarySelectedImage(index)"
+                              @click="setSelectedImageAsPrimary(index)"
+                            />
+                            <div class="row q-gutter-xs">
+                              <q-btn
+                                flat
+                                dense
+                                round
+                                size="sm"
+                                icon="arrow_back"
+                                :disable="index === 0"
+                                @click="moveSelectedImage(index, -1)"
+                                aria-label="圖片往前"
+                              >
+                                <q-tooltip>往前</q-tooltip>
+                              </q-btn>
+                              <q-btn
+                                flat
+                                dense
+                                round
+                                size="sm"
+                                icon="arrow_forward"
+                                :disable="index === selectedAlbumImages.length - 1"
+                                @click="moveSelectedImage(index, 1)"
+                                aria-label="圖片往後"
+                              >
+                                <q-tooltip>往後</q-tooltip>
+                              </q-btn>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-else class="image-setup-empty">
+                      <q-icon name="photo_size_select_actual" size="36px" color="grey-5" />
+                      <div class="q-mt-sm text-body2 text-grey-7">尚未加入商品圖片</div>
+                      <div class="text-caption text-grey-6">可直接上傳，或先儲存商品後從相簿選圖。</div>
+                    </div>
+                  </q-card-section>
+                </q-card>
               </div>
                 </q-form>
               </q-tab-panel>
@@ -418,7 +555,7 @@
               <q-tab-panel name="specifications">
                 <div v-if="!form.id" class="text-center text-grey q-pa-xl">
                   <q-icon name="info" size="48px" />
-                  <div class="q-mt-md">請先保存商品後再添加商品規格</div>
+                  <div class="q-mt-md">請先儲存商品後，再管理商品規格</div>
                 </div>
 
                 <div v-else>
@@ -457,7 +594,7 @@
                     <template v-slot:body-cell-price="props">
                       <q-td :props="props">
                         <span class="text-weight-bold text-primary">
-                          ¥{{ (props.value || 0).toFixed(2) }}
+                          ${{ (props.value || 0).toFixed(2) }}
                         </span>
                       </q-td>
                     </template>
@@ -510,8 +647,8 @@
 
                   <div v-if="specifications.length === 0" class="text-center text-grey q-pa-xl">
                     <q-icon name="inventory_2" size="64px" />
-                    <div class="q-mt-md">尚未添加商品規格</div>
-                    <div class="text-caption q-mt-xs">點擊「新增規格」按鈕開始添加</div>
+                    <div class="q-mt-md">尚未建立商品規格</div>
+                    <div class="text-caption q-mt-xs">點擊右上角「新增規格」開始建立 SKU</div>
                   </div>
                 </div>
               </q-tab-panel>
@@ -626,10 +763,10 @@
             </q-tab-panels>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-card-actions align="right" class="q-px-md q-pb-md product-dialog-card__actions">
             <q-btn flat label="取消" color="grey-7" @click="closeDialog" />
             <q-btn unelevated label="儲存" color="primary" @click="handleSubmit" />
-            <q-btn v-if="form.id" unelevated label="完成" color="positive" @click="closeDialog" />
+            <q-btn v-if="form.id" unelevated label="完成" color="positive" @click="handleDone" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -893,6 +1030,16 @@ const albumImages = ref<AlbumImage[]>([])
 const tempSelectedImages = ref<AlbumImage[]>([])
 const selectedAlbumImages = ref<AlbumImage[]>([])
 const defaultAlbumId = ref<number | null>(null)
+const selectedProductImageFileName = computed(() => {
+  const file = productImage.value as File | File[] | null
+  if (!file) return ''
+  if (Array.isArray(file)) return file[0]?.name || ''
+  return file.name || ''
+})
+const selectedImageCount = computed(() => {
+  const uploadCount = selectedProductImageFileName.value ? 1 : 0
+  return selectedAlbumImages.value.length + uploadCount
+})
 
 const form = ref<Product>({
   name: '',
@@ -926,7 +1073,7 @@ const statusOptions = [
 ]
 
 const salesModeOptions = [
-  { label: '正常銷售', value: 'NORMAL' },
+  { label: '一般販售', value: 'NORMAL' },
   { label: '預購商品', value: 'PRE_ORDER' },
   { label: '票券商品', value: 'TICKET' },
   { label: '訂閱商品', value: 'SUBSCRIPTION' },
@@ -955,6 +1102,7 @@ const loadProducts = async () => {
   loading.value = true
   try {
     const response = await productApi.getProducts()
+    console.log('[loadProducts] API 回應:', response)
     const data = response.data as PageResponse<Product> | Product[]
     let productList: Product[] = []
     if (Array.isArray(data)) {
@@ -962,7 +1110,11 @@ const loadProducts = async () => {
     } else if (data && 'content' in data) {
       productList = data.content
     }
-    
+
+    // 調試：輸出有圖片的商品
+    const productsWithImages = productList.filter(p => p.images && p.images.length > 0)
+    console.log('[loadProducts] 有圖片的商品:', productsWithImages.map(p => ({ id: p.id, name: p.name, images: p.images })))
+
     // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
     // 並將後端狀態值轉換為前端狀態值
     products.value = productList.map(product => {
@@ -974,7 +1126,7 @@ const loadProducts = async () => {
         status = 'UNPUBLISHED'
       }
       // DRAFT 保持不變
-      
+
       return {
         ...product,
         status: status as 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED',
@@ -1025,6 +1177,16 @@ const handleEdit = async (product: Product) => {
       // This is a best-effort approach since we need to query albums for matching URLs
       selectedAlbumImages.value = []
 
+      // 先提取所有商品圖片的 URL
+      const productImageUrls: string[] = product.images.map(img => {
+        if (typeof img === 'string') {
+          return img
+        } else if (img && typeof img === 'object' && 'imageUrl' in img) {
+          return img.imageUrl
+        }
+        return ''
+      }).filter(url => url !== '')
+
       // Load all albums and their images to find matches
       const albumsResponse = await albumApi.getAlbums({ page: 0, size: 100 })
       if (albumsResponse.success && albumsResponse.data) {
@@ -1037,9 +1199,9 @@ const handleEdit = async (product: Product) => {
             if (imagesResponse.success && imagesResponse.data) {
               const albumImages = imagesResponse.data
               // Check if any product images match album images
-              for (const productImage of product.images) {
+              for (const productImageUrl of productImageUrls) {
                 const matchingAlbumImage = albumImages.find(
-                  (albumImg) => albumImg.imageUrl === productImage
+                  (albumImg) => albumImg.imageUrl === productImageUrl
                 )
                 if (matchingAlbumImage && !selectedAlbumImages.value.some(img => img.id === matchingAlbumImage.id)) {
                   selectedAlbumImages.value.push(matchingAlbumImage)
@@ -1174,7 +1336,7 @@ const handleSubmit = async () => {
             selectedAlbumImages.value.push(uploadResponse.data)
           }
         } catch (uploadError) {
-          console.error('上傳圖片失敗:', uploadError)
+          console.error('圖片上傳失敗:', uploadError)
           $q.notify({
             type: 'negative',
             message: '圖片上傳失敗',
@@ -1216,7 +1378,7 @@ const handleSubmit = async () => {
     // 9. 顯示成功訊息
     $q.notify({
       type: 'positive',
-      message: productId ? '更新成功' : '創建成功',
+      message: productId ? '更新成功' : '建立成功',
       position: 'top'
     })
 
@@ -1224,6 +1386,7 @@ const handleSubmit = async () => {
     productImage.value = null
 
     loadProducts()
+    return true
   } catch (error) {
     console.error(error) // 建議印出錯誤以便除錯
     $q.notify({
@@ -1231,26 +1394,18 @@ const handleSubmit = async () => {
       message: '操作失敗',
       position: 'top'
     })
+    return false
+  }
+}
+
+const handleDone = async () => {
+  const success = await handleSubmit()
+  if (success) {
+    closeDialog()
   }
 }
 
 const closeDialog = async () => {
-  // If there are selected album images and a product ID, save them before closing
-  if (form.value.id && selectedAlbumImages.value.length > 0) {
-    try {
-      // Convert images to ProductImageDTO format for backend
-      const productData = { ...form.value }
-      productData.images = selectedAlbumImages.value.map(img => ({
-        imageUrl: img.imageUrl || '',
-        albumImageId: img.id
-      }))
-      await productApi.updateProduct(form.value.id, productData)
-      await loadProducts()
-    } catch (error) {
-      console.error('Failed to save images on close:', error)
-    }
-  }
-
   showDialog.value = false
   dialogTab.value = 'basic'
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
@@ -1317,7 +1472,7 @@ const saveSpecification = async () => {
       await productSpecificationApi.addSpecification(specForm.value)
       $q.notify({
         type: 'positive',
-        message: '規格已添加',
+        message: '規格已新增',
         position: 'top'
       })
     }
@@ -1468,7 +1623,7 @@ const initializeAutoBlocks = async () => {
       message: '初始化自動區塊失敗',
       position: 'top'
     })
-    console.error('初始化自動區塊失敗:', error)
+    console.error('初始化自動區塊失敗', error)
   }
 }
 
@@ -1501,7 +1656,7 @@ const saveDescriptionBlocks = async () => {
       message: '保存描述區塊失敗',
       position: 'top'
     })
-    console.error('保存描述區塊失敗:', error)
+    console.error('保存描述區塊失敗', error)
   }
 }
 
@@ -1550,7 +1705,7 @@ const ensureDefaultAlbum = async () => {
       // 如果不存在，創建一個
       const response = await albumApi.createAlbum({
         name: defaultAlbumName,
-        description: '用於儲存商品圖片的預設相冊'
+        description: '系統自動建立的商品圖片相簿'
       })
       if (response.success && response.data && response.data.id) {
         defaultAlbumId.value = response.data.id
@@ -1573,7 +1728,7 @@ const loadAlbumImages = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: '載入相冊圖片失敗',
+      message: '載入相簿圖片失敗',
       position: 'top'
     })
   }
@@ -1635,6 +1790,26 @@ const removeSelectedImage = (imageId?: number) => {
   }
 }
 
+const isPrimarySelectedImage = (index: number) => index === 0
+
+const setSelectedImageAsPrimary = (index: number) => {
+  if (index <= 0 || index >= selectedAlbumImages.value.length) return
+  const [target] = selectedAlbumImages.value.splice(index, 1)
+  if (target) selectedAlbumImages.value.unshift(target)
+}
+
+const moveSelectedImage = (index: number, direction: -1 | 1) => {
+  const nextIndex = index + direction
+  if (index < 0 || nextIndex < 0 || nextIndex >= selectedAlbumImages.value.length) return
+  const list = [...selectedAlbumImages.value]
+  ;[list[index], list[nextIndex]] = [list[nextIndex], list[index]]
+  selectedAlbumImages.value = list
+}
+
+const clearSelectedImages = () => {
+  selectedAlbumImages.value = []
+}
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'PUBLISHED': return 'positive'
@@ -1653,39 +1828,57 @@ const getStatusLabel = (status: string) => {
   }
 }
 
+// 處理圖片載入錯誤
+const handleImageError = (event: Event, product: Product) => {
+  const imageUrl = getProductImageUrl(product)
+  console.warn(`圖片載入失敗: ${imageUrl}`, { productId: product.id, productName: product.name })
+}
+
 // 獲取商品圖片 URL（獲取第一張圖片）
 const getProductImageUrl = (product: Product): string | null => {
+  // 調試：輸出商品圖片數據
+  if (product.images) {
+    console.log(`[getProductImageUrl] 商品 ${product.id} (${product.name}) 的 images:`, product.images)
+  }
+
   if (!product.images || product.images.length === 0) {
     return null
   }
-  
+
   let imageUrl: string | null = null
-  
+
   // 如果 images 是字符串數組
   if (typeof product.images[0] === 'string') {
     imageUrl = product.images[0] as string
   } else if (typeof product.images[0] === 'object' && product.images[0] !== null) {
-    // 如果 images 是對象數組
+    // 如果 images 是對象數組（ProductImageDTO）
     const firstImage = product.images[0] as { imageUrl?: string; albumImageId?: number }
     imageUrl = firstImage?.imageUrl || null
   }
-  
+
+  console.log(`[getProductImageUrl] 提取的 imageUrl:`, imageUrl)
+
   if (!imageUrl) {
     return null
   }
-  
+
   // 如果 URL 已經是完整 URL（http/https），直接返回
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl
   }
-  
+
   // 如果 URL 已經以 /api 開頭，直接返回
   if (imageUrl.startsWith('/api')) {
     return imageUrl
   }
-  
-  // 否則加上 /api 前綴
-  return `/api${imageUrl}`
+
+  // 如果 URL 以 /albums 開頭（相簿圖片路徑），加上 /api 前綴
+  if (imageUrl.startsWith('/albums')) {
+    return `/api${imageUrl}`
+  }
+
+  // 否則假設是相對於 /api/albums/images/ 的檔案名稱
+  return `/api/albums/images/${imageUrl}`
 }
 
 const loadCategories = async () => {
@@ -1809,6 +2002,9 @@ onMounted(() => {
 .product-dialog-card {
   border-radius: 18px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 960px);
 }
 
 .product-dialog-tabs {
@@ -1818,6 +2014,79 @@ onMounted(() => {
 
 .product-dialog-tabs :deep(.q-tab) {
   min-height: 42px;
+}
+
+.product-dialog-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.product-dialog-card__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #e8edf6;
+  backdrop-filter: blur(8px);
+}
+
+.product-dialog-card__actions :deep(.q-btn) {
+  min-height: 40px;
+}
+
+.product-image-setup {
+  border-radius: 14px;
+}
+
+.image-setup-card {
+  border-radius: 14px;
+  border-color: #e5eaf4;
+  background: #fff;
+}
+
+.selected-image-card {
+  border: 1px solid #e5eaf4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.selected-image-card--primary {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.selected-image-card__thumb {
+  background: #f8fafc;
+}
+
+.selected-image-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+.selected-image-card__actions :deep(.q-btn) {
+  min-height: 36px;
+}
+
+.image-setup-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  background: #f8fafc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selected-image-card {
+    transition: none;
+  }
 }
 
 @media (max-width: 700px) {
@@ -1831,6 +2100,28 @@ onMounted(() => {
 
   .mobile-product-card :deep(.q-card__section) {
     padding: 12px;
+  }
+
+  .product-dialog-card {
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .product-dialog-card__actions {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .product-dialog-card__actions :deep(.q-btn) {
+    min-height: 44px;
+  }
+
+  .selected-image-card__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selected-image-card__actions > .row {
+    justify-content: flex-end;
   }
 }
 </style>

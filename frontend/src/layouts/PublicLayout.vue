@@ -1,22 +1,24 @@
-<template>
+﻿<template>
   <q-layout view="hHh lpR fFf" class="store-layout">
+    <a class="skip-link" href="#main-content">跳至主要內容</a>
+
     <q-header bordered class="store-header text-dark">
       <div class="top-strip">
         <div class="store-shell top-strip__inner">
-          <span class="top-strip__msg">新客首購享免運門檻優惠，結帳流程支援付款狀態追蹤</span>
-          <q-btn flat dense no-caps class="top-strip__cta" label="立即選購" @click="goTo('/products')" />
+          <span class="top-strip__msg">新會員首購享優惠，精選商品快速出貨</span>
+          <q-btn flat dense no-caps class="top-strip__cta" label="立即逛逛" to="/products" />
         </div>
       </div>
 
       <q-toolbar class="store-toolbar store-shell">
         <q-toolbar-title class="brand-wrap">
-          <button class="brand-btn" type="button" @click="goTo('/')" aria-label="Go to Shopro home">
+          <router-link class="brand-btn" to="/" aria-label="回到 Shopro 首頁">
             <span class="brand-title">Shopro</span>
             <span class="brand-subtitle">Everyday Essentials, Better Chosen</span>
-          </button>
+          </router-link>
         </q-toolbar-title>
 
-        <nav class="desktop-nav" aria-label="Main store navigation">
+        <nav class="desktop-nav" aria-label="商店主選單">
           <q-btn
             v-for="item in navItems"
             :key="item.path"
@@ -25,26 +27,13 @@
             class="nav-btn"
             :class="{ 'nav-btn--active': isActive(item.path) }"
             :label="item.label"
-            @click="goTo(item.path)"
+            :to="item.path"
           />
         </nav>
 
         <div class="toolbar-actions">
-          <q-btn
-            flat
-            no-caps
-            class="desktop-only secondary-cta"
-            icon="workspace_premium"
-            label="會員專區"
-            @click="goTo('/account')"
-          />
-          <q-btn
-            flat
-            round
-            icon="shopping_bag"
-            aria-label="Open cart"
-            @click="goTo('/cart')"
-          >
+          <q-btn flat no-caps class="desktop-only secondary-cta" icon="workspace_premium" label="會員中心" to="/account" />
+          <q-btn flat round icon="shopping_bag" aria-label="開啟購物車" to="/cart">
             <q-badge v-if="cartCount > 0" floating color="negative">{{ cartCount }}</q-badge>
           </q-btn>
           <q-btn
@@ -52,14 +41,14 @@
             color="primary"
             no-caps
             class="login-cta"
-            :label="authStore.isAuthenticated ? '帳戶中心' : '登入 / 註冊'"
-            @click="goTo(authStore.isAuthenticated ? '/account' : '/login')"
+            :label="authStore.isAuthenticated ? '我的帳戶' : '登入 / 註冊'"
+            :to="authStore.isAuthenticated ? '/account' : '/login'"
           />
         </div>
       </q-toolbar>
 
       <div class="mobile-nav-wrap">
-        <div class="store-shell mobile-nav" role="navigation" aria-label="Mobile store navigation">
+        <div class="store-shell mobile-nav" role="navigation" aria-label="行動版商店選單">
           <q-btn
             v-for="item in navItems"
             :key="`m-${item.path}`"
@@ -69,13 +58,13 @@
             class="mobile-nav__btn"
             :class="{ 'mobile-nav__btn--active': isActive(item.path) }"
             :label="item.label"
-            @click="goTo(item.path)"
+            :to="item.path"
           />
         </div>
       </div>
     </q-header>
 
-    <q-page-container>
+    <q-page-container id="main-content" tabindex="-1">
       <router-view />
     </q-page-container>
 
@@ -84,20 +73,22 @@
         <div class="footer-brand">
           <div class="footer-brand__title">Shopro</div>
           <p class="footer-brand__copy">
-            用更清楚的商品資訊、透明價格與可追蹤訂單流程，讓每一次購物更安心。
+            為日常選品打造更清楚、更安心的購物體驗，從商品資訊、付款流程到售後服務都維持一致透明。
           </p>
         </div>
 
-        <div class="footer-links" aria-label="Store footer links">
-          <q-btn flat size="sm" no-caps label="退換貨政策" @click="goTo('/policy/returns')" />
-          <q-btn flat size="sm" no-caps label="付款與配送" @click="goTo('/policy/payment-shipping')" />
-          <q-btn flat size="sm" no-caps label="聯絡我們" @click="goTo('/contact')" />
-          <q-btn flat size="sm" no-caps label="品牌故事" @click="goTo('/brand')" />
+        <div class="footer-links" aria-label="商店頁尾連結">
+          <q-btn flat size="sm" no-caps label="退換貨政策" to="/policy/returns" />
+          <q-btn flat size="sm" no-caps label="付款與配送" to="/policy/payment-shipping" />
+          <q-btn flat size="sm" no-caps label="聯絡我們" to="/contact" />
+          <q-btn flat size="sm" no-caps label="品牌故事" to="/brand" />
+          <q-btn flat size="sm" no-caps label="優惠活動" to="/promotions" />
+          <q-btn flat size="sm" no-caps label="選品專欄" to="/blog" />
         </div>
 
-        <div class="footer-trust">
-          <div class="footer-pill"><q-icon name="payments" size="16px" /> ECPay / 貨到付款</div>
-          <div class="footer-pill"><q-icon name="local_shipping" size="16px" /> 配送進度可追蹤</div>
+        <div class="footer-trust" aria-label="商店信任資訊">
+          <div class="footer-pill"><q-icon name="payments" size="16px" aria-hidden="true" /> ECPay / 多元付款</div>
+          <div class="footer-pill"><q-icon name="local_shipping" size="16px" aria-hidden="true" /> 快速出貨與配送</div>
         </div>
       </div>
     </q-footer>
@@ -106,7 +97,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getCartItems } from '@/utils/storeCart'
 
@@ -115,13 +106,14 @@ interface NavItem {
   path: string
 }
 
-const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const cartCount = ref(0)
 
 const navItems: NavItem[] = [
   { label: '商品列表', path: '/products' },
+  { label: '優惠活動', path: '/promotions' },
+  { label: '選品專欄', path: '/blog' },
   { label: '品牌故事', path: '/brand' },
   { label: '聯絡我們', path: '/contact' }
 ]
@@ -131,11 +123,6 @@ const syncCartCount = () => {
 }
 
 const isActive = computed(() => (path: string) => route.path.startsWith(path))
-
-const goTo = (path: string) => {
-  if (route.path === path) return
-  router.push(path)
-}
 
 watch(
   () => route.fullPath,
@@ -157,6 +144,30 @@ onUnmounted(() => {
 <style scoped>
 .store-layout {
   background: transparent;
+}
+
+.store-layout :deep(.q-btn) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+}
+
+.skip-link {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #2f241f;
+  color: #fffaf2;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 0.2s ease;
+  z-index: 1000;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .store-header {
@@ -206,6 +217,7 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .brand-title {

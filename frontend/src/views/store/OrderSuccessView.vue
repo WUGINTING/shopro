@@ -16,10 +16,13 @@
                 <div class="summary-item__label">訂單編號</div>
                 <div class="summary-item__value">{{ orderNumber || '-' }}</div>
               </div>
-              <div class="summary-item">
-                <div class="summary-item__label">訂單金額</div>
-                <div class="summary-item__value">NT$ {{ amount.toLocaleString('zh-TW') }}</div>
+            <div class="summary-item">
+              <div class="summary-item__label">訂單金額</div>
+              <div class="summary-item__value">
+                <span v-if="hasTrustedQuery">NT$ {{ amountDisplay }}</span>
+                <span v-else>-</span>
               </div>
+            </div>
               <div class="summary-item">
                 <div class="summary-item__label">訂單狀態</div>
                 <div class="summary-item__value">
@@ -34,6 +37,13 @@
                 </div>
               </div>
             </div>
+
+            <q-banner v-if="!hasTrustedQuery" rounded class="sf-warning-note q-mb-md">
+              <template #avatar>
+                <q-icon name="report_problem" />
+              </template>
+              這筆訂單資訊尚未完成後端驗證，請以會員中心的訂單紀錄為準。
+            </q-banner>
 
             <q-banner rounded class="sf-success-note q-mb-md">
               <template #avatar>
@@ -65,6 +75,8 @@ const router = useRouter()
 const orderNumber = computed(() => String(route.query.orderNumber || ''))
 const amount = computed(() => Number(route.query.amount || 0))
 const orderStatus = computed(() => String(route.query.status || 'PENDING_PAYMENT'))
+const hasTrustedQuery = computed(() => Boolean(orderNumber.value) && amount.value > 0)
+const amountDisplay = computed(() => amount.value.toLocaleString('zh-TW'))
 
 onMounted(() => {
   let items: Array<Record<string, unknown>> = []
@@ -77,11 +89,13 @@ onMounted(() => {
     }
   }
 
-  trackEvent('purchase', {
-    order_number: orderNumber.value,
-    order_amount: amount.value,
-    items
-  })
+  if (hasTrustedQuery.value) {
+    trackEvent('purchase', {
+      order_number: orderNumber.value,
+      order_amount: amount.value,
+      items
+    })
+  }
 
   sessionStorage.removeItem('last_purchase_items')
 })
@@ -134,6 +148,12 @@ onMounted(() => {
 
 .success-cta {
   border-radius: 999px;
+}
+
+.sf-warning-note {
+  border: 1px solid #f5d7b2;
+  background: #fff5e6;
+  color: #7a4a1a;
 }
 
 @media (max-width: 700px) {

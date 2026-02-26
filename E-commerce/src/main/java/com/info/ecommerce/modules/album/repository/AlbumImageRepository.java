@@ -13,6 +13,8 @@ import java.util.List;
 public interface AlbumImageRepository extends JpaRepository<AlbumImage, Long> {
     
     List<AlbumImage> findByAlbumIdOrderBySortOrderAsc(Long albumId);
+
+    java.util.Optional<AlbumImage> findByIdAndAlbumId(Long id, Long albumId);
     
     void deleteByAlbumId(Long albumId);
 }

@@ -76,6 +76,9 @@ public class PaymentManagementService {
             PaymentGateway gateway = (PaymentGateway) stat[0];
             Long count = ((Number) stat[1]).longValue();
             BigDecimal amount = (BigDecimal) stat[2];
+            if (amount == null) {
+                amount = BigDecimal.ZERO;
+            }
             
             Double percentage = totalAmount.compareTo(BigDecimal.ZERO) > 0
                 ? amount.divide(totalAmount, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()

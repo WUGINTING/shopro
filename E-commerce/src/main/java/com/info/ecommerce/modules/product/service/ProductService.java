@@ -188,6 +188,8 @@ public class ProductService {
      */
     @Transactional
     public ProductDTO addAlbumImagesToProduct(Long productId, List<Long> albumImageIds) {
+        System.out.println("[ProductService] addAlbumImagesToProduct - productId: " + productId + ", albumImageIds: " + albumImageIds);
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
 
@@ -196,37 +198,49 @@ public class ProductService {
         if (imageUrls == null) {
             imageUrls = new ArrayList<>();
         }
+        System.out.println("[ProductService] 現有圖片數量: " + imageUrls.size());
 
         // 批次獲取所有相冊圖片（避免 N+1 查詢問題）
         List<AlbumImage> albumImages = albumImageRepository.findAllById(albumImageIds);
-        
+        System.out.println("[ProductService] 找到的相冊圖片數量: " + albumImages.size());
+
         // 驗證所有圖片都存在
         if (albumImages.size() != albumImageIds.size()) {
+            System.err.println("[ProductService] 部分相冊圖片不存在! 請求: " + albumImageIds.size() + ", 找到: " + albumImages.size());
             throw new BusinessException("部分相冊圖片不存在");
         }
 
         // 添加相冊圖片的 URL
         for (AlbumImage albumImage : albumImages) {
+            String url = albumImage.getImageUrl();
+            System.out.println("[ProductService] 處理圖片: id=" + albumImage.getId() + ", url=" + url);
             // 添加圖片 URL（避免重複）
-            if (!imageUrls.contains(albumImage.getImageUrl())) {
-                imageUrls.add(albumImage.getImageUrl());
+            if (!imageUrls.contains(url)) {
+                imageUrls.add(url);
+                System.out.println("[ProductService] 添加圖片 URL: " + url);
+            } else {
+                System.out.println("[ProductService] 圖片 URL 已存在，跳過: " + url);
             }
         }
 
         product.setImageUrls(imageUrls);
         product = productRepository.save(product);
+        System.out.println("[ProductService] 保存後圖片數量: " + product.getImageUrls().size());
         return toDTO(product);
     }
 
     private ProductDTO toDTO(Product entity) {
         ProductDTO dto = new ProductDTO();
         BeanUtils.copyProperties(entity, dto, "images");
-        
+
         // 將 imageUrls 轉換為 images
-        if (entity.getImageUrls() != null && !entity.getImageUrls().isEmpty()) {
+        List<String> urls = entity.getImageUrls();
+        System.out.println("[toDTO] 商品 " + entity.getId() + " (" + entity.getName() + ") 的 imageUrls: " + urls);
+
+        if (urls != null && !urls.isEmpty()) {
             List<ProductImageDTO> imageDTOs = new ArrayList<>();
-            for (int i = 0; i < entity.getImageUrls().size(); i++) {
-                String imageUrl = entity.getImageUrls().get(i);
+            for (int i = 0; i < urls.size(); i++) {
+                String imageUrl = urls.get(i);
                 ProductImageDTO imageDTO = new ProductImageDTO();
                 imageDTO.setProductId(entity.getId());
                 imageDTO.setImageUrl(imageUrl);
@@ -235,6 +249,9 @@ public class ProductService {
                 imageDTOs.add(imageDTO);
             }
             dto.setImages(imageDTOs);
+            System.out.println("[toDTO] 設置了 " + imageDTOs.size() + " 張圖片");
+        } else {
+            System.out.println("[toDTO] 沒有圖片");
         }
         
         // 添加描述區塊

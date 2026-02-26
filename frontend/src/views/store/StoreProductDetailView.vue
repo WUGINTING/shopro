@@ -1,29 +1,58 @@
-<template>
+﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
-    <q-btn flat no-caps icon="arrow_back" label="Back to products" class="q-mb-sm" @click="router.push('/products')" />
+    <q-btn flat no-caps icon="arrow_back" label="返回商品列表" class="q-mb-sm" @click="router.push('/products')" />
 
     <q-card bordered class="detail-card">
-      <q-card-section>
+      <q-card-section v-if="loading">
+        <div class="row q-col-gutter-xl items-start">
+          <div class="col-12 col-md-6">
+            <q-skeleton type="rect" height="360px" class="rounded-borders" />
+          </div>
+          <div class="col-12 col-md-6">
+            <q-skeleton type="text" width="30%" class="q-mb-md" />
+            <q-skeleton type="text" width="70%" class="q-mb-sm" />
+            <q-skeleton type="text" width="95%" />
+            <q-skeleton type="text" width="90%" />
+            <q-skeleton type="text" width="35%" class="q-mt-lg q-mb-md" />
+            <q-skeleton type="QBtn" width="140px" class="q-mr-sm" />
+            <q-skeleton type="QBtn" width="140px" />
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-card-section v-else-if="errorMessage">
+        <q-banner rounded class="bg-red-1 text-negative">
+          <template #avatar>
+            <q-icon name="error" />
+          </template>
+          {{ errorMessage }}
+          <template #action>
+            <q-btn flat no-caps color="negative" label="重新載入" @click="fetchProduct" />
+          </template>
+        </q-banner>
+      </q-card-section>
+
+      <q-card-section v-else-if="product">
         <div class="row q-col-gutter-xl items-start">
           <div class="col-12 col-md-6">
             <div class="detail-media">
-              <q-img v-if="imageUrl" :src="imageUrl" :alt="product?.name || 'Product image'" fit="cover" class="detail-image" />
-              <div v-else class="detail-placeholder">
+              <q-img v-if="imageUrl" :src="imageUrl" :alt="product.name || '商品圖片'" fit="cover" class="detail-image" />
+              <div v-else class="detail-placeholder" :aria-label="`${product.name} 商品圖片尚未提供`">
                 <q-icon name="inventory_2" size="48px" color="white" />
-                <div class="placeholder-name">{{ (product?.name || 'P').slice(0, 1).toUpperCase() }}</div>
+                <div class="placeholder-name">{{ (product.name || 'P').slice(0, 1).toUpperCase() }}</div>
               </div>
             </div>
           </div>
 
           <div class="col-12 col-md-6">
             <div class="row items-center q-gutter-sm q-mb-sm">
-              <q-chip color="blue-1" text-color="primary" square dense>Featured</q-chip>
-              <q-chip v-if="product?.id && favoriteOn" color="pink-1" text-color="pink-9" square dense>Favorite</q-chip>
-              <q-chip v-if="product?.id && compareOn" color="blue-1" text-color="blue-9" square dense>Compare</q-chip>
+              <q-chip color="blue-1" text-color="primary" square dense>精選商品</q-chip>
+              <q-chip v-if="product.id && favoriteOn" color="pink-1" text-color="pink-9" square dense>已收藏</q-chip>
+              <q-chip v-if="product.id && compareOn" color="blue-1" text-color="blue-9" square dense>比較中</q-chip>
             </div>
 
-            <h1 class="text-h5 text-weight-bold q-mb-sm">{{ product?.name || 'Loading product' }}</h1>
-            <p class="text-grey-7 q-mb-md detail-desc">{{ product?.description || 'No detailed description yet.' }}</p>
+            <h1 class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</h1>
+            <p class="text-grey-7 q-mb-md detail-desc">{{ product.description || '尚未提供商品詳細描述。' }}</p>
             <div class="text-h4 text-primary text-weight-bold">NT$ {{ formatPrice(price) }}</div>
 
             <div class="row q-gutter-sm q-mt-md q-mb-md">
@@ -32,7 +61,7 @@
                 no-caps
                 color="pink"
                 :icon="favoriteOn ? 'favorite' : 'favorite_border'"
-                :label="favoriteOn ? 'Favorited' : 'Add favorite'"
+                :label="favoriteOn ? '已收藏' : '加入收藏'"
                 @click="toggleFavoriteCurrent"
               />
               <q-btn
@@ -40,13 +69,13 @@
                 no-caps
                 color="primary"
                 :icon="compareOn ? 'done_all' : 'balance'"
-                :label="compareOn ? 'Compared' : 'Add compare'"
+                :label="compareOn ? '比較中' : '加入比較'"
                 @click="toggleCompareCurrent"
               />
             </div>
 
             <q-card flat bordered class="buy-box q-pa-md">
-              <p class="text-subtitle2 text-weight-medium q-mb-sm">Quantity</p>
+              <p class="text-subtitle2 text-weight-medium q-mb-sm">購買數量</p>
               <q-input
                 v-model.number="quantity"
                 type="number"
@@ -54,31 +83,43 @@
                 max="99"
                 outlined
                 dense
-                aria-label="Product quantity"
+                aria-label="商品購買數量"
                 @update:model-value="normalizeQty"
               />
 
               <div class="row q-gutter-sm q-mt-md">
-                <q-btn unelevated color="primary" no-caps label="Add to cart" @click="handleAddToCart" />
-                <q-btn outline color="primary" no-caps label="Open cart" @click="router.push('/cart')" />
+                <q-btn unelevated color="primary" no-caps label="加入購物車" @click="handleAddToCart" />
+                <q-btn outline color="primary" no-caps label="前往購物車" @click="router.push('/cart')" />
               </div>
 
               <q-separator class="q-my-md" />
               <ul class="service-points">
-                <li>ECPay and cash on delivery supported</li>
-                <li>Track status in your account after order placement</li>
-                <li>Fast support and transparent after-sales flow</li>
+                <li>支援 ECPay 與貨到付款（依結帳選項顯示）</li>
+                <li>下單後可於會員中心查看訂單狀態</li>
+                <li>提供清楚售後與聯絡資訊</li>
               </ul>
             </q-card>
           </div>
         </div>
+      </q-card-section>
+
+      <q-card-section v-else>
+        <q-banner rounded class="bg-grey-2 text-grey-8">
+          <template #avatar>
+            <q-icon name="inventory_2" />
+          </template>
+          找不到此商品，請返回商品列表重新選擇。
+          <template #action>
+            <q-btn flat no-caps color="primary" label="返回商品列表" @click="router.push('/products')" />
+          </template>
+        </q-banner>
       </q-card-section>
     </q-card>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { productApi, type Product } from '@/api/product'
@@ -94,6 +135,8 @@ const product = ref<Product | null>(null)
 const quantity = ref(1)
 const favoriteOn = ref(false)
 const compareOn = ref(false)
+const loading = ref(false)
+const errorMessage = ref('')
 
 const productId = computed(() => Number(route.params.id))
 const price = computed(() => Number(product.value?.price ?? product.value?.salePrice ?? 0))
@@ -131,34 +174,62 @@ const handleAddToCart = () => {
     price: price.value
   })
 
-  $q.notify({ type: 'positive', message: 'Added to cart' })
+  $q.notify({ type: 'positive', message: '已加入購物車' })
 }
 
 const toggleFavoriteCurrent = () => {
   if (!product.value?.id) return
   const selected = toggleFavorite(product.value.id)
   syncPrefs()
-  $q.notify({ type: selected ? 'positive' : 'info', message: selected ? 'Added to favorites' : 'Removed from favorites' })
+  $q.notify({ type: selected ? 'positive' : 'info', message: selected ? '已加入收藏' : '已從收藏移除' })
 }
 
 const toggleCompareCurrent = () => {
   if (!product.value?.id) return
   const result = toggleCompare(product.value.id, 4)
   if (result.limited) {
-    $q.notify({ type: 'warning', message: 'You can compare up to 4 products.' })
+    $q.notify({ type: 'warning', message: '比較清單最多可加入 4 項商品。' })
     return
   }
   syncPrefs()
-  $q.notify({ type: result.selected ? 'positive' : 'info', message: result.selected ? 'Added to compare list' : 'Removed from compare list' })
+  $q.notify({ type: result.selected ? 'positive' : 'info', message: result.selected ? '已加入比較清單' : '已從比較清單移除' })
 }
 
-onMounted(async () => {
-  const response = await productApi.getProduct(productId.value)
-  product.value = response.data
-  syncPrefs()
+const fetchProduct = async () => {
+  if (!Number.isFinite(productId.value) || productId.value <= 0) {
+    product.value = null
+    errorMessage.value = '商品編號無效。'
+    return
+  }
 
-  trackEvent('view_product_detail', { product_id: productId.value })
-})
+  loading.value = true
+  errorMessage.value = ''
+  product.value = null
+  quantity.value = 1
+
+  try {
+    const response = await productApi.getProduct(productId.value)
+    product.value = response.data || null
+    if (!product.value) {
+      errorMessage.value = '找不到此商品資訊。'
+      return
+    }
+    syncPrefs()
+    trackEvent('view_product_detail', { product_id: productId.value })
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.message || '載入商品詳情失敗，請稍後再試。'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(
+  () => productId.value,
+  () => {
+    fetchProduct()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>

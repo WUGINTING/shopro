@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <q-page class="store-page sf-page q-pa-md q-pa-lg-lg">
     <section class="catalog-hero q-pa-lg q-mb-md">
       <div>
-        <div class="hero-badge q-mb-sm">精選商品目錄</div>
-        <h1 class="hero-title">更快找到商品，也能先收藏與比較再決定</h1>
-        <p class="hero-subtitle">降低選擇疲勞：先搜尋、再收藏/比較，最後再進入結帳。</p>
+        <div class="hero-badge q-mb-sm">精選日常商品</div>
+        <h1 class="hero-title">快速找到需要的商品，價格與庫存資訊一目了然</h1>
+        <p class="hero-subtitle">可直接搜尋、排序、加入收藏或比較，並在確認後前往商品詳情與購物車。</p>
       </div>
       <div class="hero-panel">
-        <div class="hero-row"><span>商品數</span><strong>{{ displayProducts.length }}</strong></div>
-        <div class="hero-row"><span>收藏清單</span><strong>{{ favoriteIds.length }}</strong></div>
+        <div class="hero-row"><span>目前顯示</span><strong>{{ displayProducts.length }}</strong></div>
+        <div class="hero-row"><span>收藏商品</span><strong>{{ favoriteIds.length }}</strong></div>
         <div class="hero-row"><span>比較清單</span><strong>{{ compareIds.length }}/4</strong></div>
       </div>
     </section>
@@ -54,8 +54,8 @@
     </section>
 
     <section class="q-mb-sm row items-center justify-between" aria-live="polite">
-      <div class="text-subtitle2 text-grey-8">{{ displayProducts.length }} 項商品</div>
-      <div class="text-caption text-grey-7">價格以新台幣顯示</div>
+      <div class="text-subtitle2 text-grey-8">共 {{ displayProducts.length }} 項商品</div>
+      <div class="text-caption text-grey-7">商品資訊依目前搜尋與排序條件顯示</div>
     </section>
 
     <div v-if="loading" class="row q-col-gutter-md">
@@ -75,8 +75,8 @@
     <div v-else-if="displayProducts.length === 0" class="empty-state q-pa-xl text-center">
       <q-icon name="inventory_2" size="48px" color="grey-6" />
       <h2 class="text-h6 q-mt-md q-mb-sm">找不到符合條件的商品</h2>
-      <p class="text-grey-7 q-mb-md">請調整關鍵字，或清除篩選後重新瀏覽全部商品。</p>
-      <q-btn color="primary" no-caps label="清除篩選" @click="resetSearch" />
+      <p class="text-grey-7 q-mb-md">請嘗試更換關鍵字，或清除篩選與排序條件後重新查看。</p>
+      <q-btn color="primary" no-caps label="清除搜尋條件" @click="resetSearch" />
     </div>
 
     <div v-else class="row q-col-gutter-md">
@@ -84,19 +84,25 @@
         <q-card bordered class="product-card full-height">
           <div class="product-media">
             <q-img v-if="productImage(product)" :src="productImage(product)!" :alt="product.name" fit="cover" class="product-image" />
-            <div v-else class="product-image-placeholder" :aria-label="`${product.name} 商品圖片預留區`">
+            <div v-else class="product-image-placeholder" :aria-label="`${product.name} 商品圖片尚未提供`">
               <q-icon name="inventory_2" size="34px" color="white" />
               <div class="placeholder-title">{{ product.name.slice(0, 1).toUpperCase() }}</div>
             </div>
             <div class="media-actions">
               <q-btn
-                round flat color="white" class="media-action-btn"
+                round
+                flat
+                color="white"
+                class="media-action-btn"
                 :icon="favoriteIds.includes(Number(product.id)) ? 'favorite' : 'favorite_border'"
                 :aria-label="favoriteIds.includes(Number(product.id)) ? '從收藏移除' : '加入收藏'"
                 @click.stop="toggleFavoriteItem(product)"
               />
               <q-btn
-                round flat color="white" class="media-action-btn"
+                round
+                flat
+                color="white"
+                class="media-action-btn"
                 :icon="compareIds.includes(Number(product.id)) ? 'done_all' : 'balance'"
                 :aria-label="compareIds.includes(Number(product.id)) ? '從比較清單移除' : '加入比較清單'"
                 @click.stop="toggleCompareItem(product)"
@@ -106,17 +112,17 @@
 
           <q-card-section>
             <h2 class="text-subtitle1 text-weight-bold q-mb-xs">{{ product.name }}</h2>
-            <p class="text-grey-7 product-description q-mb-md">{{ product.description || '尚未提供商品說明' }}</p>
+            <p class="text-grey-7 product-description q-mb-md">{{ product.description || '尚未提供商品描述。' }}</p>
             <div class="row items-center justify-between q-gutter-sm">
               <div class="text-h6 text-primary">NT$ {{ formatPrice(productPrice(product)) }}</div>
-              <q-chip dense square color="grey-2" text-color="dark">{{ product.stock > 0 ? '現貨供應' : '請先確認庫存' }}</q-chip>
+              <q-chip dense square color="grey-2" text-color="dark">{{ product.stock > 0 ? '現貨供應' : '暫時缺貨' }}</q-chip>
             </div>
           </q-card-section>
 
           <q-card-actions align="between" class="q-pt-none q-px-md q-pb-md">
             <div class="row q-gutter-xs">
               <q-chip v-if="favoriteIds.includes(Number(product.id))" dense square color="pink-1" text-color="pink-9">已收藏</q-chip>
-              <q-chip v-if="compareIds.includes(Number(product.id))" dense square color="blue-1" text-color="blue-9">已加入比較</q-chip>
+              <q-chip v-if="compareIds.includes(Number(product.id))" dense square color="blue-1" text-color="blue-9">比較中</q-chip>
             </div>
             <q-btn flat no-caps color="primary" label="查看詳情" @click="goDetail(product.id)" />
           </q-card-actions>

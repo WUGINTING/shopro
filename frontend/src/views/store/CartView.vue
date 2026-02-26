@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="store-page sf-page q-pa-md q-pa-lg-lg">
     <section class="q-mb-md">
       <q-card flat bordered class="flow-card">
@@ -18,9 +18,9 @@
     <div class="row items-center justify-between q-mb-md">
       <div>
         <h1 class="sf-page-title">購物車</h1>
-        <p class="sf-page-lead">確認品項與數量後即可進入結帳。你目前離完成下單只差一步。</p>
+        <p class="sf-page-lead">確認商品與數量後即可前往結帳，系統會保留你的購物車內容直到完成下單。</p>
       </div>
-      <q-btn flat no-caps label="繼續選購" icon="arrow_back" @click="router.push('/products')" />
+      <q-btn flat no-caps label="繼續購物" icon="arrow_back" @click="router.push('/products')" />
     </div>
 
     <q-banner v-if="items.length === 0" rounded class="empty-banner q-pa-lg">
@@ -29,7 +29,7 @@
       </template>
       <div class="empty-cart-copy">
         <div class="text-weight-medium">你的購物車目前是空的</div>
-        <div class="text-body2 text-grey-7">先加入商品後即可進入結帳，系統會在下一步顯示完整金額與付款方式。</div>
+        <div class="text-body2 text-grey-7">先到商品列表挑選需要的商品，再回到這裡確認訂單摘要與付款資訊。</div>
       </div>
       <template #action>
         <q-btn unelevated color="primary" no-caps label="前往商品列表" @click="router.push('/products')" />
@@ -60,7 +60,7 @@
                   dense
                   outlined
                   style="width: 92px"
-                  :aria-label="`更新 ${item.name} 購買數量`"
+                  :aria-label="`調整 ${item.name} 的購買數量`"
                   @update:model-value="(v) => updateQty(item.productId, Number(v))"
                 />
               </td>
@@ -78,39 +78,32 @@
           <q-card-section>
             <div class="text-subtitle1 text-weight-bold q-mb-md">訂單摘要</div>
             <div class="sf-kv">
-              <span>商品總額</span>
+              <span>商品金額</span>
               <span class="text-weight-medium">NT$ {{ formatPrice(total) }}</span>
             </div>
             <div class="sf-kv">
-              <span>運費</span>
-              <span class="text-positive text-weight-medium">依結帳方式計算 / 預設優惠</span>
+              <span>配送費用</span>
+              <span class="text-positive text-weight-medium">依結帳配送方式計算</span>
             </div>
             <q-separator class="q-my-md" />
             <div class="row justify-between text-subtitle1 text-weight-bold">
-              <span>預估應付</span>
+              <span>預估總計</span>
               <span class="text-primary">NT$ {{ formatPrice(total) }}</span>
             </div>
             <q-banner rounded class="sf-success-note q-mt-md">
               <template #avatar>
                 <q-icon name="verified_user" />
               </template>
-              結帳頁會再確認收件資訊與付款方式，並提供訂單/付款狀態追蹤。
+              結帳前會再次確認收件資訊與付款方式，送出後將導向 ECPay 或對應付款流程。
             </q-banner>
             <div class="q-mt-md summary-trust-list">
-              <div><q-icon name="lock" size="16px" /> 安全結帳流程</div>
+              <div><q-icon name="lock" size="16px" /> 安全的訂單資訊傳輸</div>
               <div><q-icon name="payments" size="16px" /> 支援 ECPay / 貨到付款</div>
-              <div><q-icon name="help_outline" size="16px" /> 政策頁與客服入口可快速查閱</div>
+              <div><q-icon name="help_outline" size="16px" /> 付款前可返回修改商品與數量</div>
             </div>
           </q-card-section>
           <q-card-actions vertical class="q-pa-md q-pt-none">
-            <q-btn
-              color="primary"
-              no-caps
-              class="checkout-btn"
-              label="前往結帳"
-              :disable="items.length === 0"
-              @click="goCheckout"
-            />
+            <q-btn color="primary" no-caps class="checkout-btn" label="前往結帳" :disable="items.length === 0" @click="goCheckout" />
           </q-card-actions>
         </q-card>
       </div>
@@ -130,9 +123,10 @@ const router = useRouter()
 const $q = useQuasar()
 const authStore = useAuthStore()
 const items = ref<CartItem[]>([])
+
 const cartFlowSteps = [
   { key: 'cart', label: '購物車', icon: 'shopping_cart', active: true },
-  { key: 'checkout', label: '填寫資料', icon: 'edit_note', active: false },
+  { key: 'checkout', label: '填寫結帳資料', icon: 'edit_note', active: false },
   { key: 'payment', label: '付款', icon: 'payments', active: false }
 ]
 
@@ -157,7 +151,7 @@ const goCheckout = () => {
   if (!authStore.isAuthenticated) {
     $q.notify({
       type: 'warning',
-      message: '請先使用顧客帳號登入，再進入結帳流程。'
+      message: '請先登入會員後再進行結帳。'
     })
     router.push('/login')
     return
@@ -166,7 +160,7 @@ const goCheckout = () => {
   if (authStore.userRole !== 'CUSTOMER') {
     $q.notify({
       type: 'warning',
-      message: '只有顧客帳號可使用前台結帳。'
+      message: '目前僅提供顧客帳號使用前台結帳流程。'
     })
     return
   }

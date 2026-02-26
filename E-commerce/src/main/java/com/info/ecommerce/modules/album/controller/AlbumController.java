@@ -79,7 +79,7 @@ public class AlbumController {
         return ApiResponse.success(albumService.listAlbums(pageable));
     }
 
-    @PostMapping("/{albumId}/images")
+    @PostMapping(value = "/{albumId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "上傳圖片到相冊")
     //@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<AlbumImageDTO> uploadImage(
@@ -101,6 +101,23 @@ public class AlbumController {
         return ApiResponse.success("圖片已刪除", null);
     }
 
+    @PutMapping("/{albumId}/images/{imageId}/cover")
+    @Operation(summary = "設定相冊封面圖片")
+    public ApiResponse<AlbumDTO> setCoverImage(
+            @Parameter(description = "相冊 ID") @PathVariable Long albumId,
+            @Parameter(description = "圖片 ID") @PathVariable Long imageId) {
+        return ApiResponse.success("封面圖片已更新", albumService.setCoverImage(albumId, imageId));
+    }
+
+    @PutMapping("/{albumId}/images/sort")
+    @Operation(summary = "更新相冊圖片排序")
+    public ApiResponse<List<AlbumImageDTO>> reorderImages(
+            @Parameter(description = "相冊 ID") @PathVariable Long albumId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "依序排列的圖片 ID 清單")
+            @RequestBody List<Long> imageIds) {
+        return ApiResponse.success("圖片排序已更新", albumService.reorderImages(albumId, imageIds));
+    }
+
     @GetMapping("/{albumId}/images")
     @Operation(summary = "取得相冊中的所有圖片")
     public ApiResponse<List<AlbumImageDTO>> getAlbumImages(
@@ -118,7 +135,7 @@ public class AlbumController {
 
             if (resource.exists() && resource.isReadable()) {
                 String contentType = "image/jpeg"; // 預設類型
-                
+
                 // 根據副檔名判斷內容類型
                 String lowerFilename = filename.toLowerCase();
                 if (lowerFilename.endsWith(".png")) {
@@ -132,11 +149,15 @@ public class AlbumController {
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                        .header(HttpHeaders.CACHE_CONTROL, "max-age=31536000, public")
                         .body(resource);
             } else {
+                // 檔案不存在，記錄警告
+                System.err.println("[AlbumController] 圖片檔案不存在: " + filePath.toAbsolutePath());
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
+            System.err.println("[AlbumController] 讀取圖片失敗: " + filename + ", 錯誤: " + e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }
