@@ -627,29 +627,195 @@
                   >
                     <template v-slot:body-cell-image="props">
                       <q-td :props="props">
-                        <q-avatar v-if="props.value" rounded size="50px">
-                          <q-img :src="props.value" :ratio="1" />
-                        </q-avatar>
-                        <q-avatar v-else rounded size="50px" color="grey-3">
-                          <q-icon name="image" />
-                        </q-avatar>
+                        <div class="row items-center q-gutter-sm">
+                          <q-avatar v-if="props.value" rounded size="50px">
+                            <q-img :src="props.value" :ratio="1" />
+                          </q-avatar>
+                          <q-avatar v-else rounded size="50px" color="grey-3">
+                            <q-icon name="image" />
+                          </q-avatar>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="edit"
+                            color="primary"
+                            size="sm"
+                            :loading="isSpecFieldSaving(props.row.id, 'image')"
+                          >
+                            <q-popup-edit
+                              v-model="props.row.image"
+                              buttons
+                              label-set="儲存"
+                              label-cancel="取消"
+                              @save="(value) => updateSpecificationField(props.row, 'image', value)"
+                            >
+                              <template v-slot="scope">
+                                <q-input
+                                  v-model="scope.value"
+                                  dense
+                                  autofocus
+                                  outlined
+                                  label="規格圖片 URL"
+                                />
+                              </template>
+                            </q-popup-edit>
+                          </q-btn>
+                        </div>
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-specName="props">
+                      <q-td :props="props">
+                        <div class="row items-center q-gutter-xs">
+                          <span>{{ props.value || '-' }}</span>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="edit"
+                            color="primary"
+                            size="sm"
+                            :loading="isSpecFieldSaving(props.row.id, 'specName')"
+                          >
+                            <q-popup-edit
+                              v-model="props.row.specName"
+                              buttons
+                              label-set="儲存"
+                              label-cancel="取消"
+                              @save="(value) => updateSpecificationField(props.row, 'specName', value)"
+                            >
+                              <template v-slot="scope">
+                                <q-input
+                                  v-model="scope.value"
+                                  dense
+                                  autofocus
+                                  outlined
+                                  label="規格名稱"
+                                />
+                              </template>
+                            </q-popup-edit>
+                          </q-btn>
+                        </div>
                       </q-td>
                     </template>
 
                     <template v-slot:body-cell-price="props">
                       <q-td :props="props">
-                        <span class="text-weight-bold text-primary">
-                          ${{ (props.value || 0).toFixed(2) }}
-                        </span>
+                        <div class="row items-center q-gutter-xs">
+                          <span class="text-weight-bold text-primary">
+                            ${{ Number(props.value || 0).toFixed(2) }}
+                          </span>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="edit"
+                            color="primary"
+                            size="sm"
+                            :loading="isSpecFieldSaving(props.row.id, 'price')"
+                          >
+                            <q-popup-edit
+                              v-model.number="props.row.price"
+                              buttons
+                              label-set="儲存"
+                              label-cancel="取消"
+                              @save="(value) => updateSpecificationField(props.row, 'price', value)"
+                            >
+                              <template v-slot="scope">
+                                <q-input
+                                  v-model.number="scope.value"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  dense
+                                  autofocus
+                                  outlined
+                                  label="價格"
+                                />
+                              </template>
+                            </q-popup-edit>
+                          </q-btn>
+                        </div>
+                      </q-td>
+                    </template>
+
+                    <template v-slot:body-cell-cost="props">
+                      <q-td :props="props">
+                        <div class="row items-center q-gutter-xs">
+                          <span>${{ Number(props.value || 0).toFixed(2) }}</span>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="edit"
+                            color="primary"
+                            size="sm"
+                            :loading="isSpecFieldSaving(props.row.id, 'cost')"
+                          >
+                            <q-popup-edit
+                              v-model.number="props.row.cost"
+                              buttons
+                              label-set="儲存"
+                              label-cancel="取消"
+                              @save="(value) => updateSpecificationField(props.row, 'cost', value)"
+                            >
+                              <template v-slot="scope">
+                                <q-input
+                                  v-model.number="scope.value"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  dense
+                                  autofocus
+                                  outlined
+                                  label="成本"
+                                />
+                              </template>
+                            </q-popup-edit>
+                          </q-btn>
+                        </div>
                       </q-td>
                     </template>
 
                     <template v-slot:body-cell-stock="props">
                       <q-td :props="props">
-                        <q-badge
-                          :color="props.value > 10 ? 'positive' : props.value > 0 ? 'warning' : 'negative'"
-                          :label="props.value || 0"
-                        />
+                        <div class="row items-center justify-center q-gutter-xs">
+                          <q-badge
+                            :color="props.value > 10 ? 'positive' : props.value > 0 ? 'warning' : 'negative'"
+                            :label="props.value || 0"
+                          />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            icon="edit"
+                            color="primary"
+                            size="sm"
+                            :loading="isSpecFieldSaving(props.row.id, 'stock')"
+                          >
+                            <q-popup-edit
+                              v-model.number="props.row.stock"
+                              buttons
+                              label-set="儲存"
+                              label-cancel="取消"
+                              @save="(value) => updateSpecificationField(props.row, 'stock', value)"
+                            >
+                              <template v-slot="scope">
+                                <q-input
+                                  v-model.number="scope.value"
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  dense
+                                  autofocus
+                                  outlined
+                                  label="庫存"
+                                />
+                              </template>
+                            </q-popup-edit>
+                          </q-btn>
+                        </div>
                       </q-td>
                     </template>
 
@@ -886,13 +1052,55 @@
                 </div>
               </div>
 
-              <q-input
-                v-model="specForm.image"
-                label="規格圖片URL"
-                outlined
-                class="q-mb-md"
-                hint="規格專屬圖片"
-              />
+                            <q-card flat bordered class="q-mb-md">
+                <q-card-section class="q-pb-sm">
+                  <div class="text-subtitle2 text-weight-medium">規格圖片設定</div>
+                  <div class="text-caption text-grey-7">可直接上傳或從相簿選擇 1 張規格圖片。</div>
+                </q-card-section>
+                <q-card-section class="q-pt-none">
+                  <div class="row q-col-gutter-md">
+                    <div class="col-12 col-md-6">
+                      <q-file
+                        v-model="specImageFile"
+                        label="上傳規格圖片"
+                        outlined
+                        accept="image/*"
+                      >
+                        <template v-slot:prepend>
+                          <q-icon name="image" />
+                        </template>
+                      </q-file>
+                      <div v-if="specImageFile" class="text-caption text-grey-7 q-mt-xs">
+                        已選檔案：{{ specImageFile.name }}
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-btn
+                        outline
+                        color="primary"
+                        icon="photo_library"
+                        label="從相簿選擇圖片"
+                        class="full-width"
+                        @click="openAlbumSelector('spec')"
+                      />
+                      <q-btn
+                        v-if="specForm.image"
+                        flat
+                        dense
+                        color="negative"
+                        icon="close"
+                        label="清除規格圖片"
+                        class="q-mt-sm"
+                        @click="clearSpecImageSelection"
+                      />
+                    </div>
+                  </div>
+                  <div v-if="specImagePreviewUrl" class="q-mt-md">
+                    <div class="text-caption text-grey-7 q-mb-xs">目前規格圖片預覽</div>
+                    <q-img :src="specImagePreviewUrl" :ratio="1" style="max-width: 180px" class="rounded-borders" />
+                  </div>
+                </q-card-section>
+              </q-card>
 
               <q-toggle
                 v-model="specForm.enabled"
@@ -950,15 +1158,15 @@
                     flat
                     bordered
                     class="cursor-pointer"
-                    :class="{ 'bg-blue-1 border-primary': isImageSelected(image.id) }"
-                    @click="toggleImageSelection(image)"
+                    :class="{ 'bg-blue-1 border-primary': isAlbumDialogImageSelected(image.id) }"
+                    @click="toggleAlbumDialogImageSelection(image)"
                   >
                     <q-img
                       :src="image.imageUrl"
                       :ratio="1"
                       style="height: 150px"
                     >
-                      <div v-if="isImageSelected(image.id)" class="absolute-top-right q-ma-sm">
+                      <div v-if="isAlbumDialogImageSelected(image.id)" class="absolute-top-right q-ma-sm">
                         <q-icon name="check_circle" color="primary" size="md" />
                       </div>
                     </q-img>
@@ -989,7 +1197,7 @@
               unelevated
               label="確認添加"
               color="primary"
-              @click="addSelectedImagesToProduct"
+              @click="confirmAlbumSelection"
               :disable="tempSelectedImages.length === 0"
             />
           </q-card-actions>
@@ -1078,6 +1286,7 @@ const debouncedSearchQuery = useDebouncedRef(searchQuery, 300)
 const statusFilter = ref(null)
 const categoryFilter = ref(null)
 const productImage = ref(null)
+const specImageFile = ref<File | null>(null)
 
 // 監聽防抖後的搜尋查詢，自動過濾商品
 watch(debouncedSearchQuery, () => {
@@ -1117,6 +1326,79 @@ const manualBlocks = ref<ProductDescriptionBlock[]>([
   { blockType: 'MANUAL', blockNumber: 2, title: '', content: '', enabled: true },
   { blockType: 'MANUAL', blockNumber: 3, title: '', content: '', enabled: true }
 ])
+const specFieldSaving = ref<Record<string, boolean>>({})
+
+type SpecEditableField = 'specName' | 'image' | 'price' | 'cost' | 'stock'
+
+const getSpecFieldSavingKey = (specId: number, field: SpecEditableField) => `${specId}:${field}`
+
+const isSpecFieldSaving = (specId?: number, field?: SpecEditableField) => {
+  if (!specId || !field) return false
+  return !!specFieldSaving.value[getSpecFieldSavingKey(specId, field)]
+}
+
+const normalizeSpecFieldValue = (field: SpecEditableField, value: unknown) => {
+  if (field === 'specName' || field === 'image') {
+    return String(value ?? '').trim()
+  }
+
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const updateSpecificationField = async (
+  spec: ProductSpecification,
+  field: SpecEditableField,
+  value: unknown
+) => {
+  if (!spec.id) return
+
+  const normalizedValue = normalizeSpecFieldValue(field, value)
+
+  if (field === 'specName' && !normalizedValue) {
+    $q.notify({
+      type: 'negative',
+      message: '請輸入規格名稱',
+      position: 'top'
+    })
+    if (form.value.id) {
+      await loadSpecifications(form.value.id)
+    }
+    return
+  }
+
+  const key = getSpecFieldSavingKey(spec.id, field)
+  specFieldSaving.value[key] = true
+
+  try {
+    await productSpecificationApi.updateSpecification(spec.id, {
+      ...spec,
+      [field]: normalizedValue
+    })
+
+    spec[field] = normalizedValue as never
+
+    $q.notify({
+      type: 'positive',
+      message: '規格欄位已更新',
+      position: 'top'
+    })
+  } catch (error) {
+    console.error('更新規格欄位失敗:', error)
+    $q.notify({
+      type: 'negative',
+      message: '更新規格欄位失敗',
+      position: 'top'
+    })
+
+    if (form.value.id) {
+      await loadSpecifications(form.value.id)
+    }
+  } finally {
+    specFieldSaving.value[key] = false
+  }
+}
+
 const autoBlocks = ref<ProductDescriptionBlock[]>([
   { blockType: 'AUTO', blockNumber: 1, title: '', content: '', enabled: true, isAutoGenerated: true },
   { blockType: 'AUTO', blockNumber: 2, title: '', content: '', enabled: true, isAutoGenerated: true },
@@ -1129,11 +1411,13 @@ const autoBlocks = ref<ProductDescriptionBlock[]>([
 
 // Album-related state
 const showAlbumSelector = ref(false)
+const albumSelectorMode = ref<'product' | 'spec'>('product')
 const albums = ref<Album[]>([])
 const selectedAlbum = ref<number | null>(null)
 const albumImages = ref<AlbumImage[]>([])
 const tempSelectedImages = ref<AlbumImage[]>([])
 const selectedAlbumImages = ref<AlbumImage[]>([])
+const selectedSpecAlbumImage = ref<AlbumImage | null>(null)
 const defaultAlbumId = ref<number | null>(null)
 
 // 庫存管理相關狀態
@@ -1151,6 +1435,13 @@ const selectedProductImageFileName = computed(() => {
 const selectedImageCount = computed(() => {
   const uploadCount = selectedProductImageFileName.value ? 1 : 0
   return selectedAlbumImages.value.length + uploadCount
+})
+const specImagePreviewUrl = computed(() => {
+  if (specImageFile.value) {
+    return URL.createObjectURL(specImageFile.value)
+  }
+
+  return specForm.value.image || ''
 })
 
 const form = ref<Product>({

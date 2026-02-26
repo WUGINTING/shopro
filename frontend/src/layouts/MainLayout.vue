@@ -117,7 +117,7 @@
             v-if="authStore.canAccessStaff"
             icon="inventory"
             :label="adminGlossary.nav.productManagement"
-            :default-opened="isMenuActive(['products', 'categories'])"
+            :default-opened="isMenuActive(['products', 'categories', 'inventoryLogs'])"
             data-tour="products"
           >
             <q-item
@@ -146,6 +146,20 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>{{ adminGlossary.nav.categoryManagement }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('inventoryLogs')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('inventoryLogs')"
+            >
+              <q-item-section avatar>
+                <q-icon name="history" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>庫存異動紀錄</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
@@ -511,6 +525,22 @@
             </q-item-section>
             <q-item-section>
               <q-item-label>帳號管理</q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item
+            v-if="authStore.canAccessAdmin"
+            clickable
+            v-ripple
+            :active="isActive('storeContentSettings')"
+            active-class="bg-primary text-white"
+            @click="navigateTo('storeContentSettings')"
+          >
+            <q-item-section avatar>
+              <q-icon name="edit_note" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>品牌/聯絡內容</q-item-label>
             </q-item-section>
           </q-item>
 

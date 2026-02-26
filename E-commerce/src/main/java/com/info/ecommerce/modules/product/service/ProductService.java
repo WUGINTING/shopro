@@ -8,9 +8,11 @@ import com.info.ecommerce.modules.product.dto.ProductDescriptionBlockDTO;
 import com.info.ecommerce.modules.product.dto.ProductImageDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
+import com.info.ecommerce.modules.product.entity.InventoryMovementLog;
 import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.repository.ProductCategoryRepository;
+import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
 import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
@@ -34,6 +36,7 @@ public class ProductService {
     private final ProductDescriptionBlockService descriptionBlockService;
     private final ProductInventoryRepository productInventoryRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
+    private final InventoryMovementLogRepository inventoryMovementLogRepository;
 
     /**
      * 驗證並標準化 SKU
@@ -325,6 +328,8 @@ public class ProductService {
                 .filter(inventory -> inventory.getSpecificationId() == null)
                 .findFirst()
                 .orElse(null);
+        int beforeStock = productLevelInventory != null && productLevelInventory.getAvailableStock() != null
+                ? productLevelInventory.getAvailableStock() : 0;
 
         if (productLevelInventory == null) {
             productLevelInventory = ProductInventory.builder()
@@ -343,5 +348,19 @@ public class ProductService {
         }
 
         productInventoryRepository.save(productLevelInventory);
+
+        if (beforeStock != normalizedStock) {
+            inventoryMovementLogRepository.save(InventoryMovementLog.builder()
+                    .productId(productId)
+                    .specificationId(null)
+                    .warehouseId(productLevelInventory.getWarehouseId())
+                    .changeType("SET")
+                    .source("PRODUCT_EDIT")
+                    .changeQuantity(normalizedStock - beforeStock)
+                    .beforeStock(beforeStock)
+                    .afterStock(normalizedStock)
+                    .remark("商品編輯頁設定庫存")
+                    .build());
+        }
     }
 }

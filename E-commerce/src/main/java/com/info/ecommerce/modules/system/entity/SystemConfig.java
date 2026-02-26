@@ -44,6 +44,60 @@ public class SystemConfig {
     @Column(columnDefinition = "NVARCHAR(500)")
     private String address;
 
+    @Column(columnDefinition = "NVARCHAR(100)")
+    private String brandStoryBadge;
+
+    @Column(columnDefinition = "NVARCHAR(200)")
+    private String brandStoryTitle;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String brandStoryLead;
+
+    @Column(columnDefinition = "NVARCHAR(100)")
+    private String brandMissionTitle;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String brandMissionContent;
+
+    @Column(columnDefinition = "NVARCHAR(100)")
+    private String brandVisionTitle;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String brandVisionContent;
+
+    @Column(columnDefinition = "NVARCHAR(100)")
+    private String brandValueTitle;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String brandValueContent;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String brandStoryNote;
+
+    @Column(columnDefinition = "NVARCHAR(100)")
+    private String contactPageBadge;
+
+    @Column(columnDefinition = "NVARCHAR(200)")
+    private String contactPageTitle;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String contactPageLead;
+
+    @Column(columnDefinition = "NVARCHAR(300)")
+    private String contactEmailHint;
+
+    @Column(columnDefinition = "NVARCHAR(300)")
+    private String contactPhoneHint;
+
+    @Column(columnDefinition = "NVARCHAR(300)")
+    private String contactBusinessHoursHint;
+
+    @Column(columnDefinition = "NVARCHAR(300)")
+    private String contactAddressHint;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String contactSupportNote;
+
     // SEO 設定
     @Column(columnDefinition = "NVARCHAR(200)")
     private String metaTitle;

@@ -63,6 +63,12 @@ const router = createRouter({
           meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
+          path: 'inventory-logs',
+          name: 'inventoryLogs',
+          component: () => import('@/views/InventoryLogView.vue'),
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+        },
+        {
           path: 'products',
           name: 'products',
           component: () => import('@/views/ProductView.vue'),
@@ -195,6 +201,12 @@ const router = createRouter({
           meta: { roles: ['ADMIN'] }
         },
         {
+          path: 'store-content-settings',
+          name: 'storeContentSettings',
+          component: () => import('@/views/StoreContentSettingsView.vue'),
+          meta: { roles: ['ADMIN'] }
+        },
+        {
           path: 'edm',
           name: 'edm',
           component: () => import('@/views/EdmView.vue'),
@@ -234,6 +246,7 @@ const router = createRouter({
     },
     // Legacy admin paths redirect to /admin/*
     { path: '/categories', redirect: '/admin/categories' },
+    { path: '/inventory-logs', redirect: '/admin/inventory-logs' },
     { path: '/orders', redirect: '/admin/orders' },
     { path: '/customers', redirect: '/admin/customers' },
     { path: '/about', redirect: '/admin/about' },
@@ -251,6 +264,7 @@ const router = createRouter({
     { path: '/ecpay-config', redirect: '/admin/ecpay-config' },
     { path: '/payment-callback-logs', redirect: '/admin/payment-callback-logs' },
     { path: '/marketing', redirect: '/admin/marketing' },
+    { path: '/store-content-settings', redirect: '/admin/store-content-settings' },
     { path: '/statistics', redirect: '/admin/statistics' },
     { path: '/system-settings', redirect: '/admin/system-settings' },
     { path: '/edm', redirect: '/admin/edm' },

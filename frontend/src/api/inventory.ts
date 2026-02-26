@@ -38,6 +38,20 @@ export interface ProductInventory {
   updatedAt: string
 }
 
+export interface InventoryMovementLog {
+  id: number
+  productId: number
+  specificationId?: number | null
+  warehouseId?: number | null
+  changeType: 'INCREASE' | 'DECREASE' | 'SET' | string
+  source: string
+  changeQuantity: number
+  beforeStock: number
+  afterStock: number
+  remark?: string
+  createdAt: string
+}
+
 /**
  * 庫存管理 API
  */
@@ -54,6 +68,20 @@ export const inventoryApi = {
    */
   getProductAlerts: (productId: number) => {
     return axios.get<any, ApiResponse<InventoryAlert[]>>(`/inventory/alerts/product/${productId}`)
+  },
+
+  /**
+   * 取得庫存異動紀錄（最近 100 筆）
+   */
+  getInventoryLogs: () => {
+    return axios.get<any, ApiResponse<InventoryMovementLog[]>>('/inventory/logs')
+  },
+
+  /**
+   * 取得單一商品庫存異動紀錄（最近 100 筆）
+   */
+  getProductInventoryLogs: (productId: number) => {
+    return axios.get<any, ApiResponse<InventoryMovementLog[]>>(`/inventory/logs/product/${productId}`)
   },
 
   /**

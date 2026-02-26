@@ -2,6 +2,7 @@ package com.info.ecommerce.modules.product.controller;
 
 import com.info.ecommerce.common.ApiResponse;
 import com.info.ecommerce.modules.product.entity.InventoryAlert;
+import com.info.ecommerce.modules.product.entity.InventoryMovementLog;
 import com.info.ecommerce.modules.product.service.InventoryManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -45,6 +46,19 @@ public class InventoryManagementController {
     public ApiResponse<List<InventoryAlert>> getProductUnresolvedAlerts(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
         return ApiResponse.success(inventoryService.getProductUnresolvedAlerts(productId));
+    }
+
+    @GetMapping("/logs")
+    @Operation(summary = "取得庫存異動紀錄")
+    public ApiResponse<List<InventoryMovementLog>> getInventoryMovementLogs() {
+        return ApiResponse.success(inventoryService.getInventoryMovementLogs());
+    }
+
+    @GetMapping("/logs/product/{productId}")
+    @Operation(summary = "取得商品庫存異動紀錄")
+    public ApiResponse<List<InventoryMovementLog>> getProductInventoryMovementLogs(
+            @Parameter(description = "?? ID") @PathVariable Long productId) {
+        return ApiResponse.success(inventoryService.getProductInventoryMovementLogs(productId));
     }
 
     @PostMapping("/notifications/subscribe")

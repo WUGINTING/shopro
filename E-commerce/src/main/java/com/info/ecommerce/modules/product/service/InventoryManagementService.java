@@ -2,10 +2,12 @@ package com.info.ecommerce.modules.product.service;
 
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.product.entity.InventoryAlert;
+import com.info.ecommerce.modules.product.entity.InventoryMovementLog;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
 import com.info.ecommerce.modules.product.entity.StockNotification;
 import com.info.ecommerce.modules.product.enums.AlertLevel;
 import com.info.ecommerce.modules.product.repository.InventoryAlertRepository;
+import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
 import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.StockNotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class InventoryManagementService {
 
     private final ProductInventoryRepository inventoryRepository;
     private final InventoryAlertRepository alertRepository;
+    private final InventoryMovementLogRepository movementLogRepository;
     private final StockNotificationRepository notificationRepository;
 
     /**
@@ -88,6 +91,20 @@ public class InventoryManagementService {
     }
 
     /**
+     * 取得庫存異動紀錄（最近 100 筆）
+     */
+    public List<InventoryMovementLog> getInventoryMovementLogs() {
+        return movementLogRepository.findTop100ByOrderByCreatedAtDesc();
+    }
+
+    /**
+     * 取得單一商品庫存異動紀錄（最近 100 筆）
+     */
+    public List<InventoryMovementLog> getProductInventoryMovementLogs(Long productId) {
+        return movementLogRepository.findTop100ByProductIdOrderByCreatedAtDesc(productId);
+    }
+
+    /**
      * 訂閱貨到通知
      */
     @Transactional
@@ -131,6 +148,8 @@ public class InventoryManagementService {
         ProductInventory inventory = inventoryRepository
                 .findByProductIdAndSpecificationId(productId, specificationId)
                 .orElse(null);
+        int beforeStock = inventory != null && inventory.getAvailableStock() != null
+                ? inventory.getAvailableStock() : 0;
 
         if (inventory == null) {
             // 如果庫存記錄不存在，創建新記錄
@@ -148,6 +167,8 @@ public class InventoryManagementService {
         }
 
         inventoryRepository.save(inventory);
+        int afterStock = inventory.getAvailableStock() != null ? inventory.getAvailableStock() : 0;
+        saveInventoryMovementLog(productId, specificationId, inventory.getWarehouseId(), quantity, beforeStock, afterStock);
 
         // 解決已有的庫存警示（如果補貨後庫存恢復正常）
         if (inventory.getAvailableStock() > 0) {
@@ -163,6 +184,26 @@ public class InventoryManagementService {
         if (quantity > 0) {
             processStockNotifications(productId);
         }
+    }
+
+    private void saveInventoryMovementLog(Long productId, Long specificationId, Long warehouseId,
+                                          Integer quantity, int beforeStock, int afterStock) {
+        int changeQty = quantity != null ? quantity : (afterStock - beforeStock);
+        String changeType = changeQty > 0 ? "INCREASE" : (changeQty < 0 ? "DECREASE" : "SET");
+
+        InventoryMovementLog log = InventoryMovementLog.builder()
+                .productId(productId)
+                .specificationId(specificationId)
+                .warehouseId(warehouseId)
+                .changeType(changeType)
+                .source("INVENTORY_API")
+                .changeQuantity(changeQty)
+                .beforeStock(beforeStock)
+                .afterStock(afterStock)
+                .remark("後台補貨/調整庫存")
+                .build();
+
+        movementLogRepository.save(log);
     }
 
     private String generateAlertMessage(AlertLevel level, ProductInventory inventory) {
