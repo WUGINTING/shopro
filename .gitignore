@@ -1,1 +1,48 @@
-/frontend/.env
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# === 環境配置 (敏感資料) ===
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# === 後端 Spring Boot ===
+E-commerce/target/
+E-commerce/*.jar
+E-commerce/*.war
+E-commerce/logs/
+E-commerce/src/main/resources/application-local.properties
+
+# === 前端 Node.js ===
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+frontend-official/node_modules/
+frontend-official/dist/
+frontend-official/.env
+frontend-official/.env.local
+frontend-official/.env.*.local
+
+# === 上傳文件 ===
+uploads/
+E-commerce/uploads/
+
+# === 日誌文件 ===
+*.log
+logs/
+
+# === 系統文件 ===
+.DS_Store
+Thumbs.db
+
+# === 測試覆蓋率 ===
+coverage/
+.nyc_output/

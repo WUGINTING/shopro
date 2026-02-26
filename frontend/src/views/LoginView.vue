@@ -1,80 +1,146 @@
 <template>
   <q-layout view="hHh lpR fFf" class="login-layout">
     <q-page-container>
-      <q-page class="flex flex-center login-page">
-        <q-card class="login-card">
-          <q-card-section class="bg-gradient-primary text-white">
-            <div class="text-center">
-              <q-icon name="shopping_cart" size="64px" />
-              <div class="text-h4 q-mt-md text-weight-bold">遇日小舖</div>
-              <div class="text-subtitle1">管理系統</div>
-            </div>
-          </q-card-section>
+      <q-page class="login-page q-pa-md q-pa-lg-lg">
+        <div class="login-shell">
+          <section class="login-showcase q-pa-lg q-pa-xl-md">
+            <div class="showcase-badge">Shopro Admin Console</div>
+            <h1 class="showcase-title">Manage orders, products, and operations from one place</h1>
+            <p class="showcase-subtitle">
+              Secure role-based access for admin, manager, staff, and customer accounts.
+            </p>
 
-          <q-card-section>
-            <q-form @submit="handleLogin">
+            <div class="showcase-grid q-mt-lg">
+              <q-card flat bordered class="showcase-stat">
+                <q-card-section>
+                  <div class="showcase-stat__label">Roles</div>
+                  <div class="showcase-stat__value">4</div>
+                  <div class="showcase-stat__hint">Admin / Manager / Staff / Customer</div>
+                </q-card-section>
+              </q-card>
+              <q-card flat bordered class="showcase-stat">
+                <q-card-section>
+                  <div class="showcase-stat__label">Use Cases</div>
+                  <div class="showcase-stat__value">Ops</div>
+                  <div class="showcase-stat__hint">Orders, catalog, CRM and payment operations</div>
+                </q-card-section>
+              </q-card>
+            </div>
+
+            <div class="showcase-features q-mt-lg">
+              <div class="showcase-feature"><q-icon name="verified_user" /> Role-based route protection</div>
+              <div class="showcase-feature"><q-icon name="bolt" /> Fast admin dashboard overview API</div>
+              <div class="showcase-feature"><q-icon name="payments" /> ECPay payment flow support</div>
+            </div>
+          </section>
+
+          <section class="login-panel q-pa-lg">
+            <div class="row items-center justify-between q-mb-md">
+              <div>
+                <div class="text-h5 text-weight-bold">Sign in</div>
+                <div class="text-body2 text-grey-7">Enter your account credentials to continue.</div>
+              </div>
+              <q-avatar color="primary" text-color="white" icon="lock" />
+            </div>
+
+            <q-form @submit.prevent="handleLogin" class="q-gutter-md">
               <q-input
                 v-model="loginForm.username"
-                label="使用者名稱"
+                label="Username"
                 outlined
-                :rules="[val => !!val || '請輸入使用者名稱']"
-                class="q-mb-md"
+                autocomplete="username"
+                :rules="[(val) => !!val || 'Please enter username']"
               >
-                <template v-slot:prepend>
+                <template #prepend>
                   <q-icon name="person" />
                 </template>
               </q-input>
 
               <q-input
                 v-model="loginForm.password"
-                label="密碼"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
+                label="Password"
                 outlined
-                :rules="[val => !!val || '請輸入密碼']"
-                class="q-mb-md"
+                autocomplete="current-password"
+                :rules="[(val) => !!val || 'Please enter password']"
+                @keyup.enter="handleLogin"
               >
-                <template v-slot:prepend>
-                  <q-icon name="lock" />
+                <template #prepend>
+                  <q-icon name="key" />
+                </template>
+                <template #append>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    :icon="showPassword ? 'visibility_off' : 'visibility'"
+                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                    @click="showPassword = !showPassword"
+                  />
                 </template>
               </q-input>
 
               <q-btn
                 type="submit"
-                label="登入"
                 color="primary"
                 unelevated
-                class="full-width q-mb-md"
+                no-caps
+                class="full-width login-submit"
                 :loading="loading"
+                label="Login to dashboard"
               />
-
-              <q-separator class="q-my-md">
-                <span class="text-caption text-grey-7 q-px-md">或</span>
-              </q-separator>
-
-              <div class="full-width q-mb-md">
-                <div id="google-signin-button" class="google-signin-container"></div>
-              </div>
-
-              <div class="text-caption text-grey-7 q-mt-md">
-                <p class="q-mb-sm"><strong>測試帳號：</strong></p>
-                <p class="q-mb-xs">管理員：admin / admin123</p>
-                <p class="q-mb-xs">經理：manager / manager123</p>
-                <p class="q-mb-xs">員工：staff / staff123</p>
-              </div>
             </q-form>
-          </q-card-section>
-        </q-card>
+
+            <q-separator class="q-my-lg" />
+
+            <div class="row items-center justify-between q-mb-sm">
+              <div class="text-subtitle2 text-weight-medium">Quick fill test accounts</div>
+              <q-btn flat dense no-caps label="Clear" @click="clearForm" />
+            </div>
+
+            <div class="test-account-grid q-mb-md">
+              <q-btn
+                v-for="account in testAccounts"
+                :key="account.username"
+                flat
+                no-caps
+                class="test-account-btn"
+                @click="fillTestAccount(account.username, account.password)"
+              >
+                <div class="text-left full-width">
+                  <div class="text-weight-medium">{{ account.label }}</div>
+                  <div class="text-caption text-grey-7">{{ account.username }} / {{ account.password }}</div>
+                </div>
+              </q-btn>
+            </div>
+
+            <q-banner rounded class="login-help-banner">
+              <template #avatar>
+                <q-icon name="info" color="primary" />
+              </template>
+              <div class="text-body2">
+                Customer accounts are redirected to the storefront after login; staff roles go to the admin dashboard.
+              </div>
+            </q-banner>
+          </section>
+        </div>
       </q-page>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+
+interface TestAccount {
+  label: string
+  username: string
+  password: string
+}
 
 const router = useRouter()
 const $q = useQuasar()
@@ -86,19 +152,43 @@ const loginForm = ref({
 })
 
 const loading = ref(false)
-const googleLoading = ref(false)
+const showPassword = ref(false)
 
-// Google OAuth 配置
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const testAccounts: TestAccount[] = [
+  { label: 'Admin', username: 'admin', password: 'admin123' },
+  { label: 'Manager', username: 'manager', password: 'manager123' },
+  { label: 'Staff', username: 'staff', password: 'staff123' },
+  { label: 'Customer', username: 'customer', password: 'customer123' }
+]
+
+const fillTestAccount = (username: string, password: string) => {
+  loginForm.value.username = username
+  loginForm.value.password = password
+}
+
+const clearForm = () => {
+  loginForm.value.username = ''
+  loginForm.value.password = ''
+}
+
+const redirectAfterLogin = () => {
+  if (authStore.user?.role === 'CUSTOMER') {
+    router.push('/')
+  } else {
+    router.push('/admin')
+  }
+}
 
 const handleLogin = async () => {
+  if (loading.value) return
+
   loading.value = true
   try {
     const response = await authApi.login(loginForm.value)
-    
+
     if (response.success && response.data) {
-      // Save auth data
       authStore.setAuth(response.data.token, {
+        id: response.data.id,
         username: response.data.username,
         email: response.data.email,
         role: response.data.role as any
@@ -106,248 +196,173 @@ const handleLogin = async () => {
 
       $q.notify({
         type: 'positive',
-        message: '登入成功！',
+        message: 'Login successful',
         position: 'top'
       })
 
-      // Redirect to home
-      router.push('/')
+      redirectAfterLogin()
     }
   } catch (error: any) {
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || '登入失敗，請檢查使用者名稱和密碼',
+      message: error?.response?.data?.message || 'Login failed. Please check your username and password.',
       position: 'top'
     })
   } finally {
     loading.value = false
   }
 }
-
-// 初始化 Google OAuth
-const initializeGoogleSignIn = () => {
-  if (!GOOGLE_CLIENT_ID) {
-    console.warn('Google Client ID 未配置，請在 .env 文件中設置 VITE_GOOGLE_CLIENT_ID')
-    return
-  }
-
-  // 檢查是否已經載入
-  if (window.google) {
-    setupGoogleSignIn()
-    return
-  }
-
-  // 載入 Google Identity Services
-  const script = document.createElement('script')
-  script.src = 'https://accounts.google.com/gsi/client'
-  script.async = true
-  script.defer = true
-  script.onload = () => {
-    if (window.google) {
-      setupGoogleSignIn()
-    }
-  }
-  script.onerror = () => {
-    console.error('無法載入 Google Identity Services')
-    $q.notify({
-      type: 'negative',
-      message: '無法載入 Google 登入服務',
-      position: 'top'
-    })
-  }
-  document.head.appendChild(script)
-}
-
-// 設置 Google Sign In
-const setupGoogleSignIn = () => {
-  if (!window.google || !GOOGLE_CLIENT_ID) return
-  
-  try {
-    // 初始化 Google Identity Services
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleCredentialResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true
-    })
-
-    // 渲染 Google 登入按鈕
-    const buttonContainer = document.getElementById('google-signin-button')
-    if (buttonContainer) {
-      window.google.accounts.id.renderButton(buttonContainer, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'medium',
-        text: 'signin_with',
-        width: '100%',
-        locale: 'zh_TW'
-      })
-    }
-  } catch (error) {
-    console.error('Google Sign In 設置失敗:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Google 登入設置失敗',
-      position: 'top'
-    })
-  }
-}
-
-// 處理 Google Credential Response (使用 ID Token)
-const handleGoogleCredentialResponse = async (response: any) => {
-  if (!response || !response.credential) {
-    googleLoading.value = false
-    return
-  }
-
-  googleLoading.value = true
-
-  try {
-    await handleGoogleLogin(response.credential)
-  } catch (error) {
-    googleLoading.value = false
-  }
-}
-
-// 處理 Google 登入
-const handleGoogleLogin = async (idToken: string) => {
-  try {
-    const response = await authApi.googleLogin(idToken)
-    
-    if (response.success && response.data) {
-      // Save auth data
-      authStore.setAuth(response.data.token, {
-        username: response.data.username,
-        email: response.data.email,
-        role: response.data.role as any
-      })
-
-      $q.notify({
-        type: 'positive',
-        message: 'Google 登入成功！',
-        position: 'top'
-      })
-
-      // Redirect to home
-      router.push('/')
-    }
-  } catch (error: any) {
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Google 登入失敗，請稍後再試',
-      position: 'top'
-    })
-  } finally {
-    googleLoading.value = false
-  }
-}
-
-// 擴展 Window 接口以支持 Google API
-declare global {
-  interface Window {
-    google: any
-  }
-}
-
-onMounted(() => {
-  // 等待 DOM 渲染完成後再初始化
-  nextTick(() => {
-    initializeGoogleSignIn()
-  })
-})
-
-onUnmounted(() => {
-  // 清理 Google 登入按鈕
-  const buttonContainer = document.getElementById('google-signin-button')
-  if (buttonContainer) {
-    buttonContainer.innerHTML = ''
-  }
-})
 </script>
 
 <style scoped>
 .login-layout {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(56, 189, 248, 0.18), transparent 40%),
+    radial-gradient(circle at 90% 8%, rgba(147, 197, 253, 0.16), transparent 38%),
+    linear-gradient(180deg, #0b1220 0%, #111827 55%, #0f172a 100%);
 }
 
 .login-page {
-  width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.login-card {
-  width: 90%;
-  max-width: 500px;
-  border-radius: 16px;
+.login-shell {
+  width: min(1180px, 100%);
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr;
+  border-radius: 24px;
   overflow: hidden;
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.google-signin-container {
-  width: 100%;
+.login-showcase {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 75% 15%, rgba(59, 130, 246, 0.3), transparent 42%),
+    radial-gradient(circle at 8% 85%, rgba(20, 184, 166, 0.24), transparent 40%),
+    linear-gradient(160deg, #0f172a 0%, #111827 55%, #172554 100%);
+}
+
+.showcase-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.showcase-title {
+  margin: 14px 0 10px;
+  font-size: 2rem;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.showcase-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.showcase-stat {
+  border-radius: 14px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.showcase-stat__label {
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.showcase-stat__value {
+  margin-top: 6px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.showcase-stat__hint {
+  margin-top: 4px;
+  color: rgba(226, 232, 240, 0.82);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.showcase-features {
+  display: grid;
+  gap: 10px;
+}
+
+.showcase-feature {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  color: rgba(241, 245, 249, 0.95);
 }
 
-.google-signin-container :deep(div) {
-  width: 100% !important;
+.login-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
-.google-signin-container :deep(iframe) {
-  width: 100% !important;
-  min-width: 100% !important;
-  max-height: 40px !important;
+.login-submit {
+  min-height: 44px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
-/* 調整 Google 按鈕內部的圖標和文字大小 */
-.google-signin-container :deep([role="button"]) {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  padding: 0 12px !important;
+.test-account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
-/* 調整 Google 圖標容器 */
-.google-signin-container :deep([role="button"] > div) {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
+.test-account-btn {
+  justify-content: flex-start;
+  align-items: stretch;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fff;
 }
 
-/* 調整 Google 圖標大小 - 針對所有可能的圖標元素 */
-.google-signin-container :deep(img),
-.google-signin-container :deep(svg),
-.google-signin-container :deep([data-iml]),
-.google-signin-container :deep([class*="icon"]) {
-  width: 14px !important;
-  height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
-  flex-shrink: 0 !important;
+.test-account-btn:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
 }
 
-/* 針對 Google 按鈕內部的 SVG 路徑 - 縮小圖標 */
-.google-signin-container :deep(svg) {
-  width: 14px !important;
-  height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
-  display: block !important;
+.login-help-banner {
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
 }
 
-/* 縮小 SVG 路徑本身 */
-.google-signin-container :deep(path) {
-  transform: scale(0.6) !important;
-  transform-origin: center !important;
-}
+@media (max-width: 960px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
 
-/* 確保按鈕文字大小合適 */
-.google-signin-container :deep(span) {
-  font-size: 14px !important;
-  line-height: 1.4 !important;
+  .login-showcase {
+    display: none;
+  }
+
+  .test-account-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 /**
- * 認證相關 API
+ * 認�??��? API
  * @module AuthAPI
  */
 
@@ -7,76 +7,78 @@ import axios from './axios'
 import type { ApiResponse } from './types'
 
 /**
- * 登入請求介面
+ * ?�入請�?介面
  * @interface LoginRequest
  */
 export interface LoginRequest {
-  /** 使用者名稱 */
+  /** 使用?��?�?*/
   username: string
   /** 密碼 */
   password: string
 }
 
 /**
- * 認證回應介面
+ * 認�??��?介面
  * @interface AuthResponse
  */
 export interface AuthResponse {
   /** JWT Token */
   token: string
-  /** 使用者名稱 */
+  /** User ID */
+  id?: number
+  /** 使用?��?�?*/
   username: string
-  /** 電子郵件 */
+  /** ?��??�件 */
   email: string
-  /** 使用者角色 */
+  /** 使用?��???*/
   role: string
 }
 
 /**
- * 使用者介面
+ * 使用?��???
  * @interface User
  */
 export interface User {
-  /** 使用者 ID */
+  /** 使用??ID */
   id?: number
-  /** 使用者名稱 */
+  /** 使用?��?�?*/
   username: string
-  /** 電子郵件 */
+  /** ?��??�件 */
   email: string
-  /** 使用者角色 */
+  /** 使用?��???*/
   role: 'ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER'
-  /** 是否啟用 */
+  /** ?�否?�用 */
   enabled?: boolean
-  /** 創建時間 */
+  /** ?�建?��? */
   createdAt?: string
-  /** 更新時間 */
+  /** ?�新?��? */
   updatedAt?: string
 }
 
 /**
- * 更新個人資料請求介面
+ * ?�新?�人資�?請�?介面
  * @interface UpdateProfileRequest
  */
 export interface UpdateProfileRequest {
-  /** 使用者名稱 */
+  /** 使用?��?�?*/
   username?: string
-  /** 電子郵件 */
+  /** ?��??�件 */
   email?: string
-  /** 當前密碼 */
+  /** ?��?密碼 */
   currentPassword?: string
-  /** 新密碼 */
+  /** ?��?�?*/
   newPassword?: string
 }
 
 /**
- * 認證 API 服務
+ * 認�? API ?��?
  * @namespace authApi
  */
 export const authApi = {
   /**
-   * 使用者登入
-   * @param {LoginRequest} data - 登入資料
-   * @returns {Promise<ApiResponse<AuthResponse>>} 登入回應
+   * 使用?�登??
+   * @param {LoginRequest} data - ?�入資�?
+   * @returns {Promise<ApiResponse<AuthResponse>>} ?�入?��?
    * @example
    * const response = await authApi.login({ username: 'admin', password: 'password' })
    */
@@ -85,12 +87,12 @@ export const authApi = {
   },
   
   /**
-   * 使用者註冊
-   * @param {Object} data - 註冊資料
-   * @param {string} data.username - 使用者名稱
-   * @param {string} data.email - 電子郵件
+   * 使用?�註??
+   * @param {Object} data - 註�?資�?
+   * @param {string} data.username - 使用?��?�?
+   * @param {string} data.email - ?��??�件
    * @param {string} data.password - 密碼
-   * @returns {Promise<ApiResponse<AuthResponse>>} 註冊回應
+   * @returns {Promise<ApiResponse<AuthResponse>>} 註�??��?
    * @example
    * const response = await authApi.register({ username: 'user', email: 'user@example.com', password: 'password' })
    */
@@ -99,7 +101,7 @@ export const authApi = {
   },
   
   /**
-   * 登出（客戶端清除 token）
+   * ?�出（客?�端清除 token�?
    * @returns {void}
    * @example
    * authApi.logout()
@@ -110,8 +112,8 @@ export const authApi = {
   },
   
   /**
-   * 獲取當前使用者資訊
-   * @returns {User | null} 使用者資訊或 null
+   * ?��??��?使用?��?�?
+   * @returns {User | null} 使用?��?訊�? null
    * @example
    * const user = authApi.getCurrentUser()
    */
@@ -121,8 +123,8 @@ export const authApi = {
   },
   
   /**
-   * 保存使用者資訊
-   * @param {User} user - 使用者資訊
+   * 保�?使用?��?�?
+   * @param {User} user - 使用?��?�?
    * @returns {void}
    * @example
    * authApi.saveUser({ id: 1, username: 'admin', email: 'admin@example.com', role: 'ADMIN' })
@@ -132,11 +134,11 @@ export const authApi = {
   },
   
   /**
-   * 檢查是否已登入
-   * @returns {boolean} 是否已登入
+   * 檢查?�否已登??
+   * @returns {boolean} ?�否已登??
    * @example
    * if (authApi.isAuthenticated()) {
-   *   console.log('已登入')
+   *   console.log('已登??)
    * }
    */
   isAuthenticated: (): boolean => {
@@ -144,8 +146,8 @@ export const authApi = {
   },
 
   /**
-   * 取得個人資料
-   * @returns {Promise<ApiResponse<User>>} 個人資料回應
+   * ?��??�人資�?
+   * @returns {Promise<ApiResponse<User>>} ?�人資�??��?
    * @example
    * const profile = await authApi.getProfile()
    */
@@ -154,20 +156,20 @@ export const authApi = {
   },
 
   /**
-   * 更新個人資料
-   * @param {UpdateProfileRequest} data - 更新資料
-   * @returns {Promise<ApiResponse<User>>} 更新後的個人資料
+   * ?�新?�人資�?
+   * @param {UpdateProfileRequest} data - ?�新資�?
+   * @returns {Promise<ApiResponse<User>>} ?�新後�??�人資�?
    * @example
-   * const updated = await authApi.updateProfile({ username: '新名稱' })
+   * const updated = await authApi.updateProfile({ username: '?��?�? })
    */
   updateProfile: (data: UpdateProfileRequest) => {
     return axios.put<any, ApiResponse<User>>('/auth/profile', data)
   },
 
   /**
-   * Google SSO 登入/註冊
+   * Google SSO ?�入/註�?
    * @param {string} idToken - Google ID Token
-   * @returns {Promise<ApiResponse<AuthResponse>>} 登入回應
+   * @returns {Promise<ApiResponse<AuthResponse>>} ?�入?��?
    * @example
    * const response = await authApi.googleLogin(idToken)
    */

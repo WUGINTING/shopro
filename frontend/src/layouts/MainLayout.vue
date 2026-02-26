@@ -1,18 +1,18 @@
-<template>
-  <q-layout view="hHh lpR fFf">
+﻿<template>
+  <q-layout view="hHh lpR fFf" class="admin-shell">
     <!-- Header -->
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
+    <q-header elevated class="bg-primary text-white admin-header">
+      <q-toolbar class="admin-toolbar">
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
         
         <q-toolbar-title>
           <q-icon name="shopping_cart" size="sm" class="q-mr-sm" />
-          遇日小舖 - 管理系統
+          Shopro 商城 - 管理後台
         </q-toolbar-title>
 
         <q-space />
 
-        <!-- 新手導覽按鈕 -->
+        <!-- ?唳?撠汗?? -->
         <q-btn 
           flat 
           dense 
@@ -24,7 +24,7 @@
           <q-tooltip>新手導覽</q-tooltip>
         </q-btn>
 
-        <!-- 通知按鈕 -->
+        <!-- ??? -->
         <q-btn flat dense round icon="notifications" data-tour="notifications">
           <q-badge color="red" floating>3</q-badge>
           <q-menu>
@@ -48,14 +48,14 @@
           </q-menu>
         </q-btn>
 
-        <!-- 用戶菜單 -->
+        <!-- ?冽? -->
         <q-btn flat dense round icon="account_circle" data-tour="user-menu">
           <q-menu>
             <q-list style="min-width: 200px">
               <q-item>
                 <q-item-section>
                   <q-item-label class="text-weight-bold">{{ userName }}</q-item-label>
-                  <q-item-label caption>{{ userRole }}</q-item-label>
+                  <q-item-label caption>{{ userRoleLabel }}</q-item-label>
                 </q-item-section>
               </q-item>
               <q-separator />
@@ -84,17 +84,18 @@
       </q-toolbar>
     </q-header>
 
-    <!-- 側邊導航 -->
+    <!-- ?湧?撠 -->
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
       :width="250"
       :breakpoint="1024"
       bordered
+      class="admin-drawer"
     >
       <q-scroll-area class="fit">
-        <q-list padding>
-          <!-- 儀表板 (僅管理員、經理、員工可見) -->
+        <q-list padding class="admin-nav-list">
+          <!-- ?銵冽 (?恣????撌亙閬? -->
           <q-item
             v-if="authStore.canAccessStaff"
             clickable
@@ -108,15 +109,15 @@
               <q-icon name="dashboard" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>儀表板</q-item-label>
+              <q-item-label>{{ adminGlossary.nav.dashboard }}</q-item-label>
             </q-item-section>
           </q-item>
 
-          <!-- 商品管理 (僅管理員、經理、員工可見) -->
+          <!-- ??蝞∠? (?恣????撌亙閬? -->
           <q-expansion-item
             v-if="authStore.canAccessStaff"
             icon="inventory"
-            label="商品管理"
+            :label="adminGlossary.nav.productManagement"
             :default-opened="isMenuActive(['products', 'categories'])"
             data-tour="products"
           >
@@ -131,7 +132,7 @@
                 <q-icon name="shopping_bag" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>商品列表</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.productList }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -145,15 +146,15 @@
                 <q-icon name="category" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>分類管理</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.categoryManagement }}</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
 
-          <!-- 訂單管理 -->
+          <!-- 閮蝞∠? -->
           <q-expansion-item
             icon="receipt"
-            label="訂單管理"
+            :label="adminGlossary.nav.orderManagement"
             :default-opened="isMenuActive(['orders', 'orderDiscounts', 'orderQA'])"
             data-tour="orders"
           >
@@ -168,10 +169,10 @@
                 <q-icon name="list_alt" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>訂單列表</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.orderList }}</q-item-label>
               </q-item-section>
             </q-item>
-            <!-- 訂單折扣 (僅管理員、經理、員工可見) -->
+            <!-- 閮? (?恣????撌亙閬? -->
             <q-item
               v-if="authStore.canAccessStaff"
               clickable
@@ -184,10 +185,10 @@
                 <q-icon name="local_offer" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>訂單折扣</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.orderDiscounts }}</q-item-label>
               </q-item-section>
             </q-item>
-            <!-- 訂單問答 (僅管理員、經理、員工可見) -->
+            <!-- 閮?? (?恣????撌亙閬? -->
             <q-item
               v-if="authStore.canAccessStaff"
               clickable
@@ -200,16 +201,16 @@
                 <q-icon name="help" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>訂單問答</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.orderQA }}</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
 
-          <!-- 客戶管理 (僅管理員、經理、員工可見) -->
+          <!-- 摰Ｘ蝞∠? (?恣????撌亙閬? -->
           <q-expansion-item
             v-if="authStore.canAccessStaff"
             icon="people"
-            label="客戶管理"
+            :label="adminGlossary.nav.memberManagement"
             :default-opened="isMenuActive(['customers', 'members', 'memberGroups', 'memberLevels'])"
             data-tour="customers"
           >
@@ -224,7 +225,7 @@
                 <q-icon name="person" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>客戶列表</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.memberList }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -238,7 +239,7 @@
                 <q-icon name="card_membership" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>會員管理</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.memberAdmin }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -252,7 +253,7 @@
                 <q-icon name="group" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>會員分組</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.memberGroups }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -266,12 +267,12 @@
                 <q-icon name="star" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>會員等級</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.memberLevels }}</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
 
-          <!-- 營銷管理 (僅管理員、經理、員工可見) -->
+          <!-- ?蝞∠? (?恣????撌亙閬? -->
           <q-expansion-item
             v-if="authStore.canAccessStaff"
             icon="campaign"
@@ -346,12 +347,12 @@
                 <q-icon name="calendar_month" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>行事曆管理</q-item-label>
+                <q-item-label>行事曆排程</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
 
-          <!-- 內容管理 (僅管理員、經理、員工可見) -->
+          <!-- ?批捆蝞∠? (?恣????撌亙閬? -->
           <q-expansion-item
             v-if="authStore.canAccessStaff"
             icon="article"
@@ -369,7 +370,7 @@
                 <q-icon name="edit_note" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>部落格</q-item-label>
+                <q-item-label>文章管理</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -383,16 +384,16 @@
                 <q-icon name="photo_library" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>相冊管理</q-item-label>
+                <q-item-label>相簿管理</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
 
-          <!-- 支付管理 (僅管理員、經理、員工可見) -->
+          <!-- ?臭?蝞∠? (?恣????撌亙閬? -->
           <q-expansion-item
             v-if="authStore.canAccessStaff"
             icon="payment"
-            label="支付管理"
+            :label="adminGlossary.nav.paymentManagement"
             :default-opened="isMenuActive(['paymentDashboard', 'paymentTransactions', 'paymentSettings', 'ecpayConfig', 'paymentCallbackLogs'])"
           >
             <q-item
@@ -406,7 +407,7 @@
                 <q-icon name="dashboard" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>支付儀表板</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.paymentDashboard }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -420,10 +421,10 @@
                 <q-icon name="receipt_long" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>交易記錄</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.paymentTransactions }}</q-item-label>
               </q-item-section>
             </q-item>
-            <!-- 支付設定 (僅管理員、經理可見) -->
+            <!-- ?臭?閮剖? (?恣????閬? -->
             <q-item
               v-if="authStore.canAccessManager"
               clickable
@@ -436,10 +437,10 @@
                 <q-icon name="settings" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>支付設定</q-item-label>
+                <q-item-label>{{ adminGlossary.nav.paymentSettings }}</q-item-label>
               </q-item-section>
             </q-item>
-            <!-- ECPay 配置 (僅管理員、經理可見) -->
+            <!-- ECPay ?蔭 (?恣????閬? -->
             <q-item
               v-if="authStore.canAccessManager"
               clickable
@@ -471,10 +472,10 @@
             </q-item>
           </q-expansion-item>
 
-          <!-- 系統管理 -->
+          <!-- 蝟餌絞蝞∠? -->
           <q-separator v-if="authStore.canAccessStaff" class="q-my-md" />
           
-          <!-- 數據統計 (僅管理員、經理可見) -->
+          <!-- ?豢?蝯梯? (?恣????閬? -->
           <q-item
             v-if="authStore.canAccessManager"
             clickable
@@ -487,11 +488,11 @@
               <q-icon name="bar_chart" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>數據統計</q-item-label>
+                <q-item-label>數據統計</q-item-label>
             </q-item-section>
           </q-item>
 
-          <!-- 操作日誌 (僅管理員、經理、員工可見) -->
+          <!-- ???亥? (?恣????撌亙閬? -->
           <q-item
             v-if="authStore.canAccessStaff"
             clickable
@@ -508,7 +509,7 @@
             </q-item-section>
           </q-item>
 
-          <!-- 用戶管理 (僅管理員、經理可見) -->
+          <!-- ?冽蝞∠? (?恣????閬? -->
           <q-item
             v-if="authStore.canAccessManager"
             clickable
@@ -525,7 +526,7 @@
             </q-item-section>
           </q-item>
 
-          <!-- 系統設定 (僅管理員可見) -->
+          <!-- 蝟餌絞閮剖? (?恣??航?) -->
           <q-item
             v-if="authStore.canAccessAdmin"
             clickable
@@ -545,9 +546,11 @@
       </q-scroll-area>
     </q-drawer>
 
-    <!-- 主內容區域 -->
-    <q-page-container>
-      <router-view />
+    <!-- 銝餃摰孵???-->
+    <q-page-container class="admin-page-container">
+      <div class="admin-content-shell">
+        <router-view />
+      </div>
     </q-page-container>
   </q-layout>
 </template>
@@ -558,6 +561,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useQuasar } from 'quasar'
 import { startTour, isTourCompleted, resetTour } from '@/utils/tour'
+import { adminGlossary } from '@/constants/adminGlossary'
 
 const router = useRouter()
 const route = useRoute()
@@ -566,8 +570,17 @@ const $q = useQuasar()
 
 const leftDrawerOpen = ref(true)
 
-const userName = computed(() => authStore.user?.username || '管理員')
+const userName = computed(() => authStore.user?.username || '使用者')
 const userRole = computed(() => authStore.user?.role || 'ADMIN')
+const userRoleLabel = computed(() => {
+  const map: Record<string, string> = {
+    ADMIN: '系統管理員',
+    MANAGER: '經理',
+    STAFF: '員工',
+    CUSTOMER: '顧客'
+  }
+  return map[userRole.value] || userRole.value
+})
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
@@ -592,7 +605,7 @@ const goToProfile = () => {
 const logout = () => {
   $q.dialog({
     title: '確認登出',
-    message: '確定要登出嗎？',
+    message: '確定要登出目前帳號嗎？',
     cancel: true,
     persistent: true
   }).onOk(() => {
@@ -601,14 +614,14 @@ const logout = () => {
   })
 }
 
-// 啟動新手導覽
+// ???唳?撠汗
 const handleStartTour = () => {
   nextTick(() => {
     startTour(true)
   })
 }
 
-// 重新開始導覽
+// ???撠汗
 const restartTour = () => {
   resetTour()
   nextTick(() => {
@@ -616,14 +629,88 @@ const restartTour = () => {
   })
 }
 
-// 組件掛載時檢查是否需要自動啟動導覽
+// 蝯辣???炎?交?阡?閬????閬?
 onMounted(() => {
-  // 如果用戶是第一次訪問，自動啟動導覽
+  // 憒??冽?舐洵銝甈∟赤???芸???撠汗
   if (!isTourCompleted()) {
-    // 延遲一點時間，確保 DOM 已經渲染完成
+    // 撱園銝暺???蝣箔? DOM 撌脩?皜脫?摰?
     setTimeout(() => {
       startTour()
     }, 1000)
   }
 })
 </script>
+
+<style scoped>
+.admin-shell {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(22, 163, 74, 0.08), transparent 30%),
+    radial-gradient(circle at 100% 8%, rgba(15, 118, 110, 0.1), transparent 28%),
+    #f6f8fc;
+}
+
+.admin-header {
+  backdrop-filter: blur(10px);
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.95) 55%, rgba(15, 118, 110, 0.92) 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-toolbar {
+  min-height: 64px;
+  padding-inline: 8px;
+}
+
+.admin-drawer {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.admin-drawer :deep(.q-drawer__content) {
+  border-right: 1px solid #e5eaf4;
+}
+
+.admin-nav-list {
+  padding-top: 10px;
+  padding-bottom: 14px;
+}
+
+.admin-nav-list :deep(.q-item) {
+  min-height: 42px;
+  margin: 3px 8px;
+  border-radius: 12px;
+}
+
+.admin-nav-list :deep(.q-item.q-router-link--active),
+.admin-nav-list :deep(.q-item--active) {
+  box-shadow: 0 8px 16px rgba(25, 118, 210, 0.16);
+}
+
+.admin-nav-list :deep(.q-expansion-item__container) {
+  border-radius: 12px;
+  margin: 4px 6px;
+  overflow: hidden;
+}
+
+.admin-nav-list :deep(.q-expansion-item__content .q-item) {
+  margin-left: 4px;
+}
+
+.admin-page-container {
+  background: transparent;
+}
+
+.admin-content-shell {
+  min-height: 100%;
+  padding: 10px 10px 18px;
+}
+
+@media (max-width: 1023px) {
+  .admin-toolbar {
+    min-height: 58px;
+  }
+
+  .admin-content-shell {
+    padding: 6px 6px 14px;
+  }
+}
+</style>

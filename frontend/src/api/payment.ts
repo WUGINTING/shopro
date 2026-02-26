@@ -83,6 +83,8 @@ export interface PaymentRequest {
   customerPhone?: string
 }
 
+export type PaymentGatewayType = 'LINE_PAY' | 'ECPAY' | 'MANUAL'
+
 /**
  * 支付回應 DTO
  */
@@ -236,6 +238,10 @@ export const checkGatewayAvailability = (gateway: string): Promise<ApiResponse<b
  */
 export const createPayment = (gateway: string, request: PaymentRequest): Promise<ApiResponse<PaymentResponse>> => {
   return axiosInstance.post(`/payment-gateway/create?gateway=${gateway}`, request)
+}
+
+export const createEcPayPayment = (request: PaymentRequest): Promise<ApiResponse<PaymentResponse>> => {
+  return createPayment('ECPAY', request)
 }
 
 /**

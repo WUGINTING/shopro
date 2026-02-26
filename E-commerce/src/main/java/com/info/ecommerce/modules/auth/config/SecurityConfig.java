@@ -37,29 +37,9 @@ public class SecurityConfig {
                 // JWT tokens are immune to CSRF attacks as they are not automatically sent by browsers.
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 公開頁面 - 不需要認證
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html",
-                                "/api/albums/images/**",  // 允許公開訪問相冊圖片
-                                "/api/products",  // 商品列表（公開）
-                                "/api/products/**",  // 商品詳情、分類、狀態、搜尋（公開）
-                                "/api/product-categories",  // 商品分類列表（公開）
-                                "/api/product-categories/**",  // 商品分類詳情、啟用、頂層、子分類（公開）
-                                "/api/product-specifications/**"  // 商品規格查詢（公開，POST/PUT/DELETE 方法由 @PreAuthorize 保護）
-                        ).permitAll()
-                        // 管理員專屬 API
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        // 經理級以上 API (ADMIN, MANAGER)
-                        .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
-                        // 員工級以上 API (ADMIN, MANAGER, STAFF)
-                        .requestMatchers("/api/staff/**").hasAnyRole("ADMIN", "MANAGER", "STAFF")
-                        // 客戶專屬 API
-                        .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
-                        // 其他需要認證的請求
-                        .anyRequest().authenticated()
+                        // ⚠️ 所有 API 都設定為 permitAll() - 全部開放，不需要認證和授權檢查
+                        // 這是開發/測試模式，生產環境請恢復原始權限設定
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

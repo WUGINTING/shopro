@@ -22,6 +22,7 @@ export * from './point'
 export * from './ecpayConfig'
 export * from './paymentCallbackLog'
 export * from './calendar'
+export * from './payment'
 
 // 匯出所有 API 服務
 export { default as productApi, categoryApi } from './product'

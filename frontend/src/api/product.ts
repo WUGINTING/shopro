@@ -148,6 +148,15 @@ export const productApi = {
   },
 
   /**
+   * 搜尋商品
+   */
+  searchProducts: (keyword: string, page = 0, size = 20) => {
+    return axios.get<any, ApiResponse<PageResponse<Product>>>('/products/search', {
+      params: { keyword, page, size }
+    })
+  },
+
+  /**
    * 取得商品詳情
    * @description 根據商品 ID 獲取完整商品資訊
    * @param {number} id - 商品 ID

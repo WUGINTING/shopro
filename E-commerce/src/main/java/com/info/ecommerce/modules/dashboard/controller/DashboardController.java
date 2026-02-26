@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.dashboard.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.dashboard.dto.DashboardOverviewDTO;
 import com.info.ecommerce.modules.dashboard.dto.DashboardStatsDTO;
 import com.info.ecommerce.modules.dashboard.dto.RecentOrderDTO;
 import com.info.ecommerce.modules.dashboard.dto.TopProductDTO;
@@ -10,41 +11,51 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Dashboard Controller - Provides summary statistics for the admin dashboard
- */
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@Tag(name = "儀表板", description = "後台儀表板統計數據")
+@Tag(name = "Dashboard", description = "Admin dashboard summary endpoints")
 public class DashboardController {
 
     private final DashboardService dashboardService;
 
     @GetMapping("/stats")
-    @Operation(summary = "取得儀表板統計摘要", description = "包含商品、訂單、客戶和銷售額統計")
+    @Operation(summary = "Get dashboard stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<DashboardStatsDTO> getStats() {
         return ApiResponse.success(dashboardService.getStats());
     }
 
     @GetMapping("/recent-orders")
-    @Operation(summary = "取得最近訂單", description = "取得最近的訂單列表")
+    @Operation(summary = "Get recent orders")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<List<RecentOrderDTO>> getRecentOrders(
-            @Parameter(description = "限制數量") @RequestParam(defaultValue = "10") int limit) {
+            @Parameter(description = "Max number of records") @RequestParam(defaultValue = "10") int limit) {
         return ApiResponse.success(dashboardService.getRecentOrders(limit));
     }
 
     @GetMapping("/top-products")
-    @Operation(summary = "取得熱銷商品", description = "取得銷量最高的商品列表")
+    @Operation(summary = "Get top products")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<List<TopProductDTO>> getTopProducts(
-            @Parameter(description = "限制數量") @RequestParam(defaultValue = "5") int limit) {
+            @Parameter(description = "Max number of records") @RequestParam(defaultValue = "5") int limit) {
         return ApiResponse.success(dashboardService.getTopProducts(limit));
+    }
+
+    @GetMapping("/overview")
+    @Operation(summary = "Get unified admin dashboard overview",
+            description = "Returns stats, recent orders, top products, lookups, and shortcut metadata in one request")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ApiResponse<DashboardOverviewDTO> getOverview(
+            @RequestParam(defaultValue = "8") int recentOrderLimit,
+            @RequestParam(defaultValue = "5") int topProductLimit) {
+        return ApiResponse.success(dashboardService.getOverview(recentOrderLimit, topProductLimit));
     }
 }

@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <q-page class="q-pa-md" style="max-width: none; width: 100%;">
     <div class="dashboard">
       <!-- Welcome Banner -->
       <q-card class="bg-gradient-primary q-mb-md">
         <q-card-section class="row items-center">
           <div class="col">
-            <div class="text-h4 text-weight-bold">歡迎回來！</div>
-            <div class="text-subtitle1 q-mt-sm">今天是 {{ currentDate }}，讓我們開始新的一天吧</div>
+            <div class="text-h4 text-weight-bold">管理首頁</div>
+            <div class="text-subtitle1 q-mt-sm">今天是 {{ currentDate }}，開始處理今日營運重點。</div>
           </div>
           <div class="col-auto">
             <q-icon name="shopping_cart" size="80px" style="opacity: 0.3" />
@@ -14,7 +14,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- Stats Row (僅管理員、經理、員工可見) -->
+      <!-- Stats Row (?恣????撌亙閬? -->
       <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md q-mb-md">
         <div class="col-12 col-sm-6 col-md-3">
           <q-card class="card-hover card-border-top border-primary">
@@ -23,7 +23,7 @@
                 <q-icon name="inventory_2" size="40px" color="primary" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalProducts) }}</div>
-                  <div class="text-caption text-grey-7">總商品數</div>
+                  <div class="text-caption text-grey-7">商品總數</div>
                 </div>
               </div>
               <q-badge 
@@ -32,7 +32,7 @@
                 class="q-mt-sm"
               >
                 {{ stats.totalProductsChange >= 0 ? '+' : '' }}{{ stats.totalProductsChange }}% 
-                {{ stats.totalProductsChange >= 0 ? '↑' : '↓' }}
+                {{ stats.totalProductsChange >= 0 ? '較上期' : '較上期下降' }}
               </q-badge>
             </q-card-section>
           </q-card>
@@ -54,7 +54,7 @@
                 class="q-mt-sm"
               >
                 {{ stats.pendingOrdersChange >= 0 ? '+' : '' }}{{ stats.pendingOrdersChange }}% 
-                {{ stats.pendingOrdersChange >= 0 ? '↑' : '↓' }}
+                {{ stats.pendingOrdersChange >= 0 ? '較上期' : '較上期下降' }}
               </q-badge>
             </q-card-section>
           </q-card>
@@ -67,7 +67,7 @@
                 <q-icon name="people" size="40px" color="teal" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.totalCustomers) }}</div>
-                  <div class="text-caption text-grey-7">總客戶數</div>
+                  <div class="text-caption text-grey-7">會員總數</div>
                 </div>
               </div>
               <q-badge 
@@ -76,7 +76,7 @@
                 class="q-mt-sm"
               >
                 {{ stats.totalCustomersChange >= 0 ? '+' : '' }}{{ stats.totalCustomersChange }}% 
-                {{ stats.totalCustomersChange >= 0 ? '↑' : '↓' }}
+                {{ stats.totalCustomersChange >= 0 ? '較上期' : '較上期下降' }}
               </q-badge>
             </q-card-section>
           </q-card>
@@ -98,14 +98,14 @@
                 class="q-mt-sm"
               >
                 {{ stats.monthlySalesChange >= 0 ? '+' : '' }}{{ stats.monthlySalesChange }}% 
-                {{ stats.monthlySalesChange >= 0 ? '↑' : '↓' }}
+                {{ stats.monthlySalesChange >= 0 ? '較上期' : '較上期下降' }}
               </q-badge>
             </q-card-section>
           </q-card>
         </div>
       </div>
 
-      <!-- Quick Actions (僅管理員、經理、員工可見) -->
+      <!-- Quick Actions (?恣????撌亙閬? -->
       <q-card v-if="authStore.userRole !== 'CUSTOMER'" class="q-mb-md">
         <q-card-section>
           <div class="text-h6 text-weight-bold">快速操作</div>
@@ -128,13 +128,13 @@
         </q-card-section>
       </q-card>
 
-      <!-- Recent Activity (僅管理員、經理、員工可見) -->
+      <!-- Recent Activity (?恣????撌亙閬? -->
       <div v-if="authStore.userRole !== 'CUSTOMER'" class="row q-col-gutter-md">
         <div class="col-12 col-md-6">
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
-                <div class="text-h6 text-weight-bold">最近訂單</div>
+                <div class="text-h6 text-weight-bold">近期訂單</div>
                 <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/orders')" />
               </div>
             </q-card-section>
@@ -161,7 +161,7 @@
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
-                <div class="text-h6 text-weight-bold">熱銷商品</div>
+                <div class="text-h6 text-weight-bold">熱門商品</div>
                 <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/products')" />
               </div>
             </q-card-section>
@@ -175,7 +175,7 @@
                   </q-item-section>
                   <q-item-section>
                     <q-item-label>{{ product.name }}</q-item-label>
-                    <q-item-label caption>已售 {{ product.salesCount }} 件</q-item-label>
+                    <q-item-label caption>銷售 {{ product.salesCount }} 件</q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label class="text-primary text-weight-bold">
@@ -190,7 +190,7 @@
         </div>
       </div>
 
-      <!-- CUSTOMER 專屬內容 -->
+      <!-- CUSTOMER 撠惇?批捆 -->
       <div v-if="authStore.userRole === 'CUSTOMER'" class="row q-col-gutter-md">
         <div class="col-12 col-md-6">
           <q-card>
@@ -198,7 +198,7 @@
               <div class="text-h6 text-weight-bold">我的訂單</div>
             </q-card-section>
             <q-card-section class="q-pt-none">
-              <div class="text-body2 text-grey-7 q-mb-md">查看您的訂單狀態和歷史記錄</div>
+              <div class="text-body2 text-grey-7 q-mb-md">查看您的訂單狀態與歷史記錄</div>
               <q-btn
                 color="primary"
                 label="查看我的訂單"
@@ -215,7 +215,7 @@
               <div class="text-h6 text-weight-bold">瀏覽商品</div>
             </q-card-section>
             <q-card-section class="q-pt-none">
-              <div class="text-body2 text-grey-7 q-mb-md">探索我們的商品目錄</div>
+              <div class="text-body2 text-grey-7 q-mb-md">探索商品目錄與庫存狀態</div>
               <q-btn
                 color="primary"
                 label="瀏覽商品"
@@ -237,6 +237,7 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
 import { dashboardApi, type DashboardStats, type RecentOrder, type TopProduct } from '@/api'
+import { adminGlossary, getOrderStatusLabel } from '@/constants/adminGlossary'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -266,62 +267,80 @@ const currentDate = computed(() => {
 const quickActions = [
   {
     icon: 'add_circle',
-    label: '新增商品',
+    label: adminGlossary.actions.createProduct,
     color: 'primary',
     onClick: () => router.push('/products')
   },
   {
     icon: 'receipt',
-    label: '處理訂單',
+    label: adminGlossary.actions.manageOrders,
     color: 'orange',
     onClick: () => router.push('/orders')
   },
   {
     icon: 'person_add',
-    label: '管理客戶',
+    label: adminGlossary.actions.addMember,
     color: 'teal',
     onClick: () => router.push('/customers')
   },
   {
     icon: 'photo_library',
-    label: '相冊管理',
+    label: adminGlossary.actions.mediaLibrary,
     color: 'purple',
     onClick: () => router.push('/albums')
   },
   {
     icon: 'bar_chart',
-    label: '查看報表',
+    label: adminGlossary.actions.analytics,
     color: 'green',
     onClick: () => {}
   },
   {
     icon: 'settings',
-    label: '系統設定',
+    label: adminGlossary.actions.systemSettings,
     color: 'blue-grey',
     onClick: () => {}
   }
 ]
 
 const loadDashboardData = async () => {
-  // 只有管理員、經理和員工可以訪問儀表板統計
+  // ?芣?蝞∠??～????∪極?臭誑閮芸??銵冽蝯梯?
   if (authStore.userRole === 'CUSTOMER') {
-    // CUSTOMER 角色不顯示儀表板統計
+    // CUSTOMER 閫銝＊蝷箏?銵冽蝯梯?
     loading.value = false
     return
   }
 
   loading.value = true
   try {
-    // Load stats
-    const statsResponse = await dashboardApi.getStats()
+    // Prefer unified overview endpoint to reduce admin home round-trips.
+    try {
+      const overviewResponse = await dashboardApi.getOverview({
+        recentOrderLimit: 5,
+        topProductLimit: 5
+      })
+
+      if (overviewResponse?.data) {
+        stats.value = overviewResponse.data.stats ?? stats.value
+        recentOrders.value = overviewResponse.data.recentOrders ?? []
+        topProducts.value = overviewResponse.data.topProducts ?? []
+        return
+      }
+    } catch (overviewError) {
+      if (overviewError instanceof Error) {
+        console.warn('Dashboard overview load error, fallback to legacy APIs:', overviewError.message)
+      }
+    }
+
+    // Fallback for older backend versions
+    const [statsResponse, ordersResponse, productsResponse] = await Promise.all([
+      dashboardApi.getStats(),
+      dashboardApi.getRecentOrders(5),
+      dashboardApi.getTopProducts(5)
+    ])
+
     stats.value = statsResponse.data
-
-    // Load recent orders
-    const ordersResponse = await dashboardApi.getRecentOrders(5)
     recentOrders.value = ordersResponse.data
-
-    // Load top products
-    const productsResponse = await dashboardApi.getTopProducts(5)
     topProducts.value = productsResponse.data
   } catch (error) {
     // Silently log error (visible in browser console for debugging)
@@ -331,7 +350,7 @@ const loadDashboardData = async () => {
     
     $q.notify({
       type: 'warning',
-      message: '載入儀表板資料失敗，顯示預設資料',
+      message: '載入管理首頁資料失敗，請稍後再試。',
       position: 'top'
     })
   } finally {
@@ -361,14 +380,7 @@ const formatDate = (dateStr: string) => {
 }
 
 const getStatusText = (status: string) => {
-  const statusMap: { [key: string]: string } = {
-    PENDING: '待處理',
-    PROCESSING: '處理中',
-    SHIPPED: '已發貨',
-    DELIVERED: '已送達',
-    CANCELLED: '已取消'
-  }
-  return statusMap[status] || status
+  return getOrderStatusLabel(status)
 }
 
 const getStatusIcon = (status: string) => {
@@ -402,5 +414,52 @@ onMounted(() => {
 .dashboard {
   width: 100%;
   padding: 0;
+}
+
+.dashboard :deep(.q-card) {
+  border-radius: 16px;
+}
+
+.dashboard :deep(.q-card__section) {
+  padding: 16px;
+}
+
+.dashboard :deep(.q-card .text-h6) {
+  letter-spacing: 0.01em;
+}
+
+.dashboard :deep(.q-timeline__content) {
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid #e8edf6;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.dashboard :deep(.q-timeline__title) {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dashboard :deep(.q-item) {
+  border-radius: 12px;
+}
+
+.dashboard :deep(.q-list > .q-item) {
+  margin-bottom: 6px;
+}
+
+.dashboard :deep(.q-btn.full-width) {
+  min-height: 52px;
+  border-radius: 14px;
+}
+
+@media (max-width: 700px) {
+  .dashboard :deep(.q-card__section) {
+    padding: 14px;
+  }
+
+  .dashboard :deep(.q-btn.full-width) {
+    min-height: 48px;
+  }
 }
 </style>

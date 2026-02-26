@@ -1,8 +1,9 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
+    <div class="row items-center justify-between q-mb-md">
       <div class="col">
         <h4 class="q-my-none" data-tour="title">會員群組管理</h4>
+        <div class="text-caption text-grey-7 q-mt-xs">管理會員分群、群組啟用狀態與成員歸屬</div>
       </div>
       <div class="col-auto">
         <div class="row q-gutter-sm">
@@ -27,6 +28,45 @@
       </div>
     </div>
 
+    <div class="row q-col-gutter-md q-mb-md">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <q-card flat bordered class="group-metric-card">
+          <q-card-section>
+            <div class="text-caption text-grey-7">群組總數</div>
+            <div class="group-metric-card__value">{{ groups.length }}</div>
+            <div class="text-caption text-grey-6">目前已建立的會員群組</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <q-card flat bordered class="group-metric-card group-metric-card--green">
+          <q-card-section>
+            <div class="text-caption text-grey-7">啟用群組</div>
+            <div class="group-metric-card__value">{{ groupMetrics.enabled }}</div>
+            <div class="text-caption text-grey-6">目前可使用的分群規則</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <q-card flat bordered class="group-metric-card group-metric-card--blue">
+          <q-card-section>
+            <div class="text-caption text-grey-7">停用群組</div>
+            <div class="group-metric-card__value">{{ groupMetrics.disabled }}</div>
+            <div class="text-caption text-grey-6">暫停使用的群組</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <q-card flat bordered class="group-metric-card group-metric-card--amber">
+          <q-card-section>
+            <div class="text-caption text-grey-7">總成員數（群組加總）</div>
+            <div class="group-metric-card__value">{{ groupMetrics.totalMembers }}</div>
+            <div class="text-caption text-grey-6">各群組 memberCount 加總</div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- 群組列表 -->
     <div class="row q-col-gutter-md" data-tour="group-list">
       <div
@@ -35,7 +75,7 @@
         class="col-12 col-sm-6 col-md-4 col-lg-3"
       >
         <q-card
-          class="cursor-pointer hover-highlight"
+          class="cursor-pointer hover-highlight group-card"
           :class="{ 'disabled-group': !group.enabled }"
           data-tour="group-card"
         >
@@ -67,7 +107,7 @@
 
           <q-separator />
 
-          <q-card-actions data-tour="group-actions">
+          <q-card-actions class="group-card__actions" data-tour="group-actions">
             <q-btn
               flat
               dense
@@ -104,8 +144,8 @@
 
     <!-- 新增/編輯對話框 -->
     <q-dialog v-model="showDialog">
-      <q-card style="width: 500px; max-width: 90vw" data-tour="group-form-dialog">
-        <q-card-section class="row items-center q-pb-none">
+      <q-card class="group-dialog-card" style="width: 500px; max-width: 90vw" data-tour="group-form-dialog">
+        <q-card-section class="row items-center q-pb-none group-dialog-card__header">
           <div class="text-h6">
             {{ editingGroup?.id ? '編輯群組' : '新增群組' }}
           </div>
@@ -121,14 +161,19 @@
 
         <q-separator />
 
-        <q-card-section class="q-pt-none">
+        <q-card-section class="q-pt-none group-dialog-card__body">
           <q-form ref="groupForm" @submit="saveGroup">
+            <q-banner rounded dense class="group-dialog-banner q-mb-md">
+              建議群組名稱使用可辨識業務語意，避免後續分群操作混淆。
+            </q-banner>
             <q-input
               v-model="editingGroup.name"
               label="群組名稱 *"
               outlined
               dense
               class="q-mb-md"
+              name="member-group-name"
+              autocomplete="off"
               :rules="[val => !!val || '請輸入群組名稱']"
             />
 
@@ -139,6 +184,8 @@
               dense
               type="textarea"
               class="q-mb-md"
+              name="member-group-description"
+              autocomplete="off"
             />
 
             <q-checkbox
@@ -147,7 +194,7 @@
               class="q-mb-md"
             />
 
-            <div class="row q-gutter-md">
+            <div class="row q-gutter-md group-dialog-card__actions-row">
               <q-btn
                 label="取消"
                 flat
@@ -167,7 +214,7 @@
 
     <!-- 刪除確認 -->
     <q-dialog v-model="showDeleteDialog">
-      <q-card>
+      <q-card class="group-dialog-card group-dialog-card--danger">
         <q-card-section class="row items-center">
           <q-icon
             name="warning"
@@ -176,8 +223,13 @@
           />
           <span class="q-ml-md">確定要刪除此群組嗎？</span>
         </q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-banner rounded dense class="group-dialog-banner group-dialog-banner--danger">
+            刪除後群組設定無法復原，請先確認不影響分群與行銷操作。
+          </q-banner>
+        </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="group-dialog-card__actions">
           <q-btn
             label="取消"
             flat
@@ -195,9 +247,12 @@
 
     <!-- 成員管理對話框 -->
     <q-dialog v-model="showMembersDialogFlag" style="width: 600px; max-width: 90vw">
-      <q-card data-tour="member-management-dialog">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">群組成員管理</div>
+      <q-card class="group-dialog-card group-member-dialog-card" data-tour="member-management-dialog">
+        <q-card-section class="row items-center q-pb-none group-dialog-card__header">
+          <div>
+            <div class="text-h6">群組成員管理</div>
+            <div class="text-caption text-grey-7">{{ currentGroupName || '管理群組成員名單' }}</div>
+          </div>
           <q-space />
           <q-btn
             icon="close"
@@ -210,7 +265,10 @@
 
         <q-separator />
 
-        <q-card-section>
+        <q-card-section class="group-dialog-card__body">
+          <q-banner rounded dense class="group-dialog-banner q-mb-md">
+            先搜尋再加入，可避免重複加入與錯誤分群。
+          </q-banner>
           <div class="row q-mb-md">
             <div class="col">
               <p class="text-caption text-grey-7">
@@ -236,6 +294,8 @@
                 emit-value
                 @filter="filterMembers"
                 clearable
+                name="member-group-add-member"
+                autocomplete="off"
               >
                 <template v-slot:no-option>
                   <q-item>
@@ -250,6 +310,7 @@
               <q-btn
                 color="primary"
                 label="添加"
+                unelevated
                 :loading="addingMember"
                 :disable="!selectedMemberId"
                 @click="addMemberToGroup"
@@ -261,12 +322,13 @@
 
           <!-- 成員列表 -->
           <q-virtual-scroll
+            class="group-member-list"
             :items="groupMemberDetails"
             virtual-scroll-item-size="70"
             style="max-height: 400px"
           >
             <template #default="{ item, index }">
-              <div class="q-pa-md border-bottom">
+              <div class="q-pa-md border-bottom group-member-list__row">
                 <div class="row items-center">
                   <div class="col">
                     <p class="q-my-none text-weight-medium">{{ item.name }}</p>
@@ -292,7 +354,7 @@
 
         <q-separator />
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="group-dialog-card__actions">
           <q-btn
             label="關閉"
             flat
@@ -305,7 +367,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { memberGroupApi, type MemberGroup } from '@/api/memberGroup'
 import { memberApi } from '@/api/member'
@@ -340,6 +402,17 @@ const editingGroup = ref<Partial<MemberGroup>>({
   name: '',
   description: '',
   enabled: true
+})
+
+const groupMetrics = computed(() => ({
+  enabled: groups.value.filter(g => g.enabled).length,
+  disabled: groups.value.filter(g => !g.enabled).length,
+  totalMembers: groups.value.reduce((sum, g) => sum + (Number(g.memberCount) || 0), 0)
+}))
+
+const currentGroupName = computed(() => {
+  if (!currentGroupId.value) return ''
+  return groups.value.find(g => g.id === currentGroupId.value)?.name || ''
 })
 
 // 載入群組列表
@@ -628,10 +701,137 @@ onMounted(() => {
 }
 
 .hover-highlight:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
 }
 
 .border-bottom {
   border-bottom: 1px solid #e0e0e0;
+}
+
+.group-metric-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96));
+  box-shadow: 0 10px 26px rgba(15,23,42,.06);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.group-metric-card__value {
+  margin: 6px 0 4px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.group-metric-card--green {
+  border-color: rgba(34,197,94,.22);
+  background: linear-gradient(180deg, rgba(240,253,244,.98), rgba(236,253,245,.96));
+}
+
+.group-metric-card--blue {
+  border-color: rgba(59,130,246,.2);
+  background: linear-gradient(180deg, rgba(239,246,255,.98), rgba(238,242,255,.96));
+}
+
+.group-metric-card--amber {
+  border-color: rgba(245,158,11,.24);
+  background: linear-gradient(180deg, rgba(255,251,235,.98), rgba(255,247,237,.96));
+}
+
+.group-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,.2);
+  box-shadow: 0 10px 26px rgba(15,23,42,.05);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.group-card__actions {
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.group-dialog-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148,163,184,.2);
+  box-shadow: 0 18px 42px rgba(15,23,42,.12);
+}
+
+.group-dialog-card__header {
+  border-bottom: 1px solid rgba(148,163,184,.14);
+}
+
+.group-dialog-card__body {
+  padding-top: 14px;
+}
+
+.group-dialog-card__actions {
+  border-top: 1px solid rgba(148,163,184,.12);
+}
+
+.group-dialog-banner {
+  background: linear-gradient(90deg, rgba(59,130,246,.08), rgba(34,197,94,.08));
+  color: #0f172a;
+  border: 1px solid rgba(59,130,246,.12);
+}
+
+.group-dialog-banner--danger {
+  background: linear-gradient(90deg, rgba(239,68,68,.08), rgba(251,146,60,.08));
+  border-color: rgba(239,68,68,.14);
+}
+
+.group-dialog-card--danger {
+  border-color: rgba(239,68,68,.2);
+}
+
+.group-member-dialog-card {
+  width: 760px;
+  max-width: 96vw;
+}
+
+.group-member-list {
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 12px;
+  background: rgba(248,250,252,.65);
+}
+
+.group-member-list__row {
+  background: transparent;
+}
+
+@media (max-width: 599px) {
+  .group-metric-card__value {
+    font-size: 1.28rem;
+  }
+
+  .group-card__actions {
+    flex-wrap: wrap;
+  }
+
+  .group-card__actions :deep(.q-btn) {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .group-dialog-card {
+    width: calc(100vw - 24px) !important;
+    max-width: unset !important;
+  }
+
+  .group-dialog-card__actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .group-dialog-card__actions :deep(.q-btn) {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group-card,
+  .group-metric-card {
+    transition: none;
+  }
 }
 </style>

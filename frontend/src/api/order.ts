@@ -107,6 +107,10 @@ export const orderApi = {
   getMyOrders: (params?: any) => {
     return axios.get<any, ApiResponse<Order[]>>('/orders/my', { params })
   },
+
+  getOrdersByCustomerId: (customerId: number, params?: any) => {
+    return axios.get<any, ApiResponse<Order[]>>(`/orders/customer/${customerId}`, { params })
+  },
   
   /**
    * 取得訂單詳情

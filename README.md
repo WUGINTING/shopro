@@ -2,6 +2,20 @@
 
 全棧電商管理系統，使用 Spring Boot + Vue 3 構建
 
+## 技術文檔
+
+完整的技術文檔請參閱 [docs/](./docs/) 目錄：
+
+| 文檔 | 說明 |
+|------|------|
+| [架構概覽](./docs/architecture-overview.md) | 系統整體架構、技術棧、目錄結構 |
+| [後端架構](./docs/backend-architecture.md) | Spring Boot 模組詳細說明 |
+| [前端架構](./docs/frontend-architecture.md) | Vue 3 架構與組件說明 |
+| [API 文檔](./docs/api-reference.md) | RESTful API 端點參考 |
+| [資料庫設計](./docs/database-design.md) | 實體關係與資料模型 |
+| [部署指南](./docs/deployment-guide.md) | 環境配置與部署步驟 |
+| [開發指南](./docs/development-guide.md) | 開發規範與最佳實踐 |
+
 ## 專案概述
 
 Shopro 是一個完整的電商管理平台，提供商店管理、商品管理、訂單處理、客戶關係管理（CRM）等全方位功能。

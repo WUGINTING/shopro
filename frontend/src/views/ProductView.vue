@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md product-admin-page">
     <div class="page-container">
       <!-- Page Header -->
       <div class="row items-center justify-between q-mb-md">
@@ -28,9 +28,57 @@
         </div>
       </div>
 
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card class="metric-card metric-card--blue">
+            <q-card-section>
+              <div class="metric-label">商品總數</div>
+              <div class="metric-value">{{ productMetrics.total }}</div>
+              <div class="metric-sub">所有商品資料（含草稿）</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card class="metric-card metric-card--green">
+            <q-card-section>
+              <div class="metric-label">已上架</div>
+              <div class="metric-value">{{ productMetrics.published }}</div>
+              <div class="metric-sub">目前可售商品數</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card class="metric-card metric-card--amber">
+            <q-card-section>
+              <div class="metric-label">草稿商品</div>
+              <div class="metric-value">{{ productMetrics.draft }}</div>
+              <div class="metric-sub">待補資料 / 待上架</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card class="metric-card metric-card--rose">
+            <q-card-section>
+              <div class="metric-label">低庫存商品</div>
+              <div class="metric-value">{{ productMetrics.lowStock }}</div>
+              <div class="metric-sub">庫存 ≤ 10</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
       <!-- Search and Filter Bar -->
-      <q-card class="q-mb-md">
+      <q-card class="q-mb-md filter-card">
         <q-card-section>
+          <div class="filter-card__top q-mb-md">
+            <div>
+              <div class="text-subtitle1 text-weight-bold">快速篩選</div>
+              <div class="text-caption text-grey-7">先用名稱搜尋，再用狀態與分類縮小範圍，降低操作時間。</div>
+            </div>
+            <q-chip dense square color="blue-1" text-color="blue-9">
+              目前顯示 {{ products.length }} 筆
+            </q-chip>
+          </div>
           <div class="row q-col-gutter-md">
             <div class="col-12 col-sm-6 col-md-4">
               <q-input
@@ -38,6 +86,8 @@
                 outlined
                 dense
                 placeholder="搜尋商品名稱"
+                name="product-admin-search"
+                autocomplete="off"
                 clearable
               >
                 <template v-slot:prepend>
@@ -82,7 +132,7 @@
       </q-card>
 
       <!-- Products Table -->
-      <q-card>
+      <q-card class="table-shell-card">
         <q-table
           :rows="products"
           :columns="columns"
@@ -90,15 +140,68 @@
           :loading="loading"
           :pagination="pagination"
           flat
+          :grid="$q.screen.lt.md"
+          class="product-table"
+          aria-label="商品列表"
         >
+          <!-- 手機版卡片模式 -->
+          <template v-slot:item="props">
+            <div class="q-pa-xs col-xs-12 col-sm-6">
+              <q-card flat bordered class="mobile-product-card">
+                <q-card-section class="row items-center">
+                  <q-avatar v-if="getProductImageUrl(props.row)" rounded size="60px" class="q-mr-md">
+                    <q-img :src="getProductImageUrl(props.row)" :ratio="1" loading="lazy" />
+                  </q-avatar>
+                  <q-avatar v-else rounded size="60px" color="grey-3" class="q-mr-md">
+                    <q-icon name="image" />
+                  </q-avatar>
+                  <div class="col">
+                    <div class="text-weight-bold">{{ props.row.name }}</div>
+                    <div class="text-primary text-weight-bold">${{ (props.row.price || 0).toFixed(2) }}</div>
+                    <div class="row items-center q-gutter-xs q-mt-xs">
+                      <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+                      <q-badge
+                        :color="props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                        :label="'庫存: ' + props.row.stock"
+                      />
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-separator />
+                <q-card-actions align="right">
+                  <q-btn flat dense icon="edit" color="primary" @click="handleEdit(props.row)" aria-label="編輯商品">
+                    <q-tooltip>編輯</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    dense
+                    :icon="props.row.status === 'PUBLISHED' ? 'visibility_off' : 'visibility'"
+                    :color="props.row.status === 'PUBLISHED' ? 'warning' : 'positive'"
+                    @click="handlePublishToggle(props.row)"
+                    :aria-label="props.row.status === 'PUBLISHED' ? '下架商品' : '上架商品'"
+                  >
+                    <q-tooltip>{{ props.row.status === 'PUBLISHED' ? '下架' : '上架' }}</q-tooltip>
+                  </q-btn>
+                  <q-btn flat dense icon="delete" color="negative" @click="handleDelete(props.row.id)" aria-label="刪除商品">
+                    <q-tooltip>刪除</q-tooltip>
+                  </q-btn>
+                </q-card-actions>
+              </q-card>
+            </div>
+          </template>
           <template v-slot:body-cell-image="props">
             <q-td :props="props">
               <q-avatar v-if="getProductImageUrl(props.row)" rounded size="50px">
-                <q-img 
-                  :src="getProductImageUrl(props.row)" 
+                <q-img
+                  :src="getProductImageUrl(props.row)"
                   :ratio="1"
+                  loading="lazy"
                   @error="(err) => console.error('圖片載入失敗:', getProductImageUrl(props.row), err, props.row)"
-                />
+                >
+                  <template v-slot:loading>
+                    <q-spinner-dots color="primary" />
+                  </template>
+                </q-img>
               </q-avatar>
               <q-avatar v-else rounded size="50px" color="grey-3">
                 <q-icon name="image" />
@@ -156,8 +259,8 @@
       </q-card>
 
       <!-- Add/Edit Dialog -->
-      <q-dialog v-model="showDialog" persistent>
-        <q-card style="min-width: 800px; max-width: 90vw">
+      <q-dialog v-model="showDialog" persistent maximized-on-mobile>
+        <q-card class="product-dialog-card" :style="$q.screen.lt.md ? 'width: 100%' : 'min-width: 800px; max-width: 90vw'">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">{{ form.id ? '編輯商品' : '新增商品' }}</div>
             <q-space />
@@ -165,7 +268,7 @@
           </q-card-section>
 
           <q-card-section>
-            <q-tabs v-model="dialogTab" class="text-grey" active-color="primary" indicator-color="primary" align="left">
+            <q-tabs v-model="dialogTab" class="text-grey product-dialog-tabs" active-color="primary" indicator-color="primary" align="left">
               <q-tab name="basic" label="基本資訊" />
               <q-tab name="specifications" label="商品規格（SKU）" :disable="!form.id" />
               <q-tab name="description" label="描述區塊" :disable="!form.id" />
@@ -532,8 +635,8 @@
       </q-dialog>
 
       <!-- Specification Dialog -->
-      <q-dialog v-model="showSpecDialog" persistent>
-        <q-card style="min-width: 600px">
+      <q-dialog v-model="showSpecDialog" persistent maximized-on-mobile>
+        <q-card :style="$q.screen.lt.md ? 'width: 100%' : 'min-width: 600px; max-width: 90vw'">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">{{ specForm.id ? '編輯規格' : '新增規格' }}</div>
             <q-space />
@@ -625,8 +728,8 @@
       </q-dialog>
 
       <!-- Album Image Selector Dialog -->
-      <q-dialog v-model="showAlbumSelector" persistent>
-        <q-card style="min-width: 800px; max-width: 90vw">
+      <q-dialog v-model="showAlbumSelector" persistent maximized-on-mobile>
+        <q-card :style="$q.screen.lt.md ? 'width: 100%' : 'min-width: 800px; max-width: 90vw'">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">從相冊選擇圖片</div>
             <q-space />
@@ -715,11 +818,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
 import { startProductTour, isProductTourCompleted } from '@/utils/productTour'
+import { useDebouncedRef } from '@/composables/useDebounce'
 
 const $q = useQuasar()
 
@@ -728,9 +832,15 @@ const loading = ref(false)
 const showDialog = ref(false)
 const dialogTab = ref('basic')
 const searchQuery = ref('')
+const debouncedSearchQuery = useDebouncedRef(searchQuery, 300)
 const statusFilter = ref(null)
 const categoryFilter = ref(null)
 const productImage = ref(null)
+
+// 監聽防抖後的搜尋查詢，自動過濾商品
+watch(debouncedSearchQuery, () => {
+  // 搜尋時可以在這裡觸發 API 或本地過濾
+})
 
 // 商品規格相關狀態
 const specifications = ref<ProductSpecification[]>([])
@@ -829,6 +939,16 @@ const categoryOptions = computed(() => {
     label: cat.name,
     value: cat.id
   })).filter(opt => opt.value !== undefined)
+})
+
+const productMetrics = computed(() => {
+  const list = products.value
+  return {
+    total: list.length,
+    published: list.filter((p) => p.status === 'PUBLISHED').length,
+    draft: list.filter((p) => p.status === 'DRAFT').length,
+    lowStock: list.filter((p) => Number(p.stock || 0) <= 10).length
+  }
 })
 
 const loadProducts = async () => {
@@ -1599,3 +1719,118 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.product-admin-page {
+  max-width: none;
+}
+
+.metric-card {
+  border-radius: 16px;
+  border: 1px solid #e5eaf4;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.metric-card :deep(.q-card__section) {
+  padding: 14px 16px;
+}
+
+.metric-label {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.metric-value {
+  margin-top: 4px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.metric-sub {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.metric-card--blue {
+  background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+}
+
+.metric-card--green {
+  background: linear-gradient(180deg, #fff 0%, #f5fff8 100%);
+}
+
+.metric-card--amber {
+  background: linear-gradient(180deg, #fff 0%, #fffaf1 100%);
+}
+
+.metric-card--rose {
+  background: linear-gradient(180deg, #fff 0%, #fff7f7 100%);
+}
+
+.filter-card {
+  border-radius: 16px;
+}
+
+.filter-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.table-shell-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.product-table :deep(.q-table__top) {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.product-table :deep(thead th) {
+  white-space: nowrap;
+}
+
+.mobile-product-card {
+  border-radius: 14px;
+  border-color: #e5eaf4;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.mobile-product-card :deep(.q-card__actions .q-btn) {
+  min-height: 38px;
+}
+
+.product-dialog-card {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.product-dialog-tabs {
+  border-bottom: 1px solid #e8edf6;
+  margin-bottom: 8px;
+}
+
+.product-dialog-tabs :deep(.q-tab) {
+  min-height: 42px;
+}
+
+@media (max-width: 700px) {
+  .filter-card__top {
+    flex-direction: column;
+  }
+
+  .metric-value {
+    font-size: 1.35rem;
+  }
+
+  .mobile-product-card :deep(.q-card__section) {
+    padding: 12px;
+  }
+}
+</style>

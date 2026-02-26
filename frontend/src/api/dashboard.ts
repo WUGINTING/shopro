@@ -38,6 +38,35 @@ export interface TopProduct {
   imageUrl?: string
 }
 
+export interface DashboardOption {
+  code: string
+  label: string
+}
+
+export interface DashboardShortcut {
+  key: string
+  label: string
+  route: string
+  description: string
+  badgeCount?: number
+}
+
+export interface DashboardLookups {
+  roles: DashboardOption[]
+  orderStatuses: DashboardOption[]
+  paymentMethods: DashboardOption[]
+  shippingMethods: DashboardOption[]
+  pickupTypes: DashboardOption[]
+}
+
+export interface DashboardOverview {
+  stats: DashboardStats
+  recentOrders: RecentOrder[]
+  topProducts: TopProduct[]
+  lookups?: DashboardLookups
+  shortcuts?: DashboardShortcut[]
+}
+
 export interface OrderStatistics {
   totalOrders: number
   totalAmount: number
@@ -94,6 +123,13 @@ export const dashboardApi = {
     return axios.get<any, ApiResponse<TopProduct[]>>('/dashboard/top-products', {
       params: { limit }
     })
+  },
+
+  /**
+   * Unified dashboard overview payload for admin home screen
+   */
+  getOverview: (params?: { recentOrderLimit?: number; topProductLimit?: number }) => {
+    return axios.get<any, ApiResponse<DashboardOverview>>('/dashboard/overview', { params })
   },
 
   /**

@@ -35,11 +35,56 @@
         </div>
       </div>
 
+      <!-- Metrics -->
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="order-metric-card">
+            <q-card-section>
+              <div class="text-caption text-grey-7">目前資料筆數</div>
+              <div class="order-metric-card__value">{{ pagination.rowsNumber || 0 }}</div>
+              <div class="text-caption text-grey-6">符合目前篩選條件的總訂單數</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="order-metric-card order-metric-card--amber">
+            <q-card-section>
+              <div class="text-caption text-grey-7">待付款</div>
+              <div class="order-metric-card__value">{{ orderMetrics.pendingPayment }}</div>
+              <div class="text-caption text-grey-6">本頁需追蹤付款的訂單</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="order-metric-card order-metric-card--blue">
+            <q-card-section>
+              <div class="text-caption text-grey-7">待出貨 / 處理中</div>
+              <div class="order-metric-card__value">{{ orderMetrics.fulfillmentQueue }}</div>
+              <div class="text-caption text-grey-6">本頁需要履約處理的訂單</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <q-card flat bordered class="order-metric-card order-metric-card--green">
+            <q-card-section>
+              <div class="text-caption text-grey-7">本頁總金額</div>
+              <div class="order-metric-card__value">{{ formatCurrency(orderMetrics.pageAmount) }}</div>
+              <div class="text-caption text-grey-6">目前列表頁面可見訂單金額加總</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
       <!-- Filter Panel -->
-      <q-card class="q-mb-md">
-        <q-card-section>
+      <q-card class="q-mb-md order-filter-card">
+        <q-card-section class="order-filter-card__header">
           <div class="row items-center justify-between">
-            <div class="text-h6">篩選條件</div>
+            <div>
+              <div class="text-h6">篩選條件</div>
+              <div class="text-caption text-grey-7">
+                快速縮小範圍，優先處理待付款與待出貨訂單
+              </div>
+            </div>
             <div class="row q-gutter-sm">
               <q-btn
                 flat
@@ -65,6 +110,14 @@
               />
             </div>
           </div>
+          <div class="row items-center justify-between q-mt-sm filter-card__meta">
+            <div class="text-caption text-grey-7">
+              {{ hasActiveFilters ? `已啟用 ${activeFilterCount} 個篩選條件` : '尚未套用篩選條件' }}
+            </div>
+            <q-chip dense color="grey-2" text-color="grey-8" icon="receipt_long">
+              共 {{ pagination.rowsNumber || 0 }} 筆訂單
+            </q-chip>
+          </div>
         </q-card-section>
 
         <q-slide-transition>
@@ -81,6 +134,8 @@
                     dense
                     clearable
                     placeholder="輸入訂單編號"
+                    name="order-number-filter"
+                    autocomplete="off"
                   />
                 </div>
 
@@ -93,6 +148,8 @@
                     dense
                     clearable
                     placeholder="輸入客戶姓名"
+                    name="order-customer-name-filter"
+                    autocomplete="off"
                   />
                 </div>
 
@@ -176,6 +233,8 @@
                     prefix="¥"
                     step="0.01"
                     min="0"
+                    inputmode="decimal"
+                    name="order-min-amount-filter"
                   />
                 </div>
 
@@ -191,14 +250,27 @@
                     prefix="¥"
                     step="0.01"
                     min="0"
+                    inputmode="decimal"
+                    name="order-max-amount-filter"
                   />
                 </div>
               </div>
 
               <!-- 已選篩選條件標籤 -->
               <div v-if="hasActiveFilters" class="q-mt-md">
-                <div class="text-caption text-grey-7 q-mb-sm">已選條件：</div>
-                <div class="row q-gutter-xs">
+                <div class="row items-center justify-between q-mb-sm">
+                  <div class="text-caption text-grey-7">已選條件：</div>
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    color="grey-7"
+                    icon="close"
+                    label="清除全部"
+                    @click="resetFilters"
+                  />
+                </div>
+                <div class="row q-gutter-xs order-filter-chip-list">
                   <q-chip
                     v-if="filterForm.orderNumber"
                     removable
@@ -279,43 +351,89 @@
       </q-card>
 
       <!-- Orders Table -->
-      <q-card>
+      <q-card class="order-table-card">
         <q-table
+          class="order-admin-table"
           :rows="orders"
           :columns="columns"
           row-key="id"
           :loading="loading"
           :pagination="pagination"
+          :rows-per-page-options="[10, 20, 50]"
+          wrap-cells
+          separator="horizontal"
           flat
         >
+          <template v-slot:top>
+            <div class="order-table-toolbar full-width">
+              <div>
+                <div class="text-subtitle1 text-weight-bold">訂單列表</div>
+                <div class="text-caption text-grey-7">
+                  顯示 {{ orders.length }} 筆（總計 {{ pagination.rowsNumber || 0 }} 筆）
+                </div>
+              </div>
+              <div class="row items-center q-gutter-xs">
+                <q-chip dense color="amber-1" text-color="amber-10">待付款 {{ orderMetrics.pendingPayment }}</q-chip>
+                <q-chip dense color="blue-1" text-color="blue-10">待處理 {{ orderMetrics.fulfillmentQueue }}</q-chip>
+                <q-chip dense color="green-1" text-color="green-10">已完成 {{ orderMetrics.completed }}</q-chip>
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              <q-chip dense square color="grey-2" text-color="grey-8" class="text-caption">
+                #{{ props.row.id }}
+              </q-chip>
+            </q-td>
+          </template>
+
           <template v-slot:body-cell-orderNumber="props">
             <q-td :props="props">
-              <span class="text-weight-bold">{{ props.row?.orderNumber || '-' }}</span>
+              <div class="column q-gutter-xs">
+                <span class="text-weight-bold">{{ props.row?.orderNumber || '-' }}</span>
+                <span class="text-caption text-grey-6">ID #{{ props.row?.id ?? '-' }}</span>
+              </div>
             </q-td>
           </template>
 
           <template v-slot:body-cell-totalAmount="props">
             <q-td :props="props">
-              <span class="text-weight-bold text-primary">${{ props.row.totalAmount.toFixed(2) }}</span>
+              <span class="text-weight-bold text-primary">{{ formatCurrency(props.row.totalAmount) }}</span>
             </q-td>
           </template>
 
           <template v-slot:body-cell-customerName="props">
             <q-td :props="props">
-              {{ props.row?.customerName || (props.row?.customerId ? `客戶 #${props.row.customerId}` : '-') }}
+              <div class="column q-gutter-xs">
+                <span>{{ props.row?.customerName || (props.row?.customerId ? `客戶 #${props.row.customerId}` : '-') }}</span>
+                <span v-if="props.row?.customerPhone" class="text-caption text-grey-6">{{ props.row.customerPhone }}</span>
+              </div>
             </q-td>
           </template>
 
           <template v-slot:body-cell-status="props">
             <q-td :props="props">
-              <q-badge v-if="props.row?.status" :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+              <div v-if="props.row?.status" class="column items-start q-gutter-xs">
+                <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
+                <span class="text-caption text-grey-6">{{ props.row.status }}</span>
+              </div>
               <span v-else>-</span>
             </q-td>
           </template>
 
-          <template v-slot:body-cell-actions="props">
+          <template v-slot:body-cell-createdAt="props">
             <q-td :props="props">
-              <q-btn-dropdown flat dense color="primary" label="更新狀態" size="sm">
+              <div class="column q-gutter-xs">
+                <span>{{ formatDateTime(props.row?.createdAt) }}</span>
+                <span class="text-caption text-grey-6">建立時間</span>
+              </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props" class="order-actions-cell">
+              <q-btn-dropdown flat dense color="primary" label="更新狀態" size="sm" class="order-row-btn">
                 <q-list>
                   <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'PROCESSING')">
                     <q-item-section>
@@ -344,6 +462,7 @@
                 icon="payment"
                 color="positive"
                 size="sm"
+                class="order-row-icon-btn"
                 @click="handlePayment(props.row)"
               >
                 <q-tooltip>前往付款</q-tooltip>
@@ -357,18 +476,19 @@
                 icon="local_shipping"
                 color="info"
                 size="sm"
+                class="order-row-icon-btn"
                 @click="handleShipment(props.row)"
               >
                 <q-tooltip>已出貨</q-tooltip>
               </q-btn>
 
-              <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
+              <q-btn flat dense round icon="edit" color="primary" size="sm" class="order-row-icon-btn" @click="handleEdit(props.row)">
                 <q-tooltip>編輯訂單</q-tooltip>
               </q-btn>
-              <q-btn flat dense round icon="visibility" color="primary" size="sm" @click="handleViewDetail(props.row)">
+              <q-btn flat dense round icon="visibility" color="primary" size="sm" class="order-row-icon-btn" @click="handleViewDetail(props.row)">
                 <q-tooltip>查看詳情</q-tooltip>
               </q-btn>
-              <q-btn flat dense round icon="delete" color="negative" size="sm" @click="handleDelete(props.row)">
+              <q-btn flat dense round icon="delete" color="negative" size="sm" class="order-row-icon-btn" @click="handleDelete(props.row)">
                 <q-tooltip>刪除訂單</q-tooltip>
               </q-btn>
             </q-td>
@@ -799,7 +919,7 @@
 
       <!-- Status Info Modal -->
       <q-dialog v-model="showStatusModal">
-        <q-card style="min-width: 600px; max-width: 700px">
+        <q-card class="order-status-guide-card" style="min-width: 600px; max-width: 700px">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">訂單狀態說明</div>
             <q-space />
@@ -807,12 +927,15 @@
           </q-card-section>
 
           <q-card-section>
+            <q-banner dense rounded class="order-status-guide-banner q-mb-md">
+              建議流程：先處理「待付款」，再追蹤「已付款/處理中」的履約與出貨。
+            </q-banner>
             <div class="text-body2 text-grey-7 q-mb-md">
               以下是系統中所有可用的訂單狀態及其說明：
             </div>
 
-            <q-list bordered separator>
-              <q-item v-for="status in orderStatusList" :key="status.value">
+            <q-list bordered separator class="order-status-guide-list">
+              <q-item v-for="status in orderStatusList" :key="status.value" class="order-status-guide-item">
                 <q-item-section avatar>
                   <q-badge :color="getStatusColor(status.value)" :label="getStatusLabel(status.value)" />
                 </q-item-section>
@@ -849,17 +972,21 @@
 
       <!-- Payment Dialog -->
       <q-dialog v-model="showPaymentDialog">
-        <q-card style="min-width: 500px">
-          <q-card-section class="row items-center q-pb-none">
+        <q-card class="order-flow-dialog-card" style="min-width: 500px">
+          <q-card-section class="row items-center q-pb-none order-flow-dialog-card__header">
             <div class="text-h6">前往付款</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section>
-            <div class="q-mb-md">
+          <q-card-section class="order-flow-dialog-card__body">
+            <q-banner rounded dense class="order-flow-banner q-mb-md">
+              付款完成後，訂單可進入履約/出貨流程。
+            </q-banner>
+
+            <div class="q-mb-md order-info-panel">
               <div class="text-subtitle2 q-mb-sm">訂單資訊</div>
-              <q-list bordered>
+              <q-list bordered class="order-info-panel__list">
                 <q-item>
                   <q-item-section>
                     <q-item-label>訂單編號</q-item-label>
@@ -870,19 +997,20 @@
                   <q-item-section>
                     <q-item-label>付款金額</q-item-label>
                     <q-item-label caption class="text-h6 text-positive">
-                      ¥{{ paymentOrder?.totalAmount?.toFixed(2) }}
+                      {{ formatCurrency(paymentOrder?.totalAmount) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
               </q-list>
             </div>
 
-            <div class="q-mb-md">
+            <div class="q-mb-md order-info-panel">
               <div class="text-subtitle2 q-mb-sm">選擇支付方式</div>
               <q-option-group
                 v-model="selectedGateway"
                 :options="paymentGatewayOptions"
                 color="primary"
+                class="order-payment-options"
               />
             </div>
 
@@ -903,7 +1031,7 @@
             </q-banner>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-card-actions align="right" class="q-px-md q-pb-md order-flow-dialog-card__actions">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
             <q-btn
               unelevated
@@ -918,17 +1046,21 @@
 
       <!-- Shipment Dialog -->
       <q-dialog v-model="showShipmentDialog">
-        <q-card style="min-width: 600px; max-width: 700px">
-          <q-card-section class="row items-center q-pb-none">
+        <q-card class="order-flow-dialog-card" style="min-width: 600px; max-width: 700px">
+          <q-card-section class="row items-center q-pb-none order-flow-dialog-card__header">
             <div class="text-h6">設定已出貨</div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section>
-            <div class="q-mb-md">
+          <q-card-section class="order-flow-dialog-card__body">
+            <q-banner rounded dense class="order-flow-banner q-mb-md">
+              建議填寫完整物流資訊，降低客服追件與查詢成本。
+            </q-banner>
+
+            <div class="q-mb-md order-info-panel">
               <div class="text-subtitle2 q-mb-sm">訂單資訊</div>
-              <q-list bordered>
+              <q-list bordered class="order-info-panel__list">
                 <q-item>
                   <q-item-section>
                     <q-item-label>訂單編號</q-item-label>
@@ -954,6 +1086,8 @@
                     dense
                     :rules="[val => !!val || '請輸入物流公司']"
                     placeholder="例如：順豐速運、中通快遞等"
+                    name="shipment-company"
+                    autocomplete="organization"
                   />
                 </div>
                 <div class="col-12">
@@ -964,6 +1098,8 @@
                     dense
                     :rules="[val => !!val || '請輸入物流單號']"
                     placeholder="請輸入物流追蹤單號"
+                    name="shipment-tracking-number"
+                    autocomplete="off"
                   />
                 </div>
                 <div class="col-12">
@@ -973,6 +1109,8 @@
                     outlined
                     dense
                     :hint="shipmentOrder?.customerName ? `預設：${shipmentOrder.customerName}` : ''"
+                    name="shipment-recipient-name"
+                    autocomplete="shipping name"
                   />
                 </div>
                 <div class="col-12">
@@ -982,6 +1120,10 @@
                     outlined
                     dense
                     :hint="shipmentOrder?.customerPhone ? `預設：${shipmentOrder.customerPhone}` : ''"
+                    name="shipment-recipient-phone"
+                    type="tel"
+                    inputmode="tel"
+                    autocomplete="shipping tel"
                   />
                 </div>
                 <div class="col-12">
@@ -993,6 +1135,8 @@
                     type="textarea"
                     rows="2"
                     :hint="shipmentOrder?.shippingAddress ? `預設：${shipmentOrder.shippingAddress}` : ''"
+                    name="shipment-recipient-address"
+                    autocomplete="shipping street-address"
                   />
                 </div>
                 <div class="col-12">
@@ -1004,12 +1148,14 @@
                     type="textarea"
                     rows="2"
                     placeholder="可選：添加其他備註資訊"
+                    name="shipment-notes"
+                    autocomplete="off"
                   />
                 </div>
               </div>
 
               <div class="q-mt-md">
-                <q-banner class="bg-info text-white">
+                <q-banner class="bg-info text-white order-shipment-note-banner">
                   <template v-slot:avatar>
                     <q-icon name="info" />
                   </template>
@@ -1021,7 +1167,7 @@
             </q-form>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-card-actions align="right" class="q-px-md q-pb-md order-flow-dialog-card__actions">
             <q-btn flat label="取消" color="grey-7" v-close-popup />
             <q-btn
               unelevated
@@ -1036,21 +1182,61 @@
 
       <!-- Order Detail Dialog -->
       <q-dialog v-model="showDetailDialog" maximized>
-        <q-card>
-          <q-card-section class="row items-center q-pb-none bg-primary text-white">
-            <div class="text-h6">訂單詳情</div>
+        <q-card class="order-detail-dialog-card">
+          <q-card-section class="row items-center q-pb-none bg-primary text-white order-detail-dialog-card__header">
+            <div>
+              <div class="text-h6">訂單詳情</div>
+              <div class="text-caption text-blue-1">
+                {{ selectedOrder?.orderNumber || '檢視訂單資料與物流記錄' }}
+              </div>
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup color="white" />
           </q-card-section>
 
-          <q-card-section v-if="selectedOrder" class="q-pa-lg">
+          <q-card-section v-if="selectedOrder" class="q-pa-lg order-detail-dialog-card__body">
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-12 col-md-4">
+                <q-card flat bordered class="order-detail-summary-card">
+                  <q-card-section>
+                    <div class="text-caption text-grey-7">訂單狀態</div>
+                    <div class="q-mt-xs">
+                      <q-badge :color="getStatusColor(selectedOrder.status)" :label="getStatusLabel(selectedOrder.status)" />
+                    </div>
+                    <div class="text-caption text-grey-6 q-mt-sm">{{ selectedOrder.status }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+              <div class="col-12 col-md-4">
+                <q-card flat bordered class="order-detail-summary-card">
+                  <q-card-section>
+                    <div class="text-caption text-grey-7">訂單總金額</div>
+                    <div class="text-h6 text-primary text-weight-bold q-mt-xs">
+                      {{ formatCurrency(selectedOrder.totalAmount) }}
+                    </div>
+                    <div class="text-caption text-grey-6">建立於 {{ formatDateTime(selectedOrder.createdAt) }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+              <div class="col-12 col-md-4">
+                <q-card flat bordered class="order-detail-summary-card">
+                  <q-card-section>
+                    <div class="text-caption text-grey-7">履約狀態提示</div>
+                    <div class="text-body2 q-mt-xs">
+                      {{ selectedOrder.status === 'PAID' ? '可安排出貨與新增物流記錄' : selectedOrder.status === 'PENDING_PAYMENT' ? '等待付款完成後再安排出貨' : '請依目前狀態追蹤後續處理' }}
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+
             <div class="row q-col-gutter-lg">
               <!-- 左側：訂單基本資訊 -->
               <div class="col-12 col-md-6">
-                <q-card flat bordered>
+                <q-card flat bordered class="order-detail-panel-card">
                   <q-card-section>
                     <div class="text-h6 q-mb-md">訂單資訊</div>
-                    <q-list bordered separator>
+                    <q-list bordered separator class="order-detail-list">
                       <q-item>
                         <q-item-section>
                           <q-item-label caption>訂單編號</q-item-label>
@@ -1092,13 +1278,13 @@
                       <q-item>
                         <q-item-section>
                           <q-item-label caption>訂單總金額</q-item-label>
-                          <q-item-label class="text-h6 text-primary">¥{{ selectedOrder.totalAmount?.toFixed(2) }}</q-item-label>
+                          <q-item-label class="text-h6 text-primary">{{ formatCurrency(selectedOrder.totalAmount) }}</q-item-label>
                         </q-item-section>
                       </q-item>
                       <q-item>
                         <q-item-section>
                           <q-item-label caption>創建時間</q-item-label>
-                          <q-item-label>{{ selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString('zh-TW') : '-' }}</q-item-label>
+                          <q-item-label>{{ formatDateTime(selectedOrder.createdAt) }}</q-item-label>
                         </q-item-section>
                       </q-item>
                     </q-list>
@@ -1106,10 +1292,10 @@
                 </q-card>
 
                 <!-- 訂單項目 -->
-                <q-card flat bordered class="q-mt-md">
+                <q-card flat bordered class="q-mt-md order-detail-panel-card">
                   <q-card-section>
                     <div class="text-h6 q-mb-md">訂單項目</div>
-                    <q-list bordered separator v-if="getOrderItems(selectedOrder) && getOrderItems(selectedOrder).length > 0">
+                    <q-list bordered separator class="order-detail-list" v-if="getOrderItems(selectedOrder) && getOrderItems(selectedOrder).length > 0">
                       <q-item v-for="item in getOrderItems(selectedOrder)" :key="item.id">
                         <q-item-section>
                           <q-item-label class="text-weight-bold">
@@ -1142,9 +1328,9 @@
                               <span class="text-grey-7">數量：</span>
                               <span class="text-weight-medium">{{ item.quantity }}</span>
                               <span class="text-grey-7 q-ml-md">單價：</span>
-                              <span class="text-weight-medium">¥{{ (item.unitPrice || item.price || 0).toFixed(2) }}</span>
+                              <span class="text-weight-medium">{{ formatCurrency(item.unitPrice || item.price || 0) }}</span>
                               <span class="text-grey-7 q-ml-md">小計：</span>
-                              <span class="text-weight-bold text-primary">¥{{ (item.subtotal || item.subtotalAmount || 0).toFixed(2) }}</span>
+                              <span class="text-weight-bold text-primary">{{ formatCurrency(item.subtotal || item.subtotalAmount || 0) }}</span>
                             </div>
 
                             <!-- 如果沒有任何規格信息，顯示提示 -->
@@ -1162,7 +1348,7 @@
 
               <!-- 右側：物流記錄 -->
               <div class="col-12 col-md-6">
-                <q-card flat bordered>
+                <q-card flat bordered class="order-detail-panel-card">
                   <q-card-section>
                     <div class="row items-center justify-between q-mb-md">
                       <div class="text-h6">物流記錄</div>
@@ -1180,7 +1366,7 @@
 
                     <q-inner-loading :showing="shipmentsLoading" />
 
-                    <q-list bordered separator v-if="shipments.length > 0">
+                    <q-list bordered separator class="order-detail-list" v-if="shipments.length > 0">
                       <q-item v-for="shipment in shipments" :key="shipment.id">
                         <q-item-section>
                           <q-item-label class="text-weight-bold">
@@ -1190,10 +1376,10 @@
                             <div>物流單號：{{ shipment.trackingNumber || '-' }}</div>
                             <div>狀態：{{ getShippingStatusLabel(shipment.shippingStatus) }}</div>
                             <div v-if="shipment.shippedAt">
-                              出貨時間：{{ new Date(shipment.shippedAt).toLocaleString('zh-TW') }}
+                              出貨時間：{{ formatDateTime(shipment.shippedAt) }}
                             </div>
                             <div v-if="shipment.deliveredAt">
-                              送達時間：{{ new Date(shipment.deliveredAt).toLocaleString('zh-TW') }}
+                              送達時間：{{ formatDateTime(shipment.deliveredAt) }}
                             </div>
                             <div v-if="shipment.recipientName">
                               收件人：{{ shipment.recipientName }}
@@ -1234,7 +1420,7 @@
             </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-px-lg q-pb-lg">
+          <q-card-actions align="right" class="q-px-lg q-pb-lg order-detail-dialog-card__actions">
             <q-btn flat label="關閉" color="grey-7" v-close-popup />
           </q-card-actions>
         </q-card>
@@ -1353,6 +1539,29 @@ const hasActiveFilters = computed(() => {
     filterForm.value.minAmount ||
     filterForm.value.maxAmount
   )
+})
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filterForm.value.orderNumber) count++
+  if (filterForm.value.customerName) count++
+  if (filterForm.value.customerId) count++
+  if (filterForm.value.status) count++
+  if (filterForm.value.startDate) count++
+  if (filterForm.value.endDate) count++
+  if (filterForm.value.minAmount !== null && filterForm.value.minAmount !== undefined) count++
+  if (filterForm.value.maxAmount !== null && filterForm.value.maxAmount !== undefined) count++
+  return count
+})
+
+const orderMetrics = computed(() => {
+  const list = orders.value || []
+  return {
+    pendingPayment: list.filter(order => order.status === 'PENDING_PAYMENT').length,
+    fulfillmentQueue: list.filter(order => order.status === 'PAID' || order.status === 'PROCESSING').length,
+    completed: list.filter(order => order.status === 'COMPLETED').length,
+    pageAmount: list.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0)
+  }
 })
 
 const paymentGatewayOptions = [
@@ -1731,6 +1940,28 @@ const getStatusLabel = (status: Order['status']) => {
     REFUNDED: '已退款'
   }
   return labelMap[status] || status
+}
+
+const formatCurrency = (amount?: number | null) => {
+  const value = Number(amount) || 0
+  return new Intl.NumberFormat('zh-TW', {
+    style: 'currency',
+    currency: 'TWD',
+    maximumFractionDigits: 2
+  }).format(value)
+}
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
@@ -2620,3 +2851,276 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.order-metric-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.order-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+}
+
+.order-metric-card__value {
+  margin: 6px 0 4px;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.order-metric-card--amber {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), rgba(255, 247, 237, 0.96));
+}
+
+.order-metric-card--blue {
+  border-color: rgba(59, 130, 246, 0.2);
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(238, 242, 255, 0.96));
+}
+
+.order-metric-card--green {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.98), rgba(236, 253, 245, 0.96));
+}
+
+.order-filter-card,
+.order-table-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+}
+
+.order-filter-card__header {
+  padding-bottom: 12px;
+}
+
+.filter-card__meta {
+  gap: 8px;
+}
+
+.order-filter-chip-list :deep(.q-chip) {
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.order-admin-table :deep(.q-table__top) {
+  padding: 14px 16px 8px;
+}
+
+.order-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.order-admin-table :deep(thead tr th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.order-admin-table :deep(tbody tr) {
+  transition: background-color 0.18s ease;
+}
+
+.order-admin-table :deep(tbody tr:hover) {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.order-admin-table :deep(td),
+.order-admin-table :deep(th) {
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.order-actions-cell {
+  min-width: 250px;
+}
+
+.order-row-btn,
+.order-row-icon-btn {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.order-status-guide-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.order-status-guide-banner {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(14, 165, 233, 0.08));
+  color: #0f172a;
+  border: 1px solid rgba(59, 130, 246, 0.14);
+}
+
+.order-status-guide-list {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.order-status-guide-item {
+  min-height: 64px;
+}
+
+.order-flow-dialog-card,
+.order-detail-dialog-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+}
+
+.order-flow-dialog-card__header,
+.order-detail-dialog-card__header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.order-flow-dialog-card__body {
+  padding-top: 14px;
+}
+
+.order-flow-dialog-card__actions {
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.order-flow-banner {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(34, 197, 94, 0.08));
+  color: #0f172a;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+.order-info-panel {
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.order-info-panel__list {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.order-payment-options {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.order-shipment-note-banner {
+  border-radius: 12px;
+}
+
+.order-detail-dialog-card__body {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.6), rgba(255, 255, 255, 1));
+}
+
+.order-detail-dialog-card__actions {
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.order-detail-summary-card,
+.order-detail-panel-card {
+  border-radius: 16px;
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.order-detail-list {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 1023px) {
+  .order-actions-cell {
+    min-width: 220px;
+  }
+
+  .order-admin-table :deep(.q-table__middle) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .order-admin-table :deep(table) {
+    min-width: 980px;
+  }
+
+  .order-detail-dialog-card__body {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 599px) {
+  .order-metric-card__value {
+    font-size: 1.35rem;
+  }
+
+  .filter-card__meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .order-table-toolbar {
+    align-items: flex-start;
+  }
+
+  .order-actions-cell {
+    min-width: 210px;
+  }
+
+  .order-admin-table :deep(.q-table__top) {
+    padding-top: 12px;
+  }
+
+  .order-status-guide-card {
+    min-width: unset !important;
+    width: calc(100vw - 24px);
+  }
+
+  .order-flow-dialog-card {
+    min-width: unset !important;
+    width: calc(100vw - 24px);
+  }
+
+  .order-flow-dialog-card__actions {
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .order-flow-dialog-card__actions :deep(.q-btn) {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+
+  .order-detail-dialog-card__header {
+    padding-bottom: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-metric-card {
+    transition: none;
+  }
+}
+</style>

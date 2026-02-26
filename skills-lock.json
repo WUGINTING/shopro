@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "ecpay": {
+      "source": "paid-tw/skills",
+      "sourceType": "github",
+      "computedHash": "73261f53a6d57a1ce51e56c49c363454763d466d352147e00335cf829ba4ae0e"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    },
+    "marketing-psychology": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "5811291830b4814a1e8a2dc6b080438b5c31540acd6dcf8b15676a2cbeacdb58"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "computedHash": "4cfe5e95a230616c17d92b44e3cd37bae543ce087a7756a446a62f77d7c58a37"
+    },
+    "vibe-coding": {
+      "source": "refoundai/lenny-skills",
+      "sourceType": "github",
+      "computedHash": "6e31a086952e810305b9b57176946bb56ad08edbaf59c6121230d1a1151eba93"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "d8e7d3afe37dcc8a97b99ffb5afdb4d0919ae0092ea8b68f44eb201f035e33ac"
+    }
+  }
+}

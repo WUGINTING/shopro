@@ -1,22 +1,69 @@
 /**
- * 專案統一樣式
- * 整合所有重複出現的自定義樣式
+ * Global shared styles
+ * Keep Quasar defaults and only adjust reusable visual details
  */
 
-/* ============ 漸層背景 ============ */
+/* Background and cards */
 .bg-gradient-primary {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: #fff;
+}
+
+.bg-gradient-primary .text-h4,
+.bg-gradient-primary .text-h5,
+.bg-gradient-primary .text-h6,
+.bg-gradient-primary .text-subtitle1,
+.bg-gradient-primary .text-subtitle2,
+.bg-gradient-primary .text-body1,
+.bg-gradient-primary .text-body2,
+.bg-gradient-primary .text-caption {
+  color: #fff;
 }
 
 .bg-gradient-purple {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
 }
 
-/* ============ 卡片樣式 ============ */
+.bg-gradient-purple .text-h4,
+.bg-gradient-purple .text-h5,
+.bg-gradient-purple .text-h6,
+.bg-gradient-purple .text-subtitle1,
+.bg-gradient-purple .text-subtitle2,
+.bg-gradient-purple .text-body1,
+.bg-gradient-purple .text-body2,
+.bg-gradient-purple .text-caption {
+  color: #fff;
+}
+
+/* High-contrast helpers for dark gradient cards */
+.bg-gradient-primary .q-icon,
+.bg-gradient-purple .q-icon {
+  color: inherit;
+}
+
+.bg-gradient-primary .q-btn--flat,
+.bg-gradient-primary .q-btn--outline,
+.bg-gradient-purple .q-btn--flat,
+.bg-gradient-purple .q-btn--outline {
+  color: #fff;
+}
+
+.bg-gradient-primary .q-badge,
+.bg-gradient-purple .q-badge {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bg-gradient-primary a,
+.bg-gradient-purple a {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.7);
+}
+
 .card-hover {
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
-  
+
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
@@ -25,34 +72,41 @@
 
 .card-border-top {
   border-top: 4px solid;
-  
-  &.border-primary { border-top-color: #1976D2; }
-  &.border-orange { border-top-color: #ff9800; }
-  &.border-teal { border-top-color: #26A69A; }
-  &.border-green { border-top-color: #21BA45; }
-  &.border-red { border-top-color: #F44336; }
-  &.border-blue { border-top-color: #2196F3; }
+
+  &.border-primary {
+    border-top-color: #1976d2;
+  }
+  &.border-orange {
+    border-top-color: #ff9800;
+  }
+  &.border-teal {
+    border-top-color: #26a69a;
+  }
+  &.border-green {
+    border-top-color: #21ba45;
+  }
+  &.border-red {
+    border-top-color: #f44336;
+  }
+  &.border-blue {
+    border-top-color: #2196f3;
+  }
 }
 
-/* ============ 導航樣式 ============ */
-.q-item {
-  border-radius: 8px;
-  margin: 4px 8px;
-}
-
+/* Component spacing */
+.q-item,
 .q-expansion-item {
   border-radius: 8px;
   margin: 4px 8px;
 }
 
-/* ============ 資訊行樣式 ============ */
 .info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid #e0e0e0;
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -68,26 +122,16 @@
   color: #212121;
 }
 
-/* ============ 容器樣式 ============ */
-.page-container {
-  width: 100%;
-  padding: 0 16px;
-}
-
-.profile-container {
-  width: 100%;
-  padding: 0 16px;
-}
-
+.page-container,
+.profile-container,
 .wide-container {
   width: 100%;
   padding: 0 16px;
 }
 
-/* ============ 圖片相關 ============ */
 .album-card {
-  transition: transform 0.2s, box-shadow 0.2s;
-  
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -98,6 +142,144 @@
   position: relative;
 }
 
-h4,.text-h5,.text-h4{
-  color : rgb(255, 255, 255);
+/* Remove forced white heading colors to keep contrast readable */
+h4,
+.text-h5,
+.text-h4 {
+  color: inherit;
+}
+
+/* Admin console visual system (applies under MainLayout) */
+.admin-shell {
+  --admin-surface: rgba(255, 255, 255, 0.92);
+  --admin-surface-strong: #ffffff;
+  --admin-border: #e5eaf4;
+  --admin-border-strong: #d8e0ef;
+  --admin-text: #0f172a;
+  --admin-muted: #64748b;
+  --admin-shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.04);
+  --admin-shadow-md: 0 18px 46px rgba(15, 23, 42, 0.08);
+}
+
+.admin-shell .q-page {
+  color: var(--admin-text);
+}
+
+.admin-shell .page-container {
+  width: 100%;
+  padding: 0 4px;
+}
+
+.admin-shell .q-card {
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.admin-shell .q-card.q-dialog-plugin,
+.admin-shell .q-dialog .q-card {
+  background: var(--admin-surface-strong);
+}
+
+.admin-shell .q-table__container {
+  border-radius: 16px;
+  border: 1px solid var(--admin-border);
+  overflow: hidden;
+  background: var(--admin-surface-strong);
+}
+
+.admin-shell .q-table thead tr th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-shell .q-table tbody tr td {
+  border-color: #eef2f7;
+}
+
+.admin-shell .q-table tbody tr:hover td {
+  background: #fbfdff;
+}
+
+.admin-shell .q-field--outlined .q-field__control {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.admin-shell .q-field--focused .q-field__control {
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.admin-shell .q-btn {
+  border-radius: 10px;
+  text-transform: none;
+}
+
+.admin-shell .q-btn--round {
+  border-radius: 999px;
+}
+
+.admin-shell .q-chip {
+  border-radius: 999px;
+}
+
+.admin-shell .q-tabs {
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-shell .q-tab-panels {
+  border-radius: 12px;
+}
+
+.admin-shell .q-separator {
+  background: #e9edf5;
+}
+
+.admin-shell .text-caption,
+.admin-shell .text-grey-7 {
+  color: var(--admin-muted) !important;
+}
+
+.admin-shell .card-hover {
+  border: 1px solid var(--admin-border);
+  box-shadow: var(--admin-shadow-sm);
+
+  &:hover {
+    box-shadow: var(--admin-shadow-md);
+    border-color: var(--admin-border-strong);
+    transform: translateY(-3px);
+  }
+}
+
+.admin-shell .bg-gradient-primary {
+  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 52%, #0f766e 100%);
+}
+
+.admin-shell .bg-gradient-purple {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 52%, #0f766e 100%);
+}
+
+.admin-shell .q-item:focus-visible,
+.admin-shell .q-btn:focus-visible,
+.admin-shell .q-field__native:focus-visible {
+  outline: 3px solid rgba(25, 118, 210, 0.22);
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .admin-shell .page-container {
+    padding: 0;
+  }
+
+  .admin-shell .q-card {
+    border-radius: 14px;
+  }
+
+  .admin-shell .q-table__middle {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
