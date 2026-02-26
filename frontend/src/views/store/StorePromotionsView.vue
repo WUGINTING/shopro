@@ -263,15 +263,17 @@ const copyCouponCode = async (code: string) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const [promotionResult, couponResult] = await Promise.all([
-      promotionApi.getPromotions(0, 50),
-      couponApi.getCoupons(0, 50)
-    ])
+    // 載入促銷活動
+    const promotionResult = await promotionApi.getPromotions(0, 50)
     promotions.value = promotionResult.content || []
-    coupons.value = couponResult.content || []
+
+    // 折扣碼功能尚未實現，暫時顯示空列表
+    // TODO: 後端實現 /api/marketing/coupons 端點後再啟用
+    coupons.value = []
   } catch (error) {
-    liveMessage.value = '載入促銷資訊失敗，請稍後再試'
-    Notify.create({ type: 'negative', message: '載入促銷資訊失敗，請稍後再試', position: 'top' })
+    console.error('載入促銷資訊失敗:', error)
+    promotions.value = []
+    coupons.value = []
   } finally {
     loading.value = false
   }

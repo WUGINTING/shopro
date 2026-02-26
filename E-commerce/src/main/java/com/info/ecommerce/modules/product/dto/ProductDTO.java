@@ -75,6 +75,9 @@ public class ProductDTO {
     @Schema(description = "是否啟用", example = "true")
     private Boolean enabled;
 
+    @Schema(description = "庫存數量（規格庫存總和或預設值）", example = "100")
+    private Integer stock;
+
     @Schema(description = "商品圖片列表")
     private List<ProductImageDTO> images;
 

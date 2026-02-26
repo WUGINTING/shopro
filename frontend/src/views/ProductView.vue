@@ -67,6 +67,17 @@
         </div>
       </div>
 
+      <!-- 庫存警示提示 -->
+      <q-banner v-if="inventoryAlerts.length > 0" class="bg-orange-1 q-mb-md" rounded>
+        <template v-slot:avatar>
+          <q-icon name="warning" color="orange" />
+        </template>
+        <div class="text-weight-bold">庫存警示</div>
+        <div class="text-caption">
+          有 {{ inventoryAlerts.length }} 個商品庫存不足，請及時補貨
+        </div>
+      </q-banner>
+
       <!-- Search and Filter Bar -->
       <q-card class="q-mb-md filter-card">
         <q-card-section>
@@ -236,10 +247,32 @@
 
           <template v-slot:body-cell-stock="props">
             <q-td :props="props">
-              <q-badge
-                :color="props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
-                :label="props.row.stock"
-              />
+              <div class="row items-center no-wrap q-gutter-xs">
+                <q-badge
+                  :color="(props.row.stock ?? 0) > 10 ? 'positive' : (props.row.stock ?? 0) > 0 ? 'warning' : 'negative'"
+                  :label="props.row.stock ?? 0"
+                />
+                <q-icon
+                  v-if="(props.row.stock ?? 0) <= 10"
+                  name="warning"
+                  :color="(props.row.stock ?? 0) === 0 ? 'negative' : 'warning'"
+                  size="16px"
+                >
+                  <q-tooltip>{{ (props.row.stock ?? 0) === 0 ? '已缺貨' : '庫存不足' }}</q-tooltip>
+                </q-icon>
+                <q-btn
+                  v-if="(props.row.stock ?? 0) <= 10"
+                  flat
+                  dense
+                  round
+                  icon="add"
+                  color="teal"
+                  size="xs"
+                  @click.stop="openRestockDialog(props.row)"
+                >
+                  <q-tooltip>快速補貨</q-tooltip>
+                </q-btn>
+              </div>
             </q-td>
           </template>
 
@@ -247,6 +280,18 @@
             <q-td :props="props">
               <q-btn flat dense round icon="edit" color="primary" size="sm" @click="handleEdit(props.row)">
                 <q-tooltip>編輯</q-tooltip>
+              </q-btn>
+
+              <q-btn
+                flat
+                dense
+                round
+                icon="inventory"
+                color="teal"
+                size="sm"
+                @click="openRestockDialog(props.row)"
+              >
+                <q-tooltip>快速補貨</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -950,6 +995,65 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- 快速補貨對話框 -->
+      <q-dialog v-model="showRestockDialog">
+        <q-card style="min-width: 350px">
+          <q-card-section>
+            <div class="text-h6">
+              <q-icon name="inventory" color="teal" class="q-mr-sm" />
+              快速補貨
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <div v-if="restockProduct" class="q-mb-md">
+              <div class="text-subtitle2 text-weight-bold">{{ restockProduct.name }}</div>
+              <div class="text-caption text-grey-7">
+                目前庫存：
+                <q-badge
+                  :color="(restockProduct.stock ?? 0) > 10 ? 'positive' : (restockProduct.stock ?? 0) > 0 ? 'warning' : 'negative'"
+                >
+                  {{ restockProduct.stock ?? 0 }}
+                </q-badge>
+              </div>
+            </div>
+
+            <q-input
+              v-model.number="restockQuantity"
+              type="number"
+              label="補貨數量"
+              outlined
+              dense
+              :min="1"
+              :rules="[val => val > 0 || '數量必須大於 0']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="add_shopping_cart" />
+              </template>
+            </q-input>
+
+            <div class="row q-gutter-sm q-mt-sm">
+              <q-btn dense flat label="+10" color="grey-7" @click="restockQuantity += 10" />
+              <q-btn dense flat label="+50" color="grey-7" @click="restockQuantity += 50" />
+              <q-btn dense flat label="+100" color="grey-7" @click="restockQuantity += 100" />
+              <q-btn dense flat label="+500" color="grey-7" @click="restockQuantity += 500" />
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="取消" color="grey-7" v-close-popup />
+            <q-btn
+              unelevated
+              label="確認補貨"
+              color="teal"
+              :loading="restockLoading"
+              @click="handleRestock"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
     </div>
   </q-page>
 </template>
@@ -959,6 +1063,7 @@ import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
+import { inventoryApi, type InventoryAlert } from '@/api/inventory'
 import { startProductTour, isProductTourCompleted } from '@/utils/productTour'
 import { useDebouncedRef } from '@/composables/useDebounce'
 
@@ -1030,6 +1135,13 @@ const albumImages = ref<AlbumImage[]>([])
 const tempSelectedImages = ref<AlbumImage[]>([])
 const selectedAlbumImages = ref<AlbumImage[]>([])
 const defaultAlbumId = ref<number | null>(null)
+
+// 庫存管理相關狀態
+const inventoryAlerts = ref<InventoryAlert[]>([])
+const showRestockDialog = ref(false)
+const restockProduct = ref<Product | null>(null)
+const restockQuantity = ref(0)
+const restockLoading = ref(false)
 const selectedProductImageFileName = computed(() => {
   const file = productImage.value as File | File[] | null
   if (!file) return ''
@@ -1142,6 +1254,59 @@ const loadProducts = async () => {
     console.error('API Error:', error)
   } finally {
     loading.value = false
+  }
+}
+
+// 載入庫存警示
+const loadInventoryAlerts = async () => {
+  try {
+    const response = await inventoryApi.getUnresolvedAlerts()
+    if (response.success && response.data) {
+      inventoryAlerts.value = response.data
+    }
+  } catch (error) {
+    console.warn('載入庫存警示失敗:', error)
+    inventoryAlerts.value = []
+  }
+}
+
+// 獲取商品的庫存警示級別
+const getProductAlertLevel = (productId: number): string | null => {
+  const alert = inventoryAlerts.value.find(a => a.productId === productId)
+  return alert?.alertLevel || null
+}
+
+// 開啟快速補貨對話框
+const openRestockDialog = (product: Product) => {
+  restockProduct.value = product
+  restockQuantity.value = 100 // 預設補貨數量
+  showRestockDialog.value = true
+}
+
+// 執行快速補貨
+const handleRestock = async () => {
+  if (!restockProduct.value?.id || restockQuantity.value <= 0) return
+
+  restockLoading.value = true
+  try {
+    await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value)
+    $q.notify({
+      type: 'positive',
+      message: `已為「${restockProduct.value.name}」補貨 ${restockQuantity.value} 件`,
+      position: 'top'
+    })
+    showRestockDialog.value = false
+    // 重新載入庫存警示
+    await loadInventoryAlerts()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '補貨失敗，請稍後再試',
+      position: 'top'
+    })
+    console.error('補貨失敗:', error)
+  } finally {
+    restockLoading.value = false
   }
 }
 
@@ -1903,7 +2068,8 @@ onMounted(() => {
   loadProducts()
   loadAlbums()
   loadCategories()
-  
+  loadInventoryAlerts()
+
   // 如果用戶是第一次訪問商品管理頁面，自動啟動導覽
   if (!isProductTourCompleted()) {
     setTimeout(() => {

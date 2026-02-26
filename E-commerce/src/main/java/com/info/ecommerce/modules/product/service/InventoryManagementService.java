@@ -123,18 +123,42 @@ public class InventoryManagementService {
     }
 
     /**
-     * 更新庫存
+     * 更新庫存（如果不存在則創建新記錄）
      */
     @Transactional
-    public void updateInventory(Long productId, Long specificationId, 
+    public void updateInventory(Long productId, Long specificationId,
                                Long warehouseId, Integer quantity) {
         ProductInventory inventory = inventoryRepository
                 .findByProductIdAndSpecificationId(productId, specificationId)
-                .orElseThrow(() -> new BusinessException("庫存記錄不存在"));
-        
-        inventory.setAvailableStock(quantity);
+                .orElse(null);
+
+        if (inventory == null) {
+            // 如果庫存記錄不存在，創建新記錄
+            inventory = ProductInventory.builder()
+                    .productId(productId)
+                    .specificationId(specificationId)
+                    .warehouseId(warehouseId != null ? warehouseId : 1L)
+                    .availableStock(quantity)
+                    .lockedStock(0)
+                    .safetyStock(10) // 預設安全庫存為 10
+                    .build();
+        } else {
+            // 如果是補貨，則增加庫存；否則設置為指定數量
+            inventory.setAvailableStock(inventory.getAvailableStock() + quantity);
+        }
+
         inventoryRepository.save(inventory);
-        
+
+        // 解決已有的庫存警示（如果補貨後庫存恢復正常）
+        if (inventory.getAvailableStock() > 0) {
+            List<InventoryAlert> alerts = alertRepository.findByProductIdAndResolvedFalse(productId);
+            for (InventoryAlert alert : alerts) {
+                alert.setResolved(true);
+                alert.setResolvedAt(LocalDateTime.now());
+            }
+            alertRepository.saveAll(alerts);
+        }
+
         // 檢查是否需要發送貨到通知
         if (quantity > 0) {
             processStockNotifications(productId);

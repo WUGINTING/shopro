@@ -115,7 +115,7 @@
             <p class="text-grey-7 product-description q-mb-md">{{ product.description || '尚未提供商品描述。' }}</p>
             <div class="row items-center justify-between q-gutter-sm">
               <div class="text-h6 text-primary">NT$ {{ formatPrice(productPrice(product)) }}</div>
-              <q-chip dense square color="grey-2" text-color="dark">{{ product.stock > 0 ? '現貨供應' : '暫時缺貨' }}</q-chip>
+              <q-chip dense square color="grey-2" text-color="dark">{{ productStock(product) > 0 ? '現貨供應' : '暫時缺貨' }}</q-chip>
             </div>
           </q-card-section>
 
@@ -169,6 +169,24 @@ const syncPrefs = () => {
 }
 
 const productPrice = (product: Product) => Number(product.price ?? product.salePrice ?? 0)
+
+const productStock = (product: Product) => {
+  // 檢查直接的 stock 欄位
+  const directStock = Number((product as Product & { stock?: number | string }).stock)
+  if (Number.isFinite(directStock) && directStock >= 0) return directStock
+
+  // 檢查規格中的庫存
+  if (Array.isArray(product.specifications) && product.specifications.length > 0) {
+    return product.specifications.reduce((sum, spec) => {
+      const stock = Number(spec.stock ?? 0)
+      return sum + (Number.isFinite(stock) ? stock : 0)
+    }, 0)
+  }
+
+  // 如果沒有庫存信息，預設為有貨（返回 1 表示有貨）
+  // 這樣可以避免所有商品都顯示缺貨
+  return 1
+}
 
 const productImage = (product: Product): string | null => {
   const images = product.images

@@ -7,9 +7,13 @@ import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.dto.ProductDescriptionBlockDTO;
 import com.info.ecommerce.modules.product.dto.ProductImageDTO;
 import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.entity.ProductInventory;
+import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.repository.ProductCategoryRepository;
+import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
+import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -28,6 +32,8 @@ public class ProductService {
     private final ProductCategoryRepository productCategoryRepository;
     private final AlbumImageRepository albumImageRepository;
     private final ProductDescriptionBlockService descriptionBlockService;
+    private final ProductInventoryRepository productInventoryRepository;
+    private final ProductSpecificationRepository productSpecificationRepository;
 
     /**
      * 驗證並標準化 SKU
@@ -69,6 +75,7 @@ public class ProductService {
         Product product = new Product();
         BeanUtils.copyProperties(dto, product, "id");
         product = productRepository.save(product);
+        syncProductLevelInventory(product.getId(), dto.getStock());
         return toDTO(product);
     }
 
@@ -108,6 +115,7 @@ public class ProductService {
         }
         
         product = productRepository.save(product);
+        syncProductLevelInventory(product.getId(), dto.getStock());
         return toDTO(product);
     }
 
@@ -264,7 +272,76 @@ public class ProductService {
                 dto.setDescriptionBlocks(new ArrayList<>());
             }
         }
-        
+
+        // 設置庫存（預設為 100，表示有貨）
+        // TODO: 後續可以從 ProductSpecification 或 ProductInventory 計算實際庫存
+        dto.setStock(calculateProductStock(entity.getId()));
+
         return dto;
+    }
+
+    private Integer calculateProductStock(Long productId) {
+        if (productId == null) {
+            return 0;
+        }
+
+        List<ProductInventory> inventories = productInventoryRepository.findByProductId(productId);
+        if (inventories != null && !inventories.isEmpty()) {
+            boolean hasSpecificationRows = inventories.stream()
+                    .anyMatch(inventory -> inventory.getSpecificationId() != null);
+
+            int inventoryStock = inventories.stream()
+                    .filter(inventory -> !hasSpecificationRows || inventory.getSpecificationId() != null)
+                    .map(ProductInventory::getAvailableStock)
+                    .filter(stock -> stock != null && stock > 0)
+                    .reduce(0, Integer::sum);
+
+            return Math.max(inventoryStock, 0);
+        }
+
+        List<ProductSpecification> specifications = productSpecificationRepository.findByProductId(productId);
+        if (specifications == null || specifications.isEmpty()) {
+            return 0;
+        }
+
+        int specificationStock = specifications.stream()
+                .filter(spec -> spec.getEnabled() == null || Boolean.TRUE.equals(spec.getEnabled()))
+                .map(ProductSpecification::getStock)
+                .filter(stock -> stock != null && stock > 0)
+                .reduce(0, Integer::sum);
+
+        return Math.max(specificationStock, 0);
+    }
+
+    private void syncProductLevelInventory(Long productId, Integer stock) {
+        if (productId == null || stock == null) {
+            return;
+        }
+
+        int normalizedStock = Math.max(stock, 0);
+
+        List<ProductInventory> inventories = productInventoryRepository.findByProductId(productId);
+        ProductInventory productLevelInventory = inventories.stream()
+                .filter(inventory -> inventory.getSpecificationId() == null)
+                .findFirst()
+                .orElse(null);
+
+        if (productLevelInventory == null) {
+            productLevelInventory = ProductInventory.builder()
+                    .productId(productId)
+                    .specificationId(null)
+                    .warehouseId(1L)
+                    .availableStock(normalizedStock)
+                    .lockedStock(0)
+                    .safetyStock(10)
+                    .build();
+        } else {
+            productLevelInventory.setAvailableStock(normalizedStock);
+            if (productLevelInventory.getWarehouseId() == null) {
+                productLevelInventory.setWarehouseId(1L);
+            }
+        }
+
+        productInventoryRepository.save(productLevelInventory);
     }
 }
