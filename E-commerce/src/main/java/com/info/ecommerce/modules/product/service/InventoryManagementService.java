@@ -144,33 +144,57 @@ public class InventoryManagementService {
      */
     @Transactional
     public void updateInventory(Long productId, Long specificationId,
-                               Long warehouseId, Integer quantity) {
+                                Long warehouseId, Integer quantity) {
+        adjustInventory(productId, specificationId, warehouseId, quantity,
+                "INVENTORY_API", "後台人工庫存調整");
+    }
+
+    /**
+     * 根據來源與備註調整庫存並回傳最新庫存資料
+     */
+    @Transactional
+    public ProductInventory adjustInventory(Long productId, Long specificationId,
+                                            Long warehouseId, Integer quantity,
+                                            String source, String remark) {
+        return changeInventory(productId, specificationId, warehouseId, quantity, source, remark);
+    }
+
+    private ProductInventory changeInventory(Long productId, Long specificationId,
+                                             Long warehouseId, Integer quantity,
+                                             String source, String remark) {
+        if (productId == null || quantity == null) {
+            throw new BusinessException("商品編號或數量不能為空");
+        }
+
         ProductInventory inventory = inventoryRepository
                 .findByProductIdAndSpecificationId(productId, specificationId)
                 .orElse(null);
         int beforeStock = inventory != null && inventory.getAvailableStock() != null
                 ? inventory.getAvailableStock() : 0;
+        Long resolvedWarehouseId = warehouseId != null ? warehouseId : 1L;
 
         if (inventory == null) {
-            // 如果庫存記錄不存在，創建新記錄
             inventory = ProductInventory.builder()
                     .productId(productId)
                     .specificationId(specificationId)
-                    .warehouseId(warehouseId != null ? warehouseId : 1L)
+                    .warehouseId(resolvedWarehouseId)
                     .availableStock(quantity)
                     .lockedStock(0)
-                    .safetyStock(10) // 預設安全庫存為 10
+                    .safetyStock(10)
                     .build();
         } else {
-            // 如果是補貨，則增加庫存；否則設置為指定數量
-            inventory.setAvailableStock(inventory.getAvailableStock() + quantity);
+            int currentStock = inventory.getAvailableStock() != null ? inventory.getAvailableStock() : 0;
+            inventory.setAvailableStock(currentStock + quantity);
+            if (inventory.getWarehouseId() == null) {
+                inventory.setWarehouseId(resolvedWarehouseId);
+            }
         }
 
         inventoryRepository.save(inventory);
         int afterStock = inventory.getAvailableStock() != null ? inventory.getAvailableStock() : 0;
-        saveInventoryMovementLog(productId, specificationId, inventory.getWarehouseId(), quantity, beforeStock, afterStock);
+        saveInventoryMovementLog(productId, specificationId, inventory.getWarehouseId(),
+                quantity, beforeStock, afterStock, source, remark);
 
-        // 解決已有的庫存警示（如果補貨後庫存恢復正常）
         if (inventory.getAvailableStock() > 0) {
             List<InventoryAlert> alerts = alertRepository.findByProductIdAndResolvedFalse(productId);
             for (InventoryAlert alert : alerts) {
@@ -180,14 +204,16 @@ public class InventoryManagementService {
             alertRepository.saveAll(alerts);
         }
 
-        // 檢查是否需要發送貨到通知
         if (quantity > 0) {
             processStockNotifications(productId);
         }
+
+        return inventory;
     }
 
     private void saveInventoryMovementLog(Long productId, Long specificationId, Long warehouseId,
-                                          Integer quantity, int beforeStock, int afterStock) {
+                                          Integer quantity, int beforeStock, int afterStock,
+                                          String source, String remark) {
         int changeQty = quantity != null ? quantity : (afterStock - beforeStock);
         String changeType = changeQty > 0 ? "INCREASE" : (changeQty < 0 ? "DECREASE" : "SET");
 
@@ -196,11 +222,11 @@ public class InventoryManagementService {
                 .specificationId(specificationId)
                 .warehouseId(warehouseId)
                 .changeType(changeType)
-                .source("INVENTORY_API")
+                .source(source)
                 .changeQuantity(changeQty)
                 .beforeStock(beforeStock)
                 .afterStock(afterStock)
-                .remark("後台補貨/調整庫存")
+                .remark(remark)
                 .build();
 
         movementLogRepository.save(log);

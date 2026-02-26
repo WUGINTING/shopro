@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
     <q-btn flat no-caps icon="arrow_back" label="返回商品列表" class="q-mb-sm" @click="router.push('/products')" />
 
@@ -54,6 +54,49 @@
             <h1 class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</h1>
             <p class="text-grey-7 q-mb-md detail-desc">{{ product.description || '尚未提供商品詳細描述。' }}</p>
             <div class="text-h4 text-primary text-weight-bold">NT$ {{ formatPrice(price) }}</div>
+
+            <div v-if="specifications.length > 0" class="q-mt-md">
+              <p class="text-subtitle2 text-weight-medium q-mb-sm">選擇規格</p>
+              <div class="spec-grid">
+                <div
+                  v-for="spec in specifications"
+                  :key="spec.id"
+                  :class="['spec-card', {
+                    'spec-card--selected': selectedSpecId === spec.id,
+                    'spec-card--disabled': spec.stock === 0
+                  }]"
+                  @click="selectSpec(spec)"
+                >
+                  <q-img
+                    v-if="spec.image"
+                    :src="spec.image"
+                    :alt="spec.specName"
+                    :ratio="1"
+                    fit="cover"
+                    class="spec-card__image"
+                  >
+                    <template v-slot:error>
+                      <div class="absolute-full flex flex-center bg-grey-2">
+                        <q-icon name="image" size="24px" color="grey-4" />
+                      </div>
+                    </template>
+                  </q-img>
+                  <div class="spec-card__body">
+                    <div class="spec-card__name">{{ spec.specName }}</div>
+                    <div class="spec-card__price">NT$ {{ formatPrice(Number(spec.price ?? 0)) }}</div>
+                    <div v-if="(spec.stock ?? 0) > 0" class="spec-card__stock">庫存: {{ spec.stock }}</div>
+                    <div v-else class="spec-card__stock spec-card__stock--out">售完</div>
+                  </div>
+                  <q-icon v-if="selectedSpecId === spec.id" name="check_circle" color="primary" size="20px" class="spec-card__check" />
+                </div>
+              </div>
+              <div v-if="selectedSpec" class="text-caption text-grey-7 q-mt-sm">
+                已選擇：<strong>{{ selectedSpec.specName }}</strong>（庫存 {{ selectedSpec.stock }} 件）
+              </div>
+              <div v-else class="text-caption text-warning q-mt-sm">
+                <q-icon name="warning" size="14px" /> 請選擇商品規格
+              </div>
+            </div>
 
             <div class="row q-gutter-sm q-mt-md q-mb-md">
               <q-btn
@@ -137,11 +180,39 @@ const favoriteOn = ref(false)
 const compareOn = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const selectedSpecId = ref<number | null>(null)
 
 const productId = computed(() => Number(route.params.id))
-const price = computed(() => Number(product.value?.price ?? product.value?.salePrice ?? 0))
+const baseProductPrice = computed(() => Number(product.value?.price ?? product.value?.salePrice ?? 0))
+const specifications = computed(() => (product.value?.specifications ?? []).filter((spec) => spec.enabled !== false))
+const selectedSpec = computed(() => {
+  const available = specifications.value
+  if (!available.length) return null
+  if (selectedSpecId.value) {
+    const found = available.find(spec => spec.id === selectedSpecId.value)
+    if (found) return found
+  }
+  return null
+})
+const price = computed(() => Number(selectedSpec.value?.price ?? baseProductPrice.value))
+
+const selectSpec = (spec: any) => {
+  if (spec.stock === 0) {
+    $q.notify({ type: 'warning', message: '此規格已售完', position: 'top', timeout: 1500 })
+    return
+  }
+  // 再次點擊可取消選擇
+  if (selectedSpecId.value === spec.id) {
+    selectedSpecId.value = null
+  } else {
+    selectedSpecId.value = spec.id
+  }
+  quantity.value = 1
+}
 
 const imageUrl = computed(() => {
+  const specImage = selectedSpec.value?.image
+  if (specImage) return specImage
   const images = product.value?.images
   if (!images || !Array.isArray(images) || images.length === 0) return null
   const first = images[0]
@@ -163,12 +234,34 @@ const formatPrice = (value: number) => value.toLocaleString('zh-TW', { maximumFr
 
 const handleAddToCart = () => {
   if (!product.value?.id) return
+
+  // 有規格但未選擇時提示
+  if (specifications.value.length > 0 && !selectedSpecId.value) {
+    $q.notify({ type: 'warning', message: '請先選擇商品規格' })
+    return
+  }
+
+  // 檢查庫存
+  if (selectedSpec.value && selectedSpec.value.stock !== undefined && selectedSpec.value.stock < quantity.value) {
+    $q.notify({ type: 'warning', message: '庫存不足' })
+    return
+  }
+
   normalizeQty()
 
-  addToCart({ productId: product.value.id, name: product.value.name, price: price.value, quantity: quantity.value })
+  addToCart({
+    productId: product.value.id,
+    name: product.value.name,
+    price: price.value,
+    quantity: quantity.value,
+    specificationId: selectedSpec.value?.id,
+    specName: selectedSpec.value?.specName || selectedSpec.value?.sku
+  })
 
   trackEvent('add_to_cart', {
     product_id: product.value.id,
+    specification_id: selectedSpec.value?.id,
+    spec_name: selectedSpec.value?.specName || selectedSpec.value?.sku,
     product_name: product.value.name,
     quantity: quantity.value,
     price: price.value
@@ -230,6 +323,21 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => specifications.value,
+  (specs) => {
+    if (!specs.length) {
+      selectedSpecId.value = null
+      return
+    }
+    // 如果當前選擇的規格不在可用列表中，重置
+    if (selectedSpecId.value && !specs.some(spec => spec.id === selectedSpecId.value)) {
+      selectedSpecId.value = null
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -245,6 +353,85 @@ watch(
 .detail-desc { line-height: 1.7; }
 .buy-box { border-radius: 14px; background: #f8fafc; }
 .service-points { margin: 0; padding-left: 18px; color: #475569; display: grid; gap: 4px; }
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.spec-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  background: #fff;
+}
+
+.spec-card:hover:not(.spec-card--disabled) {
+  border-color: #1d4ed8;
+  box-shadow: 0 2px 12px rgba(29, 78, 216, 0.15);
+}
+
+.spec-card--selected {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.spec-card--selected .spec-card__name {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.spec-card--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.spec-card__image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.spec-card__body {
+  padding: 10px 12px;
+}
+
+.spec-card__name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.spec-card__price {
+  font-size: 0.85rem;
+  color: #dc2626;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.spec-card__stock {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.spec-card__stock--out {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.spec-card__check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #fff;
+  border-radius: 50%;
+}
 
 @media (max-width: 900px) {
   .detail-media { height: 260px; }

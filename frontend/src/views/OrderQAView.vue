@@ -260,10 +260,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import { orderQAApi, orderApi, type OrderQA, type Order } from '@/api'
 import { startOrderQATour, isOrderQATourCompleted } from '@/utils/orderQATour'
 
 const $q = useQuasar()
+const route = useRoute()
 
 const qas = ref<OrderQA[]>([])
 const loading = ref(false)
@@ -354,6 +356,12 @@ watch(orderOptions, (newVal) => {
   filteredOrderOptions.value = newVal
 }, { immediate: true })
 
+watch(() => route.query.orderId, (value) => {
+  if (value) {
+    void applyRouteOrderFilter()
+  }
+})
+
 const filterOrders = (val: string, update: (callback: () => void) => void) => {
   update(() => {
     if (val === '') {
@@ -393,6 +401,16 @@ const searchByOrderId = async () => {
   } finally {
     loading.value = false
   }
+}
+
+
+const applyRouteOrderFilter = async () => {
+  const orderIdParam = route.query.orderId
+  if (!orderIdParam) return
+  const numericId = Number(orderIdParam)
+  if (!Number.isFinite(numericId) || numericId <= 0) return
+  searchOrderId.value = String(numericId)
+  await searchByOrderId()
 }
 
 const clearFilters = () => {
@@ -516,6 +534,7 @@ const handleStartTour = () => {
 onMounted(() => {
   loadOrders()
   loadAllQAs()
+  void applyRouteOrderFilter()
   
   // 如果用戶是第一次訪問訂單問答管理頁面，自動啟動導覽
   if (!isOrderQATourCompleted()) {

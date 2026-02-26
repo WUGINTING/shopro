@@ -390,8 +390,14 @@
 
           <template v-slot:body-cell-orderNumber="props">
             <q-td :props="props">
-              <div class="column q-gutter-xs">
-                <span class="text-weight-bold">{{ props.row?.orderNumber || '-' }}</span>
+              <div
+                class="column q-gutter-xs order-number-link"
+                role="button"
+                tabindex="0"
+                @click="handleViewDetail(props.row)"
+                @keyup.enter="handleViewDetail(props.row)"
+              >
+                <span class="text-weight-bold text-primary">{{ props.row?.orderNumber || '-' }}</span>
                 <span class="text-caption text-grey-6">ID #{{ props.row?.id ?? '-' }}</span>
               </div>
             </q-td>
@@ -400,6 +406,18 @@
           <template v-slot:body-cell-totalAmount="props">
             <q-td :props="props">
               <span class="text-weight-bold text-primary">{{ formatCurrency(props.row.totalAmount) }}</span>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-qa="props">
+            <q-td :props="props">
+              <div class="column items-center">
+                <q-badge
+                  :color="getOrderQAStats(props.row?.id)?.unanswered ? 'warning' : 'positive'"
+                  :label="getOrderQALabel(props.row?.id)"
+                />
+                <div class="text-caption text-grey-6">回答/總數</div>
+              </div>
             </q-td>
           </template>
 
@@ -487,6 +505,9 @@
               </q-btn>
               <q-btn flat dense round icon="visibility" color="primary" size="sm" class="order-row-icon-btn" @click="handleViewDetail(props.row)">
                 <q-tooltip>查看詳情</q-tooltip>
+              </q-btn>
+              <q-btn flat dense round icon="forum" color="orange" size="sm" class="order-row-icon-btn" @click="openOrderQA(props.row)">
+                <q-tooltip>訂單問答</q-tooltip>
               </q-btn>
               <q-btn flat dense round icon="delete" color="negative" size="sm" class="order-row-icon-btn" @click="handleDelete(props.row)">
                 <q-tooltip>刪除訂單</q-tooltip>
@@ -1307,20 +1328,17 @@
                               調試: {{ JSON.stringify(item) }}
                             </div> -->
 
-                            <!-- 規格信息 -->
-                            <div v-if="item.productSpec || item.specificationId" class="q-mb-xs">
-                              <q-chip v-if="item.productSpec" size="sm" color="primary" text-color="white">
-                                規格：{{ item.productSpec }}
-                              </q-chip>
-                              <q-chip v-else-if="item.specificationId" size="sm" color="info" text-color="white">
-                                規格ID：{{ item.specificationId }}
-                              </q-chip>
+                            <!-- 規格/產品信息 -->
+                            <div class="q-mb-xs">
+                              <span class="text-caption text-grey-6">買什麼：</span>
+                              <span class="text-weight-medium">{{ item.productName || `商品 #${item.productId}` }}</span>
                             </div>
-
-                            <!-- SKU信息 -->
-                            <div v-if="item.productSku" class="q-mb-xs">
-                              <span class="text-grey-7">SKU：</span>
-                              <span class="text-weight-medium">{{ item.productSku }}</span>
+                            <div class="q-mb-xs">
+                              <span class="text-caption text-grey-6">規格：</span>
+                              <span class="text-weight-medium">
+                                {{ item.productSpec || item.specificationName || (item.specificationId ? `ID:${item.specificationId}` : '無') }}
+                              </span>
+                              <span v-if="item.productSku" class="text-caption text-grey-5 q-ml-sm">(SKU {{ item.productSku }})</span>
                             </div>
 
                             <!-- 價格信息 -->
@@ -1433,16 +1451,18 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, type Order, type OrderItem, type PageResponse, type OrderQueryParams } from '@/api'
+import { orderApi, orderQAApi, type Order, type OrderItem, type OrderQA, type PageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
 import { productApi, productSpecificationApi, type Product, type ProductSpecification } from '@/api/product'
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
 import { createPayment, type PaymentRequest } from '@/api/payment'
 import { shipmentApi, type OrderShipment } from '@/api/shipment'
 import { startOrderTour, isOrderTourCompleted } from '@/utils/orderTour'
+import { useRouter } from 'vue-router'
 
 const $q = useQuasar()
 const authStore = useAuthStore()
+const router = useRouter()
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
@@ -1564,6 +1584,56 @@ const orderMetrics = computed(() => {
   }
 })
 
+type OrderQAStats = {
+  total: number
+  answered: number
+  unanswered: number
+}
+
+const qaStats = ref<Record<number, OrderQAStats>>({})
+
+const loadOrderQAStats = async () => {
+  try {
+    const response = await orderQAApi.getAllQA()
+    const stats: Record<number, OrderQAStats> = {}
+    const qaList = response.data ?? []
+    qaList.forEach((qa: OrderQA) => {
+      const orderId = qa.orderId
+      if (!orderId) return
+      const entry = stats[orderId] || { total: 0, answered: 0, unanswered: 0 }
+      entry.total += 1
+      if (qa.answer) {
+        entry.answered += 1
+      } else {
+        entry.unanswered += 1
+      }
+      stats[orderId] = entry
+    })
+    qaStats.value = stats
+  } catch (error) {
+    console.error('Failed to load order QA stats:', error)
+  }
+}
+
+const getOrderQAStats = (orderId?: number) => {
+  if (!orderId) return undefined
+  return qaStats.value[orderId]
+}
+
+const getOrderQALabel = (orderId?: number) => {
+  const stats = getOrderQAStats(orderId)
+  if (!stats) return '0/0'
+  return `${stats.answered}/${stats.total}`
+}
+
+const openOrderQA = (order: Order) => {
+  if (!order.id) return
+  router.push({
+    name: 'orderQA',
+    query: { orderId: String(order.id) }
+  })
+}
+
 const paymentGatewayOptions = [
   { label: '綠界 ECPay', value: 'ECPAY' }
 ]
@@ -1571,7 +1641,9 @@ const paymentGatewayOptions = [
 const pagination = ref({
   page: 1,
   rowsPerPage: 20,
-  rowsNumber: 0
+  rowsNumber: 0,
+  sortBy: 'createdAt',
+  descending: true
 })
 
 // 訂單表單
@@ -1718,8 +1790,9 @@ const columns = [
   { name: 'orderNumber', label: '訂單號', align: 'left' as const, field: 'orderNumber' },
   { name: 'customerName', label: '客戶', align: 'left' as const, field: 'customerName' },
   { name: 'totalAmount', label: '總金額', align: 'left' as const, field: 'totalAmount', sortable: true },
+  { name: 'qa', label: '訂單問答', align: 'center' as const, field: 'qa' },
   { name: 'status', label: '狀態', align: 'center' as const, field: 'status' },
-  { name: 'createdAt', label: '創建時間', align: 'left' as const, field: 'createdAt' },
+  { name: 'createdAt', label: '創建時間', align: 'left' as const, field: 'createdAt', sortable: true },
   { name: 'actions', label: '操作', align: 'center' as const, field: 'actions' }
 ]
 
@@ -1852,6 +1925,12 @@ const loadOrders = async (useFilter = false) => {
           order.customerName = customer.name
         }
       }
+    })
+
+    orderList.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return bTime - aTime
     })
 
     orders.value = orderList
@@ -2842,7 +2921,8 @@ onMounted(() => {
   loadOrders()
   loadCustomers()
   loadProducts()
-  
+  loadOrderQAStats()
+
   // 如果用戶是第一次訪問訂單管理頁面，自動啟動導覽
   if (!isOrderTourCompleted()) {
     setTimeout(() => {
@@ -2953,6 +3033,11 @@ onMounted(() => {
 
 .order-actions-cell {
   min-width: 250px;
+}
+
+.order-number-link {
+  cursor: pointer;
+  user-select: none;
 }
 
 .order-row-btn,

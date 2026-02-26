@@ -9,11 +9,13 @@ import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.CustomerBlacklistRepository;
 import com.info.ecommerce.modules.order.repository.OrderItemRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.order.entity.OrderItem;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
 import com.info.ecommerce.modules.crm.service.MemberService;
+import com.info.ecommerce.modules.product.service.InventoryManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -26,6 +28,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.info.ecommerce.modules.system.enums.AdminNotificationType;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 
 /**
  * 訂單服務 - 基礎 CRUD 操作
@@ -41,6 +46,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
     private final MemberService memberService;
+    private final AdminNotificationService adminNotificationService;
 
     /**
      * 生成訂單編號

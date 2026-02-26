@@ -3,6 +3,8 @@ export interface CartItem {
   name: string
   price: number
   quantity: number
+  specificationId?: number
+  specName?: string
 }
 
 const CART_KEY = 'store_cart'
@@ -24,12 +26,20 @@ export const saveCartItems = (items: CartItem[]): void => {
   localStorage.setItem(CART_KEY, JSON.stringify(items))
 }
 
+const findItemIndex = (items: CartItem[], target: CartItem) => {
+  return items.findIndex((item) => {
+    const sameProduct = item.productId === target.productId
+    const sameSpec = (item.specificationId ?? null) === (target.specificationId ?? null)
+    return sameProduct && sameSpec
+  })
+}
+
 export const addToCart = (item: CartItem): void => {
   const items = getCartItems()
-  const found = items.find((x) => x.productId === item.productId)
+  const index = findItemIndex(items, item)
 
-  if (found) {
-    found.quantity += item.quantity
+  if (index > -1) {
+    items[index].quantity += item.quantity
   } else {
     items.push(item)
   }
@@ -37,18 +47,29 @@ export const addToCart = (item: CartItem): void => {
   saveCartItems(items)
 }
 
-export const updateCartQuantity = (productId: number, quantity: number): void => {
+export const updateCartQuantity = (productId: number, quantity: number, specificationId?: number): void => {
   const items = getCartItems()
   const next = items
-    .map((item) => (item.productId === productId ? { ...item, quantity } : item))
+    .map((item) => {
+      const sameProduct = item.productId === productId
+      const sameSpec = (item.specificationId ?? null) === (specificationId ?? null)
+      if (sameProduct && sameSpec) {
+        return { ...item, quantity }
+      }
+      return item
+    })
     .filter((item) => item.quantity > 0)
 
   saveCartItems(next)
 }
 
-export const removeFromCart = (productId: number): void => {
+export const removeFromCart = (productId: number, specificationId?: number): void => {
   const items = getCartItems()
-  saveCartItems(items.filter((x) => x.productId !== productId))
+  saveCartItems(items.filter((item) => {
+    const sameProduct = item.productId === productId
+    const sameSpec = (item.specificationId ?? null) === (specificationId ?? null)
+    return !(sameProduct && sameSpec)
+  }))
 }
 
 export const clearCart = (): void => {

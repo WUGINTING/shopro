@@ -6,6 +6,7 @@ import com.info.ecommerce.modules.album.repository.AlbumImageRepository;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.dto.ProductDescriptionBlockDTO;
 import com.info.ecommerce.modules.product.dto.ProductImageDTO;
+import com.info.ecommerce.modules.product.dto.ProductSpecificationDTO;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
 import com.info.ecommerce.modules.product.entity.InventoryMovementLog;
@@ -65,7 +66,7 @@ public class ProductService {
     public ProductDTO createProduct(ProductDTO dto) {
         // 檢查分類是否存在
         validateCategory(dto.getCategoryId());
-        
+
         // 檢查 SKU 是否已存在
         String normalizedSku = validateAndNormalizeSku(dto.getSku());
         if (normalizedSku != null) {
@@ -74,7 +75,7 @@ public class ProductService {
             }
             dto.setSku(normalizedSku);
         }
-        
+
         Product product = new Product();
         BeanUtils.copyProperties(dto, product, "id");
         product = productRepository.save(product);
@@ -89,10 +90,10 @@ public class ProductService {
     public ProductDTO updateProduct(Long id, ProductDTO dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
-        
+
         // 檢查分類是否存在
         validateCategory(dto.getCategoryId());
-        
+
         // 檢查 SKU 是否與其他商品重複
         String normalizedSku = validateAndNormalizeSku(dto.getSku());
         if (normalizedSku != null) {
@@ -102,10 +103,10 @@ public class ProductService {
             }
             dto.setSku(normalizedSku);
         }
-        
+
         // Copy properties excluding images field since we'll handle it separately
         BeanUtils.copyProperties(dto, product, "id", "createdAt", "updatedAt", "images");
-        
+
         // Manually handle images field conversion from List<ProductImageDTO> to List<String>
         if (dto.getImages() != null) {
             List<String> imageUrls = new ArrayList<>();
@@ -116,7 +117,7 @@ public class ProductService {
             }
             product.setImageUrls(imageUrls);
         }
-        
+
         product = productRepository.save(product);
         syncProductLevelInventory(product.getId(), dto.getStock());
         return toDTO(product);
@@ -264,7 +265,7 @@ public class ProductService {
         } else {
             System.out.println("[toDTO] 沒有圖片");
         }
-        
+
         // 添加描述區塊
         if (entity.getId() != null) {
             try {
@@ -273,6 +274,27 @@ public class ProductService {
             } catch (Exception e) {
                 // 如果獲取描述區塊失敗，設為空列表
                 dto.setDescriptionBlocks(new ArrayList<>());
+            }
+        }
+
+        // 添加商品規格
+        if (entity.getId() != null) {
+            try {
+                List<ProductSpecification> specs = productSpecificationRepository.findByProductId(entity.getId());
+                if (specs != null && !specs.isEmpty()) {
+                    List<ProductSpecificationDTO> specDTOs = specs.stream()
+                            .map(spec -> {
+                                ProductSpecificationDTO specDTO = new ProductSpecificationDTO();
+                                BeanUtils.copyProperties(spec, specDTO);
+                                return specDTO;
+                            })
+                            .collect(java.util.stream.Collectors.toList());
+                    dto.setSpecifications(specDTOs);
+                } else {
+                    dto.setSpecifications(new ArrayList<>());
+                }
+            } catch (Exception e) {
+                dto.setSpecifications(new ArrayList<>());
             }
         }
 

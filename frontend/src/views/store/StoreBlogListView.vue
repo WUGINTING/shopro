@@ -7,7 +7,7 @@
           <q-icon name="article" size="16px" aria-hidden="true" />
           品牌日誌
         </div>
-        <h1 class="blog-title">最新故事與選品觀點</h1>
+        <h1 class="blog-title" style="color: white">最新故事與選品觀點</h1>
         <p class="blog-subtitle">
           你會在這裡看到新品靈感、保養指南與活動公告。每週更新，讓選購更有方向。
         </p>

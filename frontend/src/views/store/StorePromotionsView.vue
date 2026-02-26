@@ -7,7 +7,7 @@
           <q-icon name="local_offer" size="16px" aria-hidden="true" />
           限時促銷與折扣
         </div>
-        <h1 class="promo-title">把握當期優惠，結帳更划算</h1>
+        <h1 class="promo-title" style="color: white">把握當期優惠，結帳更划算</h1>
         <p class="promo-subtitle">
           活動促銷與折扣碼都在這裡整理好。先領券、再下單，省得更有感。
         </p>

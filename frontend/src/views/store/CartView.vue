@@ -49,8 +49,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in items" :key="item.productId">
-              <td class="text-weight-medium">{{ item.name }}</td>
+            <tr v-for="item in items" :key="`${item.productId}-${item.specificationId ?? 'base'}`">
+              <td class="text-weight-medium">
+                {{ item.name }}
+                <div v-if="item.specName" class="text-caption text-grey-6">規格：{{ item.specName }}</div>
+              </td>
               <td class="text-right">NT$ {{ formatPrice(item.price) }}</td>
               <td class="text-center">
                 <q-input
@@ -61,12 +64,12 @@
                   outlined
                   style="width: 92px"
                   :aria-label="`調整 ${item.name} 的購買數量`"
-                  @update:model-value="(v) => updateQty(item.productId, Number(v))"
+                  @update:model-value="(v) => updateQty(item, Number(v))"
                 />
               </td>
               <td class="text-right text-weight-medium">NT$ {{ formatPrice(item.price * item.quantity) }}</td>
               <td class="text-center">
-                <q-btn flat color="negative" no-caps label="移除" @click="remove(item.productId)" />
+                <q-btn flat color="negative" no-caps label="移除" @click="remove(item)" />
               </td>
             </tr>
           </tbody>
@@ -137,13 +140,13 @@ const reload = () => {
   items.value = getCartItems()
 }
 
-const updateQty = (productId: number, qty: number) => {
-  updateCartQuantity(productId, Math.max(1, qty))
+const updateQty = (item: CartItem, qty: number) => {
+  updateCartQuantity(item.productId, Math.max(1, qty), item.specificationId)
   reload()
 }
 
-const remove = (productId: number) => {
-  removeFromCart(productId)
+const remove = (item: CartItem) => {
+  removeFromCart(item.productId, item.specificationId)
   reload()
 }
 
@@ -167,11 +170,13 @@ const goCheckout = () => {
 
   trackEvent('begin_checkout', {
     cart_total: total.value,
-    items: items.value.map((x) => ({
-      product_id: x.productId,
-      quantity: x.quantity,
-      price: x.price
-    }))
+      items: items.value.map((x) => ({
+        product_id: x.productId,
+        specification_id: x.specificationId,
+        spec_name: x.specName,
+        quantity: x.quantity,
+        price: x.price
+      }))
   })
   router.push('/checkout')
 }

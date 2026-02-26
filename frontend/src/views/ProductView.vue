@@ -477,7 +477,7 @@
                           icon="photo_library"
                           label="開啟相簿選圖"
                           class="full-width"
-                          @click="showAlbumSelector = true"
+                          @click="openAlbumSelector('product')"
                           :disable="!form.id"
                         />
                         <div class="text-caption text-grey-7 q-mt-xs" v-if="!form.id">
@@ -1294,6 +1294,17 @@ watch(debouncedSearchQuery, () => {
 })
 
 // 商品規格相關狀態
+watch(specImageFile, (file) => {
+  if (specImagePreviewObjectUrl.value) {
+    URL.revokeObjectURL(specImagePreviewObjectUrl.value)
+    specImagePreviewObjectUrl.value = ''
+  }
+
+  if (file) {
+    specImagePreviewObjectUrl.value = URL.createObjectURL(file)
+  }
+})
+
 const specifications = ref<ProductSpecification[]>([])
 const specLoading = ref(false)
 const showSpecDialog = ref(false)
@@ -1307,6 +1318,13 @@ const specForm = ref<ProductSpecification>({
   image: '',
   weight: undefined,
   enabled: true
+})
+
+watch(showSpecDialog, (visible) => {
+  if (!visible) {
+    specImageFile.value = null
+    selectedSpecAlbumImage.value = null
+  }
 })
 
 const specColumns = [
@@ -1419,6 +1437,7 @@ const tempSelectedImages = ref<AlbumImage[]>([])
 const selectedAlbumImages = ref<AlbumImage[]>([])
 const selectedSpecAlbumImage = ref<AlbumImage | null>(null)
 const defaultAlbumId = ref<number | null>(null)
+const specImagePreviewObjectUrl = ref('')
 
 // 庫存管理相關狀態
 const inventoryAlerts = ref<InventoryAlert[]>([])
@@ -1436,13 +1455,7 @@ const selectedImageCount = computed(() => {
   const uploadCount = selectedProductImageFileName.value ? 1 : 0
   return selectedAlbumImages.value.length + uploadCount
 })
-const specImagePreviewUrl = computed(() => {
-  if (specImageFile.value) {
-    return URL.createObjectURL(specImageFile.value)
-  }
-
-  return specForm.value.image || ''
-})
+const specImagePreviewUrl = computed(() => specImagePreviewObjectUrl.value || specForm.value.image || '')
 
 const form = ref<Product>({
   name: '',
@@ -1915,6 +1928,46 @@ const saveSpecification = async () => {
 
     specForm.value.productId = form.value.id
 
+    if (specImageFile.value) {
+      if (!defaultAlbumId.value) {
+        if (albums.value.length === 0) {
+          await loadAlbums()
+        } else {
+          await ensureDefaultAlbum()
+        }
+      }
+
+      if (!defaultAlbumId.value) {
+        $q.notify({
+          type: 'negative',
+          message: '無法建立預設相簿，請稍後再試',
+          position: 'top'
+        })
+        return
+      }
+
+      try {
+        const uploadResponse = await albumApi.uploadImage(
+          defaultAlbumId.value,
+          specImageFile.value,
+          `規格圖片 - ${specForm.value.specName || form.value.name || '未命名'}`
+        )
+
+        if (uploadResponse.success && uploadResponse.data) {
+          specForm.value.image = uploadResponse.data.imageUrl || ''
+          selectedSpecAlbumImage.value = uploadResponse.data
+        }
+      } catch (uploadError) {
+        console.error('規格圖片上傳失敗:', uploadError)
+        $q.notify({
+          type: 'negative',
+          message: '規格圖片上傳失敗',
+          position: 'top'
+        })
+        return
+      }
+    }
+
     if (specForm.value.id) {
       // 更新規格
       await productSpecificationApi.updateSpecification(specForm.value.id, specForm.value)
@@ -1934,6 +1987,8 @@ const saveSpecification = async () => {
     }
 
     showSpecDialog.value = false
+    specImageFile.value = null
+    selectedSpecAlbumImage.value = null
     specForm.value = {
       productId: form.value.id,
       specName: '',
@@ -1962,6 +2017,8 @@ const saveSpecification = async () => {
 
 // 編輯規格
 const editSpecification = (spec: ProductSpecification) => {
+  specImageFile.value = null
+  selectedSpecAlbumImage.value = null
   specForm.value = { ...spec }
   showSpecDialog.value = true
 }
@@ -2190,11 +2247,29 @@ const loadAlbumImages = async () => {
   }
 }
 
-const isImageSelected = (imageId?: number) => {
+const resetAlbumSelectorState = () => {
+  tempSelectedImages.value = []
+  showAlbumSelector.value = false
+  selectedAlbum.value = null
+  albumImages.value = []
+}
+
+const openAlbumSelector = (mode: 'product' | 'spec') => {
+  albumSelectorMode.value = mode
+  tempSelectedImages.value = []
+  showAlbumSelector.value = true
+}
+
+const isAlbumDialogImageSelected = (imageId?: number) => {
   return tempSelectedImages.value.some(img => img.id === imageId)
 }
 
-const toggleImageSelection = (image: AlbumImage) => {
+const toggleAlbumDialogImageSelection = (image: AlbumImage) => {
+  if (albumSelectorMode.value === 'spec') {
+    tempSelectedImages.value = [image]
+    return
+  }
+
   const index = tempSelectedImages.value.findIndex(img => img.id === image.id)
   if (index > -1) {
     tempSelectedImages.value.splice(index, 1)
@@ -2224,10 +2299,7 @@ const addSelectedImagesToProduct = async () => {
     })
 
     // Reset and close
-    tempSelectedImages.value = []
-    showAlbumSelector.value = false
-    selectedAlbum.value = null
-    albumImages.value = []
+    resetAlbumSelectorState()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -2235,6 +2307,33 @@ const addSelectedImagesToProduct = async () => {
       position: 'top'
     })
   }
+}
+
+const applySelectedImageToSpec = () => {
+  const image = tempSelectedImages.value[0]
+  if (!image) return
+
+  selectedSpecAlbumImage.value = image
+  specForm.value.image = image.imageUrl || ''
+  specImageFile.value = null
+  resetAlbumSelectorState()
+}
+
+const confirmAlbumSelection = async () => {
+  if (tempSelectedImages.value.length === 0) return
+
+  if (albumSelectorMode.value === 'spec') {
+    applySelectedImageToSpec()
+    return
+  }
+
+  await addSelectedImagesToProduct()
+}
+
+const clearSpecImageSelection = () => {
+  specImageFile.value = null
+  selectedSpecAlbumImage.value = null
+  specForm.value.image = ''
 }
 
 const removeSelectedImage = (imageId?: number) => {

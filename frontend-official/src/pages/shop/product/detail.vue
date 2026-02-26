@@ -34,12 +34,13 @@
           <!-- 縮圖 -->
           <div class="thumbnail-list">
             <div
-              v-for="(img, index) in product.images"
-              :key="index"
-              :class="['thumbnail', { active: currentImage === img }]"
-              @click="currentImage = img"
+              v-for="(img, index) in allThumbnails"
+              :key="'thumb-' + index"
+              :class="['thumbnail', { active: currentImage === img.url }]"
+              @click="currentImage = img.url"
             >
-              <q-img :src="img" ratio="1" />
+              <q-img :src="img.url" ratio="1" />
+              <div v-if="img.specName" class="thumbnail-label">{{ img.specName }}</div>
             </div>
           </div>
         </div>
@@ -102,19 +103,36 @@
               <div
                 v-for="spec in specifications"
                 :key="spec.id"
-                :class="['spec-option', { 
+                :class="['spec-option', {
                   'selected': selectedSpec?.id === spec.id,
                   'out-of-stock': spec.stock === 0
                 }]"
                 @click="selectSpecification(spec)"
               >
-                <div class="spec-name">{{ spec.specName }}</div>
-                <div class="spec-details">
-                  <span class="spec-price">NT$ {{ spec.price }}</span>
-                  <span v-if="spec.stock > 0" class="spec-stock">
-                    庫存: {{ spec.stock }}
-                  </span>
-                  <span v-else class="spec-stock out">售完</span>
+                <!-- 規格圖片 -->
+                <div v-if="spec.image" class="spec-image">
+                  <q-img
+                    :src="spec.image"
+                    :alt="spec.specName"
+                    ratio="1"
+                    fit="cover"
+                  >
+                    <template v-slot:error>
+                      <div class="absolute-full flex flex-center bg-grey-2">
+                        <q-icon name="image" size="24px" color="grey-5" />
+                      </div>
+                    </template>
+                  </q-img>
+                </div>
+                <div class="spec-info">
+                  <div class="spec-name">{{ spec.specName }}</div>
+                  <div class="spec-details">
+                    <span class="spec-price">NT$ {{ spec.price }}</span>
+                    <span v-if="spec.stock > 0" class="spec-stock">
+                      庫存: {{ spec.stock }}
+                    </span>
+                    <span v-else class="spec-stock out">售完</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -134,16 +152,16 @@
               :disable="quantity <= 1"
             />
             <span class="quantity-value">{{ quantity }}</span>
-            <q-btn 
-              flat 
-              dense 
-              round 
-              icon="add" 
+            <q-btn
+              flat
+              dense
+              round
+              icon="add"
               @click="increaseQuantity"
               :disable="selectedSpec && quantity >= selectedSpec.stock"
             />
           </div>
-          
+
           <!-- 庫存提示 -->
           <div v-if="selectedSpec" class="stock-hint">
             <q-icon name="info" size="16px" />
@@ -153,6 +171,18 @@
             <span v-else class="out-of-stock-text">
               此規格已售完
             </span>
+          </div>
+
+          <!-- 已選規格提示 -->
+          <div v-if="specifications.length > 0" class="selected-spec-hint q-mb-md">
+            <template v-if="selectedSpec">
+              <q-icon name="check_circle" color="positive" size="18px" />
+              <span>已選：<strong>{{ selectedSpec.specName }}</strong></span>
+            </template>
+            <template v-else>
+              <q-icon name="warning" color="warning" size="18px" />
+              <span class="text-warning">請選擇商品規格</span>
+            </template>
           </div>
 
           <!-- 操作按鈕 -->
@@ -184,39 +214,39 @@
       <!-- 詳細說明 -->
       <div v-if="product.descriptionBlocks && product.descriptionBlocks.length" class="product-detail-tabs">
         <q-tabs v-model="tab" class="text-primary">
-          <q-tab 
-            v-for="block in product.descriptionBlocks" 
+          <q-tab
+            v-for="block in product.descriptionBlocks"
             :key="block.id"
-            :name="`block-${block.id}`" 
-            :label="block.title" 
+            :name="`block-${block.id}`"
+            :label="block.title"
           />
         </q-tabs>
 
         <q-separator />
 
         <q-tab-panels v-model="tab" animated>
-          <q-tab-panel 
-            v-for="block in product.descriptionBlocks" 
+          <q-tab-panel
+            v-for="block in product.descriptionBlocks"
             :key="block.id"
             :name="`block-${block.id}`"
           >
             <div class="detail-content">
               <!-- 區塊標題 -->
               <h3 v-if="block.title">{{ block.title }}</h3>
-              
+
               <!-- 區塊圖片 -->
               <div v-if="block.imageUrl" class="block-image">
-                <q-img 
-                  :src="block.imageUrl" 
+                <q-img
+                  :src="block.imageUrl"
                   :alt="block.title"
                   fit="contain"
                   class="q-mb-md"
                 />
               </div>
-              
+
               <!-- 區塊內容 -->
               <div v-if="block.content" v-html="formatBlockContent(block.content)"></div>
-              
+
               <!-- 如果沒有內容和圖片 -->
               <p v-if="!block.content && !block.imageUrl" class="text-grey-6">
                 此區塊暫無內容
@@ -288,7 +318,7 @@ const getCategoryName = category => {
   if (categoryMap[category]) {
     return categoryMap[category];
   }
-  
+
   // 嘗試從 cookie 中的分類列表查找（數字 ID）
   try {
     const categoriesData = cookies.get(ProductCategoriesKey);
@@ -302,7 +332,7 @@ const getCategoryName = category => {
   } catch (error) {
     console.warn('解析分類 cookie 失敗:', error);
   }
-  
+
   return '其他商品';
 };
 
@@ -317,23 +347,27 @@ const selectSpecification = (spec) => {
     });
     return;
   }
-  
+
+  // 允許取消選擇（再次點擊已選規格）
+  if (selectedSpec.value?.id === spec.id) {
+    selectedSpec.value = null;
+    // 恢復主圖
+    if (product.value?.images?.length > 0) {
+      currentImage.value = product.value.images[0];
+    }
+    quantity.value = 1;
+    return;
+  }
+
   selectedSpec.value = spec;
-  
+
   // 重置數量為1
   quantity.value = 1;
-  
+
   // 如果規格有圖片，更新主圖
   if (spec.image) {
     currentImage.value = spec.image;
   }
-  
-  $q.notify({
-    type: 'info',
-    message: `已選擇：${spec.specName}`,
-    position: 'top',
-    timeout: 1000,
-  });
 };
 
 // 計算當前顯示價格
@@ -342,6 +376,26 @@ const displayPrice = computed(() => {
     return selectedSpec.value.price;
   }
   return product.value?.price || 0;
+});
+
+// 合併產品圖片和規格圖片到縮圖列表
+const allThumbnails = computed(() => {
+  const thumbs = [];
+  // 商品主圖
+  if (product.value?.images) {
+    product.value.images.forEach(img => {
+      thumbs.push({ url: img, specName: null });
+    });
+  }
+  // 規格圖片（排除與商品主圖重複的）
+  const existingUrls = new Set(thumbs.map(t => t.url));
+  specifications.value.forEach(spec => {
+    if (spec.image && !existingUrls.has(spec.image)) {
+      thumbs.push({ url: spec.image, specName: spec.specName });
+      existingUrls.add(spec.image);
+    }
+  });
+  return thumbs;
 });
 
 // 計算庫存限制
@@ -382,7 +436,7 @@ const handleAddToCart = () => {
     });
     return;
   }
-  
+
   // 檢查庫存
   if (selectedSpec.value && selectedSpec.value.stock < quantity.value) {
     $q.notify({
@@ -393,7 +447,7 @@ const handleAddToCart = () => {
     });
     return;
   }
-  
+
   // 構建加入購物車的商品資料
   const cartItem = {
     id: product.value.id,
@@ -408,7 +462,7 @@ const handleAddToCart = () => {
     category: product.value.category,
     images: product.value.images,
   };
-  
+
   addToCart(cartItem, quantity.value);
   $q.notify({
     message: `已將 ${quantity.value} 件「${product.value.name}${selectedSpec.value ? ` (${selectedSpec.value.specName})` : ''}」加入購物車`,
@@ -420,13 +474,19 @@ const handleAddToCart = () => {
 };
 
 const handleBuyNow = () => {
+  // 檢查是否有規格但未選擇
+  if (specifications.value.length > 0 && !selectedSpec.value) {
+    $q.notify({
+      type: 'warning',
+      message: '請先選擇商品規格',
+      position: 'top',
+      timeout: 2000,
+    });
+    return;
+  }
+
   handleAddToCart();
-  $q.notify({
-    message: '正在前往結帳頁面...',
-    color: 'info',
-    position: 'top',
-    timeout: 1500,
-  });
+  router.push('/shop/cart');
 };
 
 // 轉換 API 資料格式
@@ -434,13 +494,13 @@ const mapProductData = (apiData) => {
   // 提取主圖片
   const primaryImage = apiData.images?.find(img => img.isPrimary);
   const allImages = apiData.images?.map(img => img.imageUrl) || [];
-  
+
   // 提取標籤
   const tags = apiData.tags || [];
-  
+
   // 計算是否有折扣
   const hasDiscount = apiData.salePrice && apiData.basePrice && apiData.salePrice < apiData.basePrice;
-  
+
   return {
     id: apiData.id,
     name: apiData.name,
@@ -464,13 +524,10 @@ const mapProductData = (apiData) => {
 // 載入規格資料
 const fetchSpecifications = async (productId) => {
   try {
-    const response = await getProductSpecifications(productId);    
+    const response = await getProductSpecifications(productId);
     if (response && response.data) {
-      specifications.value = response.data;
-      // 如果有規格，預設選擇第一個
-      if (specifications.value.length > 0) {
-        selectedSpec.value = specifications.value[0];
-      }
+      // 只顯示已啟用的規格
+      specifications.value = response.data.filter(spec => spec.enabled !== false);
       return true;
     }
   } catch (error) {
@@ -485,26 +542,26 @@ const fetchProduct = async () => {
   try {
     const productId = route.params.id;
     const response = await getProductDetail(productId);
-    
+
     console.log('商品詳情 API 回應:', response);
-    
+
     if (response && response.data) {
       product.value = mapProductData(response.data);
-      
+
       // 設定主圖片
       if (product.value.images && product.value.images.length > 0) {
         currentImage.value = product.value.images[0];
       }
-      
+
       // 設定第一個 tab 為預設值
       if (product.value.descriptionBlocks && product.value.descriptionBlocks.length > 0) {
         tab.value = `block-${product.value.descriptionBlocks[0].id}`;
       }
-      
+
       // 嘗試從 cookie 載入分類名稱
       if (product.value.category) {
         const categoryName = getCategoryName(product.value.category);
-        
+
         // 如果從 cookie 找不到（返回預設值），才調用 API
         if (categoryName === '其他商品') {
           try {
@@ -517,7 +574,7 @@ const fetchProduct = async () => {
           }
         }
       }
-      
+
       // 規格 API
       await fetchSpecifications(productId);
     } else {
@@ -596,8 +653,8 @@ onMounted(() => {
 
   .thumbnail-list {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
 
     .thumbnail {
       border: 2px solid transparent;
@@ -605,10 +662,26 @@ onMounted(() => {
       overflow: hidden;
       cursor: pointer;
       transition: all 0.3s;
+      position: relative;
 
       &:hover,
       &.active {
         border-color: $shop-primary;
+      }
+
+      .thumbnail-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 0.65rem;
+        text-align: center;
+        padding: 2px 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
   }
@@ -683,10 +756,11 @@ onMounted(() => {
       .spec-option {
         border: 2px solid $shop-gray-light;
         border-radius: 8px;
-        padding: 12px 15px;
+        padding: 0;
         cursor: pointer;
         transition: all 0.3s ease;
         background: white;
+        overflow: hidden;
 
         &:hover:not(.out-of-stock) {
           border-color: $shop-primary;
@@ -696,7 +770,7 @@ onMounted(() => {
         &.selected {
           border-color: $shop-primary;
           background: rgba($shop-primary, 0.05);
-          
+
           .spec-name {
             color: $shop-primary;
             font-weight: 600;
@@ -709,10 +783,26 @@ onMounted(() => {
           background: #f5f5f5;
         }
 
+        .spec-image {
+          width: 100%;
+          aspect-ratio: 1;
+          overflow: hidden;
+          border-bottom: 1px solid $shop-gray-light;
+
+          .q-img {
+            width: 100%;
+            height: 100%;
+          }
+        }
+
+        .spec-info {
+          padding: 10px 12px;
+        }
+
         .spec-name {
           font-size: 0.95rem;
           color: $shop-text;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           font-weight: 500;
         }
 
@@ -729,7 +819,7 @@ onMounted(() => {
 
           .spec-stock {
             color: $shop-text-secondary;
-            
+
             &.out {
               color: $shop-danger;
               font-weight: 500;
@@ -773,6 +863,21 @@ onMounted(() => {
       text-align: center;
       font-size: 1.2rem;
       font-weight: 500;
+    }
+  }
+
+  .selected-spec-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: #fafafa;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: $shop-text;
+
+    .text-warning {
+      color: #ff9800;
     }
   }
 
