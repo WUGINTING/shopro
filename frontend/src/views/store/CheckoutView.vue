@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
     <section class="q-mb-md">
       <q-card flat bordered class="flow-card">
@@ -92,14 +92,27 @@
                 訂單建立後若選擇 ECPay，系統會導向 ECPay 付款頁完成付款；請勿關閉或重整頁面直到導轉完成。
               </q-banner>
 
-              <q-btn
-                color="primary"
-                no-caps
-                label="送出訂單並前往付款"
-                type="submit"
-                :disable="items.length === 0 || submitting"
-                :loading="submitting"
-              />
+              <div class="row q-gutter-md q-mt-sm checkout-actions">
+                <q-btn
+                  outline
+                  no-caps
+                  color="grey-7"
+                  icon="arrow_back"
+                  label="上一步"
+                  class="back-btn"
+                  @click="router.push('/cart')"
+                />
+                <q-btn
+                  color="primary"
+                  no-caps
+                  icon-right="arrow_forward"
+                  label="送出訂單並前往付款"
+                  type="submit"
+                  class="submit-btn"
+                  :disable="items.length === 0 || submitting"
+                  :loading="submitting"
+                />
+              </div>
             </q-form>
           </q-card-section>
         </q-card>
@@ -111,9 +124,27 @@
             <div class="text-subtitle1 text-weight-bold q-mb-md">訂單摘要</div>
             <div v-if="items.length === 0" class="text-grey-7">購物車目前沒有商品，請先回到商品列表加入商品後再進行結帳。</div>
             <div v-else>
-              <div v-for="item in items" :key="item.productId" class="row justify-between q-mb-sm text-body2">
-                <span>{{ item.name }} x {{ item.quantity }}</span>
-                <span>NT$ {{ formatPrice(item.price * item.quantity) }}</span>
+              <div v-for="item in items" :key="`${item.productId}-${item.specificationId ?? 'base'}`" class="summary-item q-mb-sm">
+                <div class="summary-item__info">
+                  <span class="text-body2 text-weight-medium">{{ item.name }}</span>
+                  <span v-if="item.specName" class="text-caption text-grey-6"> ({{ item.specName }})</span>
+                  <span class="text-body2"> x {{ item.quantity }}</span>
+                </div>
+                <div class="summary-item__actions">
+                  <span class="text-body2 text-weight-medium">NT$ {{ formatPrice(item.price * item.quantity) }}</span>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="close"
+                    size="sm"
+                    color="grey-5"
+                    @click="removeItem(item)"
+                    class="q-ml-xs"
+                  >
+                    <q-tooltip>移除商品</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
             </div>
             <q-separator class="q-my-md" />
@@ -141,7 +172,7 @@ import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
 import { orderApi } from '@/api/order'
 import { createEcPayPayment } from '@/api/payment'
-import { clearCart, getCartItems, getCartTotal } from '@/utils/storeCart'
+import { clearCart, getCartItems, removeFromCart, type CartItem } from '@/utils/storeCart'
 import { getCheckoutDraft, saveCheckoutDraft } from '@/utils/storePreferences'
 import { trackEvent } from '@/utils/tracking'
 
@@ -150,9 +181,9 @@ const authStore = useAuthStore()
 const $q = useQuasar()
 
 const checkoutFormRef = ref<QForm>()
-const items = ref(getCartItems())
+const items = ref<CartItem[]>(getCartItems())
 const submitting = ref(false)
-const total = computed(() => getCartTotal())
+const total = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0))
 const defaultGateway = (import.meta.env.VITE_DEFAULT_PAYMENT_GATEWAY || 'ECPAY').toUpperCase()
 
 const paymentOptions = [
@@ -188,6 +219,18 @@ const applySavedDraft = () => {
   form.value.customerPhone = draft.customerPhone || form.value.customerPhone
   form.value.shippingAddress = draft.shippingAddress || form.value.shippingAddress
   $q.notify({ type: 'info', message: '已套用先前暫存的結帳資料。' })
+}
+
+const removeItem = (item: CartItem) => {
+  removeFromCart(item.productId, item.specificationId)
+  items.value = getCartItems()
+
+  if (items.value.length === 0) {
+    $q.notify({ type: 'warning', message: '購物車已清空，即將返回購物車頁面。' })
+    setTimeout(() => router.push('/cart'), 1500)
+  } else {
+    $q.notify({ type: 'info', message: `已移除「${item.name}${item.specName ? ` (${item.specName})` : ''}」` })
+  }
 }
 
 watch(
@@ -333,6 +376,12 @@ onMounted(() => {
 .flow-step__dot { width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(148,163,184,.15); }
 .trust-list { display:grid; gap:6px; color:#475569; font-size:.88rem; }
 .trust-item { display:flex; align-items:center; gap:8px; }
+.summary-item { display:flex; justify-content:space-between; align-items:center; }
+.summary-item__info { flex:1; min-width:0; }
+.summary-item__actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.checkout-actions { display:flex; justify-content:space-between; align-items:center; }
+.checkout-actions .back-btn { min-height:44px; border-radius:12px; }
+.checkout-actions .submit-btn { flex:1; min-height:44px; border-radius:12px; }
 .checkout-card :deep(.q-btn) { min-height: 44px; border-radius: 12px; }
 .checkout-card :deep(.q-field--outlined .q-field__control) { border-radius: 14px; }
 @media (min-width: 1024px) { .sticky-summary { position: sticky; top: 118px; } }

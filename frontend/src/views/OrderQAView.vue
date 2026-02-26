@@ -82,7 +82,7 @@
             <q-td :props="props">
               <div class="text-weight-bold">{{ props.row.question }}</div>
               <div class="text-caption text-grey-7">
-                提问者: {{ props.row.askerName }} ({{ props.row.askerType }})
+                提問者: {{ props.row.askerName }} ({{ props.row.askerType }})
               </div>
             </q-td>
           </template>
@@ -109,13 +109,13 @@
 
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
-              <q-btn 
-                flat 
-                dense 
-                round 
-                :icon="props.row.answer ? 'edit' : 'reply'" 
-                color="primary" 
-                size="sm" 
+              <q-btn
+                flat
+                dense
+                round
+                :icon="props.row.answer ? 'edit' : 'reply'"
+                color="primary"
+                size="sm"
                 @click="handleAnswer(props.row)"
               >
                 <q-tooltip>{{ props.row.answer ? '編輯回答' : '回答' }}</q-tooltip>
@@ -181,7 +181,7 @@
 
               <q-input
                 v-model="form.askerName"
-                label="提问者名称"
+                label="提問者名稱"
                 outlined
                 class="q-mb-md"
               />
@@ -369,7 +369,7 @@ const filterOrders = (val: string, update: (callback: () => void) => void) => {
     } else {
       const needle = val.toLowerCase()
       filteredOrderOptions.value = orderOptions.value.filter(
-        option => 
+        option =>
           option.label.toLowerCase().indexOf(needle) > -1 ||
           String(option.value).indexOf(needle) > -1
       )
@@ -387,7 +387,7 @@ const searchByOrderId = async () => {
     })
     return
   }
-  
+
   loading.value = true
   try {
     const response = await orderQAApi.getQAByOrderId(Number(searchOrderId.value))
@@ -433,14 +433,14 @@ const handleSubmit = async () => {
     // 找到選中的訂單
     const selectedOrder = orders.value.find(o => o.id === form.value.orderId)
     const submittedOrderId = Number(form.value.orderId)
-    
+
     // 確保 orderId 是數字類型，並設置 askerId
     const submitData = {
       ...form.value,
       orderId: submittedOrderId,
       askerId: selectedOrder?.customerId || 0
     }
-    
+
     await orderQAApi.askQuestion(submitData)
     $q.notify({
       type: 'positive',
@@ -535,7 +535,7 @@ onMounted(() => {
   loadOrders()
   loadAllQAs()
   void applyRouteOrderFilter()
-  
+
   // 如果用戶是第一次訪問訂單問答管理頁面，自動啟動導覽
   if (!isOrderQATourCompleted()) {
     setTimeout(() => {
@@ -554,7 +554,7 @@ const handleOpenDialog = () => {
 
 const handleDelete = (id?: number) => {
   if (!id) return
-  
+
   $q.dialog({
     title: '確認刪除',
     message: '確定要刪除這條問答記錄嗎？',

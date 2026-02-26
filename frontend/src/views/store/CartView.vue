@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿<template>
   <q-page class="store-page sf-page q-pa-md q-pa-lg-lg">
     <section class="q-mb-md">
       <q-card flat bordered class="flow-card">
@@ -49,10 +49,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in items" :key="`${item.productId}-${item.specificationId ?? 'base'}`">
+            <tr v-for="item in items" :key="`${item.productId}-${item.specificationId ?? 'base'}`" :class="{ 'stock-error-row': stockErrors.has(itemKey(item)) }">
               <td class="text-weight-medium">
                 {{ item.name }}
                 <div v-if="item.specName" class="text-caption text-grey-6">規格：{{ item.specName }}</div>
+                <div v-if="stockErrors.has(itemKey(item))" class="text-caption text-negative q-mt-xs">
+                  <q-icon name="warning" size="14px" /> {{ stockErrors.get(itemKey(item)) }}
+                </div>
               </td>
               <td class="text-right">NT$ {{ formatPrice(item.price) }}</td>
               <td class="text-center">
@@ -106,7 +109,8 @@
             </div>
           </q-card-section>
           <q-card-actions vertical class="q-pa-md q-pt-none">
-            <q-btn color="primary" no-caps class="checkout-btn" label="前往結帳" :disable="items.length === 0" @click="goCheckout" />
+            <q-btn color="primary" no-caps class="checkout-btn" label="下一步：前往結帳" icon-right="arrow_forward" :disable="items.length === 0 || checkingStock" :loading="checkingStock" @click="goCheckout" />
+            <q-btn flat no-caps class="back-to-shop-btn q-mt-sm" label="上一步：繼續購物" icon="arrow_back" color="grey-7" @click="router.push('/products')" />
           </q-card-actions>
         </q-card>
       </div>
@@ -119,25 +123,28 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
-import { getCartItems, getCartTotal, removeFromCart, updateCartQuantity, type CartItem } from '@/utils/storeCart'
+import { getCartItems, removeFromCart, updateCartQuantity, type CartItem } from '@/utils/storeCart'
+import { productApi, productSpecificationApi } from '@/api/product'
 import { trackEvent } from '@/utils/tracking'
 
 const router = useRouter()
 const $q = useQuasar()
 const authStore = useAuthStore()
 const items = ref<CartItem[]>([])
-
+const checkingStock = ref(false)
+const stockErrors = ref<Map<string, string>>(new Map())
 const cartFlowSteps = [
   { key: 'cart', label: '購物車', icon: 'shopping_cart', active: true },
   { key: 'checkout', label: '填寫結帳資料', icon: 'edit_note', active: false },
   { key: 'payment', label: '付款', icon: 'payments', active: false }
 ]
 
-const total = computed(() => getCartTotal())
+const total = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0))
 const formatPrice = (value: number) => value.toLocaleString('zh-TW', { maximumFractionDigits: 0 })
 
 const reload = () => {
   items.value = getCartItems()
+  stockErrors.value = new Map()
 }
 
 const updateQty = (item: CartItem, qty: number) => {
@@ -150,7 +157,7 @@ const remove = (item: CartItem) => {
   reload()
 }
 
-const goCheckout = () => {
+const goCheckout = async () => {
   if (!authStore.isAuthenticated) {
     $q.notify({
       type: 'warning',
@@ -168,8 +175,73 @@ const goCheckout = () => {
     return
   }
 
-  trackEvent('begin_checkout', {
-    cart_total: total.value,
+  // 檢查庫存
+  checkingStock.value = true
+  stockErrors.value = new Map()
+
+  try {
+    const errors: string[] = []
+
+    for (const item of items.value) {
+      try {
+        const response = await productApi.getProduct(item.productId)
+        const product = response.data
+
+        if (!product) {
+          errors.push(`「${item.name}」商品已不存在`)
+          stockErrors.value.set(itemKey(item), '商品已不存在')
+          continue
+        }
+
+        // 如果有規格，檢查規格庫存
+        if (item.specificationId && product.specifications?.length) {
+          const spec = product.specifications.find(s => s.id === item.specificationId)
+          if (!spec) {
+            errors.push(`「${item.name}」的規格已不存在`)
+            stockErrors.value.set(itemKey(item), '規格已不存在')
+          } else if (spec.stock !== undefined && spec.stock !== null && item.quantity > spec.stock) {
+            if (spec.stock === 0) {
+              errors.push(`「${item.name} (${item.specName})」已售完`)
+              stockErrors.value.set(itemKey(item), '已售完')
+            } else {
+              errors.push(`「${item.name} (${item.specName})」庫存不足，僅剩 ${spec.stock} 件`)
+              stockErrors.value.set(itemKey(item), `庫存僅剩 ${spec.stock} 件`)
+            }
+          }
+        } else {
+          // 檢查商品整體庫存
+          const stock = product.stock ?? 0
+          if (item.quantity > stock) {
+            if (stock === 0) {
+              errors.push(`「${item.name}」已售完`)
+              stockErrors.value.set(itemKey(item), '已售完')
+            } else {
+              errors.push(`「${item.name}」庫存不足，僅剩 ${stock} 件`)
+              stockErrors.value.set(itemKey(item), `庫存僅剩 ${stock} 件`)
+            }
+          }
+        }
+      } catch (err) {
+        errors.push(`「${item.name}」無法確認庫存`)
+        stockErrors.value.set(itemKey(item), '無法確認庫存')
+      }
+    }
+
+    if (errors.length > 0) {
+      $q.notify({
+        type: 'negative',
+        message: '部分商品庫存不足，請調整數量後再結帳',
+        caption: errors.join('；'),
+        position: 'top',
+        timeout: 5000,
+        multiLine: true
+      })
+      return
+    }
+
+    // 庫存檢查通過
+    trackEvent('begin_checkout', {
+      cart_total: total.value,
       items: items.value.map((x) => ({
         product_id: x.productId,
         specification_id: x.specificationId,
@@ -177,9 +249,19 @@ const goCheckout = () => {
         quantity: x.quantity,
         price: x.price
       }))
-  })
-  router.push('/checkout')
+    })
+    router.push('/checkout')
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: '庫存檢查失敗，請稍後再試'
+    })
+  } finally {
+    checkingStock.value = false
+  }
 }
+
+const itemKey = (item: CartItem) => `${item.productId}-${item.specificationId ?? 'base'}`
 
 onMounted(() => {
   reload()
@@ -205,6 +287,14 @@ onMounted(() => {
   display: block;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.stock-error-row {
+  background: #fff5f5;
+}
+
+.stock-error-row td {
+  border-bottom-color: #fecaca;
 }
 
 .flow-card {
@@ -241,6 +331,11 @@ onMounted(() => {
   border-radius: 999px;
   min-height: 46px;
   font-weight: 700;
+}
+
+.back-to-shop-btn {
+  border-radius: 999px;
+  min-height: 40px;
 }
 
 @media (min-width: 1024px) {

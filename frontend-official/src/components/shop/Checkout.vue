@@ -44,7 +44,7 @@
                 <!-- 商品資訊 -->
                 <div class="item-details">
                   <div class="item-name">{{ item.name }}</div>
-                  
+
                   <!-- 規格 -->
                   <div v-if="item.specification" class="item-spec">
                     <q-chip size="sm" color="primary" text-color="white" dense>
@@ -64,6 +64,20 @@
                 <div class="item-subtotal">
                   NT$ {{ ((item.selectedPrice || item.price) * item.quantity).toLocaleString() }}
                 </div>
+
+                <!-- 移除按鈕 -->
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="close"
+                  size="sm"
+                  color="grey-5"
+                  class="item-remove-btn"
+                  @click="removeCartItem(item)"
+                >
+                  <q-tooltip>移除商品</q-tooltip>
+                </q-btn>
               </div>
             </div>
 
@@ -361,7 +375,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { getCartItems, getCartTotal, clearCart } from 'src/utils/cart.js';
+import { getCartItems, clearCart, removeFromCart } from 'src/utils/cart.js';
+import { getProductDetail, getProductSpecifications } from 'src/api/product.js';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -442,6 +457,30 @@ const canSubmit = computed(() => {
 // 載入購物車資料
 const loadCartData = () => {
   cartItems.value = getCartItems();
+};
+
+// 移除購物車商品
+const removeCartItem = (item) => {
+  const specId = item.specification?.id || null;
+  removeFromCart(item.id, specId);
+  cartItems.value = getCartItems();
+
+  if (cartItems.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: '購物車已清空，即將返回商店',
+      position: 'top',
+      timeout: 1500,
+    });
+    setTimeout(() => router.push('/shop'), 1500);
+  } else {
+    $q.notify({
+      type: 'info',
+      message: `已移除「${item.name}」`,
+      position: 'top',
+      timeout: 1500,
+    });
+  }
 };
 
 // 返回上一頁
@@ -705,9 +744,22 @@ onMounted(() => {
   border-radius: 8px;
   border: 1px solid $shop-border;
   transition: $shop-transition;
+  position: relative;
 
   &:hover {
     border-color: $shop-primary;
+  }
+
+  .item-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+
+  &:hover .item-remove-btn {
+    opacity: 1;
   }
 
   .item-image {
