@@ -231,6 +231,44 @@ server {
 }
 ```
 
+#### 3. 前台商城（frontend-official）
+
+```bash
+cd frontend-official
+npm ci
+npx quasar build          # 輸出至 dist/spa
+```
+
+前台預設呼叫同網域的 `/api`（見 `frontend-official/.env.production`），請讓網站伺服器反向代理到後端；路由為 history 模式，需要 SPA fallback：
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name shop.yourdomain.com;
+    root /var/www/shopro-shop;          # dist/spa 的內容
+    index index.html;
+
+    client_max_body_size 12m;           # 與後端上傳上限一致
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+上線前檢查：
+- 後端 `STOREFRONT_URL` 設為前台網址（綠界付款完成後導回 `/shop/order/success`）。
+- `ECPAY_NOTIFY_URL` 必須是綠界伺服器能連到的 HTTPS 網址，否則訂單不會變成「已付款」。
+- 後台「商店內容設定」填好聯絡 Email、電話、營業時間與地址（前台頁尾與商店介紹會顯示）。
+- 需要自訂退換貨、隱私權、服務條款、常見問題內容時，建立對應 slug（`returns`、`privacy`、`terms`、`faq`）的自訂頁面；未建立時顯示內建預設內容。
+
 ---
 
 ### Docker 部署
