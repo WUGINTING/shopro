@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.product.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.product.dto.ProductSpecificationDTO;
 import com.info.ecommerce.modules.product.service.ProductSpecificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,15 @@ import java.util.List;
 public class ProductSpecificationController {
 
     private final ProductSpecificationService specificationService;
+    private final CurrentUserService currentUserService;
+
+    /** 前台（非員工）不回傳成本價 */
+    private ProductSpecificationDTO forCaller(ProductSpecificationDTO dto) {
+        if (dto != null && !currentUserService.isStaff()) {
+            dto.setCost(null);
+        }
+        return dto;
+    }
 
     @PostMapping
     @Operation(summary = "添加商品規格")
@@ -58,13 +68,15 @@ public class ProductSpecificationController {
     @Operation(summary = "取得規格詳情")
     public ApiResponse<ProductSpecificationDTO> getSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id) {
-        return ApiResponse.success(specificationService.getSpecification(id));
+        return ApiResponse.success(forCaller(specificationService.getSpecification(id)));
     }
 
     @GetMapping("/product/{productId}")
     @Operation(summary = "取得商品的所有規格")
     public ApiResponse<List<ProductSpecificationDTO>> listProductSpecifications(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
-        return ApiResponse.success(specificationService.listProductSpecifications(productId));
+        List<ProductSpecificationDTO> specs = specificationService.listProductSpecifications(productId);
+        specs.forEach(this::forCaller);
+        return ApiResponse.success(specs);
     }
 }

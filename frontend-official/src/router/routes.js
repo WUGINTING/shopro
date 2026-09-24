@@ -34,8 +34,12 @@ const routes = [
         component: () => import('pages/shop/news/list.vue'),
       },
       {
-        path: '/shop/news/:id',
+        path: '/shop/news/:slug',
         component: () => import('pages/shop/news/detail.vue'),
+      },
+      {
+        path: '/shop/page/:slug',
+        component: () => import('pages/shop/page.vue'),
       },
       {
         path: '/shop/product/list',

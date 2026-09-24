@@ -7,7 +7,9 @@
  * @returns {String} 格式化後的金額
  */
 export function formatCurrency(amount, currency = 'NT$') {
-  return `${currency} ${amount.toLocaleString()}`;
+  const value = Number(amount);
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${currency} ${safe.toLocaleString('zh-TW', { maximumFractionDigits: 0 })}`;
 }
 
 /**

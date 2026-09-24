@@ -5,6 +5,29 @@ import http from '@/utils/request';
  */
 
 /**
+ * 前台商品列表（只含上架 / 缺貨商品，後端分頁、篩選、排序）
+ * @param {Object} params
+ * @param {number} [params.categoryId] - 分類 ID（含子分類）
+ * @param {string} [params.keyword] - 名稱或 SKU 關鍵字
+ * @param {string} [params.sort] - newest / price_asc / price_desc / name
+ * @param {number} [params.page] - 頁碼（0 起算）
+ * @param {number} [params.size] - 每頁數量（最多 60）
+ * @returns {Promise} Page<ProductDTO>
+ */
+export function getStorefrontProducts(params = {}) {
+  return http.get('/storefront/products', params);
+}
+
+/**
+ * 前台商品詳情（未上架商品回傳錯誤）
+ * @param {number} id - 商品 ID
+ * @returns {Promise} ProductDTO
+ */
+export function getStorefrontProduct(id) {
+  return http.get(`/storefront/products/${id}`, undefined, { silent: true });
+}
+
+/**
  * 分頁查詢商品列表
  * @param {Object} params - 查詢參數
  * @param {number} params.page - 頁碼，預設 0

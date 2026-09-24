@@ -26,9 +26,6 @@
                 </q-item-section>
                 <q-item-section>
                   <q-item-label class="text-weight-medium">所有商品</q-item-label>
-                  <q-item-label caption class="text-grey-7"
-                    >{{ totalElements }} 件</q-item-label
-                  >
                 </q-item-section>
               </q-item>
 
@@ -40,6 +37,7 @@
                 :key="category.id"
                 clickable
                 v-ripple
+                :inset-level="category.depth ? 0.3 : 0"
                 :active="categoryId == category.id"
                 active-class="category-active"
                 @click="filterByCategory(category.id)"
@@ -59,14 +57,11 @@
                 </q-item-section>
                 <q-item-section>
                   <q-item-label class="text-weight-medium">{{ category.name }}</q-item-label>
-                  <q-item-label caption class="text-grey-7">
-                    {{ category.productCount || 0 }} 件
-                  </q-item-label>
                 </q-item-section>
               </q-item>
 
               <!-- 分類載入中 -->
-              <q-item v-if="categories.length === 0 && !loading">
+              <q-item v-if="categories.length === 0 && !categoriesLoading">
                 <q-item-section>
                   <q-item-label class="text-grey-6 text-center">
                     <q-icon name="info" size="xs" />
@@ -85,7 +80,19 @@
             <div class="result-info">
               <div class="result-count">
                 <q-icon name="list" size="xs" class="q-mr-xs" />
+                <template v-if="keyword">「{{ keyword }}」的搜尋結果：</template>
                 共 <strong>{{ totalElements }}</strong> 件商品
+                <q-btn
+                  v-if="keyword"
+                  flat
+                  dense
+                  size="sm"
+                  color="primary"
+                  icon="close"
+                  label="清除搜尋"
+                  class="q-ml-sm"
+                  @click="clearKeyword"
+                />
               </div>
               <div v-if="totalPages > 1" class="result-page text-grey-7">
                 第 {{ currentPage }} / {{ totalPages }} 頁
@@ -115,9 +122,17 @@
             <p class="text-grey-7 q-mt-md">載入中...</p>
           </div>
 
-          <div v-else-if="filteredProducts.length === 0" class="no-products">
+          <div v-else-if="loadError" class="no-products">
+            <q-icon name="cloud_off" size="80px" color="grey-5" />
+            <p class="text-h6 text-grey-7 q-mt-md">{{ loadError }}</p>
+            <q-btn unelevated color="primary" label="重新載入" icon="refresh" class="q-mt-md" @click="fetchProducts" />
+          </div>
+
+          <div v-else-if="products.length === 0" class="no-products">
             <q-icon name="inventory_2" size="80px" color="grey-5" />
-            <p class="text-h6 text-grey-7 q-mt-md">目前此分類暫無商品</p>
+            <p class="text-h6 text-grey-7 q-mt-md">
+              {{ keyword ? '找不到符合的商品' : '目前此分類暫無商品' }}
+            </p>
             <q-btn
               flat
               color="primary"
@@ -130,10 +145,11 @@
 
           <div v-else class="products-grid">
             <ProductCard
-              v-for="product in filteredProducts"
+              v-for="product in products"
               :key="product.id"
               :product="product"
-              @click="goToDetail(product.id)"
+              @select="goToDetail(product.id)"
+              @add-to-cart="handleAddToCart"
             />
           </div>
 
@@ -162,278 +178,154 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import ProductCard from 'src/components/shop/ProductCard.vue';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
-import cookies from 'src/utils/cookies.js';
-import { ProductCategoriesKey } from 'src/config/constant.js';
-import {
-  getProductList,
-  getProductsByCategory,
-  getProductsByStatus,
-  getEnabledCategories,
-} from 'src/api/product.js';
+import { getStorefrontProducts, getEnabledCategories } from 'src/api/product.js';
+import { mapProduct, quickAddToCart } from 'src/utils/product.js';
 
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 
 const loading = ref(true);
-const sortBy = ref('default');
-const categoryId = computed(
-  () => route.params.categoryId || route.query.category
-);
-const categoryName = ref('所有商品');
+const loadError = ref('');
+const categoriesLoading = ref(true);
+const sortBy = ref('newest');
 
-// 分類列表
+// 網址參數：?category=<id|all>&keyword=<text>
+const categoryId = computed(() => {
+  const value = route.query.category;
+  return value && value !== 'all' && /^\d+$/.test(String(value)) ? Number(value) : null;
+});
+const keyword = computed(() => (route.query.keyword ? String(route.query.keyword).trim() : ''));
+
+// 分類列表（父分類在前，子分類緊接其後）
 const categories = ref([]);
 
-// 分页相关
+// 分頁（後端分頁）
 const currentPage = ref(1);
-const pageSize = 12; // 每页显示12笔
+const pageSize = 12;
 const totalPages = ref(0);
 const totalElements = ref(0);
 
-// 麵包屑項目
+const products = ref([]);
+
+const categoryName = computed(() => {
+  if (keyword.value) return `搜尋：${keyword.value}`;
+  if (!categoryId.value) return '所有商品';
+  return categories.value.find(c => c.id === categoryId.value)?.name || '商品分類';
+});
+
 const breadcrumbItems = computed(() => [
   { label: '首頁', to: '/shop' },
   { label: categoryName.value, to: '' },
 ]);
 
-// 排序選項
+// 排序選項（對應後端 sort 參數）
 const sortOptions = [
-  { label: '預設排序', value: 'default' },
-  { label: '價格：低到高', value: 'price-asc' },
-  { label: '價格：高到低', value: 'price-desc' },
   { label: '最新上架', value: 'newest' },
+  { label: '價格：低到高', value: 'price_asc' },
+  { label: '價格：高到低', value: 'price_desc' },
+  { label: '名稱', value: 'name' },
 ];
 
-// 商品列表
-const products = ref([]);
-
-// 所有商品列表（用於計算分類數量）
-const allProducts = ref([]);
-
-// 當前頁顯示的商品
-const filteredProducts = computed(() => {
-  let result = [...products.value];
-
-  // 前端排序（如果需要）
-  if (sortBy.value === 'price-asc') {
-    result.sort((a, b) => a.price - b.price);
-  } else if (sortBy.value === 'price-desc') {
-    result.sort((a, b) => b.price - a.price);
-  } else if (sortBy.value === 'newest') {
-    result.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-  }
-
-  return result;
-});
-
-// 切换页码
 const changePage = page => {
   currentPage.value = page;
   fetchProducts();
-  // 滚动到顶部
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 取得特定分類的商品數量
-const getCategoryCount = category => {
-  const cat = categories.value.find(
-    c => c.id == category || c.name === category
-  );
-  return cat?.productCount || 0;
-};
-
-// 切換分類
+// 切換分類時清除搜尋關鍵字
 const filterByCategory = categoryIdOrAll => {
-  currentPage.value = 1;
-  router.push(`/shop/product/list?category=${categoryIdOrAll}`);
+  router.push({ path: '/shop/product/list', query: { category: String(categoryIdOrAll) } });
 };
 
-// 前往商品詳情頁
+const clearKeyword = () => {
+  const query = { ...route.query };
+  delete query.keyword;
+  router.push({ path: '/shop/product/list', query });
+};
+
 const goToDetail = productId => {
   router.push(`/shop/product/${productId}`);
 };
 
-// 統一錯誤處理
-const handleError = (error, message = '操作失敗') => {
-  console.error(message, error);
-  let errorMsg = message;
-  
-  if (error.response) {
-    const status = error.response.status;
-    if (status === 404) {
-      errorMsg = '找不到相關資料';
-    } else if (status === 500) {
-      errorMsg = '伺服器錯誤，請稍後再試';
-    } else if (error.response.data?.message) {
-      errorMsg = error.response.data.message;
-    }
-  } else if (error.request) {
-    errorMsg = '網路連線異常，請檢查網路連線';
-  }
-  
-  $q.notify({
-    type: 'negative',
-    message: errorMsg,
-    position: 'top',
-    timeout: 3000,
-  });
+const handleAddToCart = product => {
+  quickAddToCart(product, { router, $q });
 };
 
-// 獲取分類列表
+// 將分類整理為樹狀順序
+const orderCategories = list => {
+  const byParent = new Map();
+  list.forEach(cat => {
+    const key = cat.parentId || 0;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(cat);
+  });
+  byParent.forEach(children => children.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+  const ids = new Set(list.map(cat => cat.id));
+  const result = [];
+  const visit = (parentKey, depth) => {
+    (byParent.get(parentKey) || []).forEach(cat => {
+      result.push({ ...cat, depth });
+      visit(cat.id, depth + 1);
+    });
+  };
+  visit(0, 0);
+  // 父分類未啟用的子分類仍列出
+  list.filter(cat => cat.parentId && !ids.has(cat.parentId)).forEach(cat => result.push({ ...cat, depth: 0 }));
+  return result;
+};
+
 const fetchCategories = async () => {
+  categoriesLoading.value = true;
   try {
     const response = await getEnabledCategories();
-    console.log('分類列表 API 回應:', response);
-    
-    // 根據 PRODUCT_PUBLIC_API.md 規範，回應格式為 { success, message, data }
-    // 注意：axios 攔截器已經返回 response.data，所以這裡直接使用 response
-    if (response?.success && response?.data) {
-      categories.value = response.data.map(cat => ({
-        ...cat,
-        productCount: 0, // 初始化為 0，後面會更新
-      }));
-      
-      // 將分類資料存入 cookie（有效期 7 天）
-      cookies.set(ProductCategoriesKey, JSON.stringify(response.data), { expires: 7 });
-    }
+    categories.value = orderCategories(response?.data || []);
   } catch (error) {
-    handleError(error, '獲取分類列表失敗');
-    // 設置空數組以避免頁面錯誤
     categories.value = [];
+  } finally {
+    categoriesLoading.value = false;
   }
 };
 
-// 獲取所有商品用於計算分類數量
-const fetchAllProductsForCount = async () => {
-  try {
-    // 獲取所有上架商品（使用較大的 size 確保獲取所有商品）
-    const response = await getProductsByStatus('ACTIVE', { page: 0, size: 1000 });
-    
-    if (response?.success && response?.data?.content) {
-      allProducts.value = response.data.content;
-      
-      // 計算每個分類的商品數量
-      categories.value = categories.value.map(cat => ({
-        ...cat,
-        productCount: allProducts.value.filter(p => p.categoryId === cat.id).length,
-      }));
-      
-      console.log('已更新分類商品數量:', categories.value);
-    }
-  } catch (error) {
-    console.error('獲取商品數量失敗:', error);
-    // 不顯示錯誤訊息，因為這不影響主要功能
-  }
-};
-
-// 獲取商品列表
 const fetchProducts = async () => {
   loading.value = true;
+  loadError.value = '';
   try {
-    let response;
-    const params = {
-      page: currentPage.value - 1, // API 使用 0-based 索引
+    const response = await getStorefrontProducts({
+      categoryId: categoryId.value || undefined,
+      keyword: keyword.value || undefined,
+      sort: sortBy.value,
+      page: currentPage.value - 1,
       size: pageSize,
-    };
-
-    if (categoryId.value && categoryId.value !== 'all') {
-      // 根據分類查詢
-      console.log('查詢分類商品:', { categoryId: categoryId.value, params });
-      response = await getProductsByCategory(categoryId.value, params);
-    } else {
-      // 查詢所有商品（不限制狀態，使用 getProductList 而非 getProductsByStatus）
-      console.log('查詢所有商品:', { params });
-      response = await getProductList(params);
-    }
-
-    console.log('商品列表 API 回應:', response);
-    console.log('商品數據:', response?.data?.content);
-
-    // 根據 PRODUCT_PUBLIC_API.md 規範處理回應
-    // 注意：axios 攔截器已經返回 response.data，所以這裡直接使用 response
-    if (response?.success && response?.data) {
-      const data = response.data;
-      
-      // 處理分頁資料
-      if (data.content && Array.isArray(data.content)) {
-        // 過濾掉非 ACTIVE 狀態的商品（確保一致性）
-        const filteredContent = data.content.filter(item => item.status === 'ACTIVE');
-        
-        products.value = filteredContent.map(item => ({
-          id: item.id,
-          name: item.name,
-          category: item.categoryId,
-          categoryName: item.categoryName,
-          price: item.salePrice || item.basePrice,
-          originalPrice: item.salePrice && item.basePrice > item.salePrice ? item.basePrice : null,
-          image: item.images && item.images.length > 0 ? item.images[0].imageUrl : '/placeholder.jpg',
-          images: item.images || [],
-          description: item.description,
-          sku: item.sku,
-          status: item.status,
-          salesMode: item.salesMode,
-          tags: item.tags || [],
-          discount: item.salePrice && item.basePrice
-            ? Math.round((1 - item.salePrice / item.basePrice) * 100)
-            : 0,
-          createdAt: item.createdAt,
-        }));
-        
-        // 更新總數為過濾後的數量
-        totalPages.value = Math.ceil(products.value.length / pageSize);
-        totalElements.value = products.value.length;
-      } else {
-        products.value = [];
-        totalPages.value = 0;
-        totalElements.value = 0;
-      }
-    } else {
-      products.value = [];
-      totalPages.value = 0;
-      totalElements.value = 0;
-    }
+    });
+    const data = response?.data || {};
+    products.value = (data.content || []).map(mapProduct);
+    totalPages.value = data.totalPages || 0;
+    totalElements.value = data.totalElements || 0;
   } catch (error) {
-    handleError(error, '獲取商品列表失敗');
     products.value = [];
     totalPages.value = 0;
     totalElements.value = 0;
+    loadError.value = error.displayMessage || '商品載入失敗，請稍後再試';
   } finally {
     loading.value = false;
   }
 };
 
-// 更新分類名稱
-const updateCategoryName = () => {
-  if (categoryId.value === 'all' || !categoryId.value) {
-    categoryName.value = '所有商品';
-  } else if (categories.value.length > 0) {
-    const cat = categories.value.find(c => c.id == categoryId.value);
-    categoryName.value = cat?.name || '所有商品';
-  }
-};
-
-// 監聽分類變化
-watch(
-  () => categoryId.value,
-  () => {
-    currentPage.value = 1;
-    updateCategoryName();
-    fetchProducts();
-  }
-);
-
-// 監聽排序變化
-watch(sortBy, () => {
-  // 排序變化時不需要重新載入資料，computed 會自動處理
+// 分類或關鍵字變更時回到第一頁
+watch([categoryId, keyword], () => {
+  currentPage.value = 1;
+  fetchProducts();
 });
 
-// 載入資料
-onMounted(async () => {
-  await fetchCategories();
-  await fetchAllProductsForCount(); // 獲取所有商品並計算分類數量
-  updateCategoryName();
-  await fetchProducts();
+watch(sortBy, () => {
+  currentPage.value = 1;
+  fetchProducts();
+});
+
+onMounted(() => {
+  fetchCategories();
+  fetchProducts();
 });
 </script>
 

@@ -76,7 +76,10 @@ public class BlogController {
             @Parameter(description = "文章狀態") @PathVariable BlogStatus status,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        // 最新發布的文章在前（發布時間相同時依 ID）
+        Pageable pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("publishedAt"),
+                        org.springframework.data.domain.Sort.Order.desc("id")));
         return ApiResponse.success(blogService.listBlogPostsByStatus(status, pageable));
     }
 

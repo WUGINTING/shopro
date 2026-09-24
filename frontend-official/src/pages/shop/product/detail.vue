@@ -80,10 +80,11 @@
           </div>
 
           <div class="product-price">
-            <span class="current-price">${{ displayPrice }}</span>
-            <span v-if="product.originalPrice" class="original-price">
-              ${{ product.originalPrice }}
+            <span class="current-price">{{ formatCurrency(displayPrice) }}</span>
+            <span v-if="product.originalPrice && !selectedSpec" class="original-price">
+              {{ formatCurrency(product.originalPrice) }}
             </span>
+            <q-badge v-if="product.soldOut" color="grey-7" label="已售完" class="q-ml-sm" />
           </div>
 
           <q-separator class="q-my-md" />
@@ -105,7 +106,7 @@
                 :key="spec.id"
                 :class="['spec-option', {
                   'selected': selectedSpec?.id === spec.id,
-                  'out-of-stock': spec.stock === 0
+                  'out-of-stock': isSpecSoldOut(spec)
                 }]"
                 @click="selectSpecification(spec)"
               >
@@ -127,11 +128,11 @@
                 <div class="spec-info">
                   <div class="spec-name">{{ spec.specName }}</div>
                   <div class="spec-details">
-                    <span class="spec-price">NT$ {{ spec.price }}</span>
-                    <span v-if="spec.stock > 0" class="spec-stock">
+                    <span class="spec-price">{{ formatCurrency(spec.price ?? product.price) }}</span>
+                    <span v-if="isSpecSoldOut(spec)" class="spec-stock out">售完</span>
+                    <span v-else-if="spec.stock != null" class="spec-stock">
                       庫存: {{ spec.stock }}
                     </span>
-                    <span v-else class="spec-stock out">售完</span>
                   </div>
                 </div>
               </div>
@@ -158,14 +159,17 @@
               round
               icon="add"
               @click="increaseQuantity"
-              :disable="selectedSpec && quantity >= selectedSpec.stock"
+              :disable="quantity >= maxQuantity"
             />
           </div>
 
           <!-- 庫存提示 -->
           <div v-if="selectedSpec" class="stock-hint">
             <q-icon name="info" size="16px" />
-            <span v-if="selectedSpec.stock > 0">
+            <span v-if="selectedSpec.stock === null || selectedSpec.stock === undefined">
+              此規格現貨供應中
+            </span>
+            <span v-else-if="selectedSpec.stock > 0">
               目前選擇規格剩餘 {{ selectedSpec.stock }} 件
             </span>
             <span v-else class="out-of-stock-text">
@@ -193,6 +197,7 @@
               text-color="white"
               size="lg"
               class="btn-add-cart"
+              :disable="product.soldOut"
               @click="handleAddToCart"
             >
               <q-icon name="shopping_cart" left />
@@ -203,6 +208,7 @@
               color="primary"
               size="lg"
               class="btn-buy-now"
+              :disable="product.soldOut"
               @click="handleBuyNow"
             >
               立即購買
@@ -260,14 +266,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { addToCart } from 'src/utils/cart.js';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
-import { getProductDetail, getProductCategory, getProductSpecifications } from 'src/api/product.js';
-import cookies from 'src/utils/cookies.js';
-import { ProductCategoriesKey } from 'src/config/constant.js';
+import { getStorefrontProduct, getProductCategory } from 'src/api/product.js';
+import { effectivePrice, PRODUCT_PLACEHOLDER } from 'src/utils/product.js';
+import { formatCurrency } from 'src/utils/format.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -280,11 +286,11 @@ const quantity = ref(1);
 const tab = ref('');
 const specifications = ref([]);
 const selectedSpec = ref(null);
+const categoryName = ref('');
 
 // 格式化區塊內容（將換行符轉換為 HTML）
 const formatBlockContent = (content) => {
   if (!content) return '';
-  // 將換行符轉換為 <br>，並保持段落格式
   return content
     .replace(/\n\n/g, '</p><p>')
     .replace(/\n/g, '<br>')
@@ -294,51 +300,24 @@ const formatBlockContent = (content) => {
 // 麵包屑項目
 const breadcrumbItems = computed(() => {
   if (!product.value) return [];
-  return [
-    { label: '首頁', to: '/shop' },
-    {
-      label: getCategoryName(product.value.category),
+  const items = [{ label: '首頁', to: '/shop' }];
+  if (product.value.category) {
+    items.push({
+      label: categoryName.value || '商品分類',
       to: `/shop/product/list?category=${product.value.category}`,
-    },
-    { label: product.value.name, to: '' },
-  ];
+    });
+  } else {
+    items.push({ label: '所有商品', to: '/shop/product/list?category=all' });
+  }
+  items.push({ label: product.value.name, to: '' });
+  return items;
 });
 
-// 分類名稱映射
-const categoryMap = {
-  bath: '沐浴用品',
-  toy: '玩具精品',
-  food: '日系零食',
-  home: '居家用品',
-  daily: '生活雜貨',
-};
-
-const getCategoryName = category => {
-  // 先從 categoryMap 查找（字串 key）
-  if (categoryMap[category]) {
-    return categoryMap[category];
-  }
-
-  // 嘗試從 cookie 中的分類列表查找（數字 ID）
-  try {
-    const categoriesData = cookies.get(ProductCategoriesKey);
-    if (categoriesData) {
-      const categories = JSON.parse(categoriesData);
-      const foundCategory = categories.find(cat => cat.id == category);
-      if (foundCategory) {
-        return foundCategory.name;
-      }
-    }
-  } catch (error) {
-    console.warn('解析分類 cookie 失敗:', error);
-  }
-
-  return '其他商品';
-};
+const isSpecSoldOut = spec => spec.stock !== null && spec.stock !== undefined && spec.stock <= 0;
 
 // 選擇規格
 const selectSpecification = (spec) => {
-  if (spec.stock === 0) {
+  if (isSpecSoldOut(spec)) {
     $q.notify({
       type: 'warning',
       message: '此規格已售完',
@@ -351,7 +330,6 @@ const selectSpecification = (spec) => {
   // 允許取消選擇（再次點擊已選規格）
   if (selectedSpec.value?.id === spec.id) {
     selectedSpec.value = null;
-    // 恢復主圖
     if (product.value?.images?.length > 0) {
       currentImage.value = product.value.images[0];
     }
@@ -360,20 +338,17 @@ const selectSpecification = (spec) => {
   }
 
   selectedSpec.value = spec;
-
-  // 重置數量為1
   quantity.value = 1;
 
-  // 如果規格有圖片，更新主圖
   if (spec.image) {
     currentImage.value = spec.image;
   }
 };
 
-// 計算當前顯示價格
+// 計算當前顯示價格（與後端計價一致：規格價 > 特價 > 原價）
 const displayPrice = computed(() => {
-  if (selectedSpec.value) {
-    return selectedSpec.value.price;
+  if (selectedSpec.value && selectedSpec.value.price != null) {
+    return Number(selectedSpec.value.price);
   }
   return product.value?.price || 0;
 });
@@ -381,13 +356,11 @@ const displayPrice = computed(() => {
 // 合併產品圖片和規格圖片到縮圖列表
 const allThumbnails = computed(() => {
   const thumbs = [];
-  // 商品主圖
   if (product.value?.images) {
     product.value.images.forEach(img => {
       thumbs.push({ url: img, specName: null });
     });
   }
-  // 規格圖片（排除與商品主圖重複的）
   const existingUrls = new Set(thumbs.map(t => t.url));
   specifications.value.forEach(spec => {
     if (spec.image && !existingUrls.has(spec.image)) {
@@ -398,12 +371,16 @@ const allThumbnails = computed(() => {
   return thumbs;
 });
 
-// 計算庫存限制
+// 可購買數量上限：規格庫存、每筆訂單上限，未追蹤庫存時 999
 const maxQuantity = computed(() => {
-  if (selectedSpec.value) {
-    return selectedSpec.value.stock;
+  let max = 999;
+  if (selectedSpec.value && selectedSpec.value.stock !== null && selectedSpec.value.stock !== undefined) {
+    max = Math.max(selectedSpec.value.stock, 0);
   }
-  return 999; // 沒有規格時的預設最大值
+  if (product.value?.maxPurchaseQuantity > 0) {
+    max = Math.min(max, product.value.maxPurchaseQuantity);
+  }
+  return max;
 });
 
 const increaseQuantity = () => {
@@ -425,8 +402,16 @@ const decreaseQuantity = () => {
   }
 };
 
+/**
+ * 加入購物車
+ * @returns {boolean} 是否成功加入
+ */
 const handleAddToCart = () => {
-  // 檢查是否有規格但未選擇
+  if (product.value.soldOut) {
+    $q.notify({ type: 'warning', message: '此商品目前缺貨', position: 'top', timeout: 2000 });
+    return false;
+  }
+
   if (specifications.value.length > 0 && !selectedSpec.value) {
     $q.notify({
       type: 'warning',
@@ -434,25 +419,23 @@ const handleAddToCart = () => {
       position: 'top',
       timeout: 2000,
     });
-    return;
+    return false;
   }
 
-  // 檢查庫存
-  if (selectedSpec.value && selectedSpec.value.stock < quantity.value) {
+  if (quantity.value > maxQuantity.value) {
     $q.notify({
       type: 'warning',
       message: '庫存不足',
       position: 'top',
       timeout: 2000,
     });
-    return;
+    return false;
   }
 
-  // 構建加入購物車的商品資料
   const cartItem = {
     id: product.value.id,
     name: product.value.name,
-    image: currentImage.value,
+    image: currentImage.value || PRODUCT_PLACEHOLDER,
     price: displayPrice.value,
     selectedPrice: displayPrice.value,
     originalPrice: product.value.originalPrice,
@@ -471,132 +454,83 @@ const handleAddToCart = () => {
     icon: 'check_circle',
     timeout: 2000,
   });
+  return true;
 };
 
+// 立即購買：加入購物車後直接前往結帳
 const handleBuyNow = () => {
-  // 檢查是否有規格但未選擇
-  if (specifications.value.length > 0 && !selectedSpec.value) {
-    $q.notify({
-      type: 'warning',
-      message: '請先選擇商品規格',
-      position: 'top',
-      timeout: 2000,
-    });
-    return;
+  if (handleAddToCart()) {
+    router.push('/shop/checkout');
   }
-
-  handleAddToCart();
-  router.push('/shop/cart');
 };
 
 // 轉換 API 資料格式
 const mapProductData = (apiData) => {
-  // 提取主圖片
-  const primaryImage = apiData.images?.find(img => img.isPrimary);
-  const allImages = apiData.images?.map(img => img.imageUrl) || [];
-
-  // 提取標籤
-  const tags = apiData.tags || [];
-
-  // 計算是否有折扣
-  const hasDiscount = apiData.salePrice && apiData.basePrice && apiData.salePrice < apiData.basePrice;
+  const images = [...(apiData.images || [])].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+  const allImages = images.map(img => img.imageUrl).filter(Boolean);
+  const price = effectivePrice(apiData);
+  const basePrice = Number(apiData.basePrice) || 0;
 
   return {
     id: apiData.id,
     name: apiData.name,
-    price: apiData.salePrice || apiData.basePrice,
-    originalPrice: hasDiscount ? apiData.basePrice : null,
+    price,
+    originalPrice: basePrice > price ? basePrice : null,
     category: apiData.categoryId,
     sku: apiData.sku,
-    description: apiData.description, // 商品簡介（右側顯示）
+    description: apiData.description,
     images: allImages,
-    tags: tags,
+    tags: apiData.tags || [],
     badges: [],
-    // 規格選項（如有多規格）
-    specifications: apiData.specifications || [],
-    // 商品描述區塊（下方 tab-panel 顯示，只顯示已啟用的區塊）
+    maxPurchaseQuantity: apiData.maxPurchaseQuantity,
+    soldOut: apiData.status === 'OUT_OF_STOCK',
     descriptionBlocks: (apiData.descriptionBlocks || [])
       .filter(block => block.enabled)
       .sort((a, b) => a.blockOrder - b.blockOrder),
   };
 };
 
-// 載入規格資料
-const fetchSpecifications = async (productId) => {
+const loadCategoryName = async (categoryId) => {
+  categoryName.value = '';
+  if (!categoryId) return;
   try {
-    const response = await getProductSpecifications(productId);
-    if (response && response.data) {
-      // 只顯示已啟用的規格
-      specifications.value = response.data.filter(spec => spec.enabled !== false);
-      return true;
-    }
+    const response = await getProductCategory(categoryId);
+    categoryName.value = response?.data?.name || '';
   } catch (error) {
-    console.error('載入規格失敗:', error);
-    return false;
+    categoryName.value = '';
   }
 };
 
-// 載入產品資料
+// 載入產品資料（未上架商品後端回傳錯誤，顯示「找不到此商品」）
 const fetchProduct = async () => {
   loading.value = true;
+  selectedSpec.value = null;
+  quantity.value = 1;
   try {
-    const productId = route.params.id;
-    const response = await getProductDetail(productId);
-
-    console.log('商品詳情 API 回應:', response);
-
-    if (response && response.data) {
-      product.value = mapProductData(response.data);
-
-      // 設定主圖片
-      if (product.value.images && product.value.images.length > 0) {
-        currentImage.value = product.value.images[0];
-      }
-
-      // 設定第一個 tab 為預設值
-      if (product.value.descriptionBlocks && product.value.descriptionBlocks.length > 0) {
-        tab.value = `block-${product.value.descriptionBlocks[0].id}`;
-      }
-
-      // 嘗試從 cookie 載入分類名稱
-      if (product.value.category) {
-        const categoryName = getCategoryName(product.value.category);
-
-        // 如果從 cookie 找不到（返回預設值），才調用 API
-        if (categoryName === '其他商品') {
-          try {
-            const categoryResponse = await getProductCategory(product.value.category);
-            if (categoryResponse && categoryResponse.data) {
-              categoryMap[product.value.category] = categoryResponse.data.name;
-            }
-          } catch (error) {
-            console.warn('載入分類名稱失敗:', error);
-          }
-        }
-      }
-
-      // 規格 API
-      await fetchSpecifications(productId);
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: '找不到此商品',
-        position: 'top',
-      });
+    const response = await getStorefrontProduct(route.params.id);
+    const data = response?.data;
+    if (!data) {
       product.value = null;
+      return;
     }
+    product.value = mapProductData(data);
+    specifications.value = (data.specifications || []).filter(spec => spec.enabled !== false);
+    currentImage.value = product.value.images[0] || PRODUCT_PLACEHOLDER;
+    tab.value = product.value.descriptionBlocks.length > 0
+      ? `block-${product.value.descriptionBlocks[0].id}`
+      : '';
+    loadCategoryName(product.value.category);
   } catch (error) {
-    console.error('載入商品失敗:', error);
-    $q.notify({
-      type: 'negative',
-      message: '載入商品失敗，請稍後再試',
-      position: 'top',
-    });
     product.value = null;
   } finally {
     loading.value = false;
   }
 };
+
+// 從相關商品等連結切換商品時重新載入
+watch(() => route.params.id, (id, oldId) => {
+  if (id && id !== oldId) fetchProduct();
+});
 
 onMounted(() => {
   fetchProduct();

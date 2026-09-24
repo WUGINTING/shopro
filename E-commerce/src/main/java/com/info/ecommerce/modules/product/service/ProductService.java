@@ -143,6 +143,80 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    /** 前台可見的商品狀態（缺貨商品可瀏覽但無法結帳） */
+    public static final List<ProductStatus> PUBLIC_STATUSES = List.of(ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK);
+
+    private static final int MAX_PUBLIC_PAGE_SIZE = 60;
+
+    /**
+     * 前台商品列表：只含上架 / 缺貨且未停用的商品，分頁與排序皆在後端完成
+     *
+     * @param categoryId 分類 ID（含其子分類），null 表示全部
+     * @param keyword    名稱或 SKU 關鍵字，可為 null
+     * @param sort       newest（預設）/ price_asc / price_desc / name
+     */
+    public Page<ProductDTO> listPublicProducts(Long categoryId, String keyword, String sort, int page, int size) {
+        java.util.Set<Long> categoryIds = new java.util.HashSet<>();
+        if (categoryId != null) {
+            collectCategoryTree(categoryId, categoryIds);
+        }
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PUBLIC_PAGE_SIZE);
+        boolean filterCategory = categoryId != null;
+        java.util.Collection<Long> ids = categoryIds.isEmpty() ? List.of(-1L) : categoryIds;
+        String sortKey = sort == null ? "newest" : sort;
+        Page<Product> result = switch (sortKey) {
+            case "price_asc" -> productRepository.findPublicOrderByPriceAsc(PUBLIC_STATUSES, filterCategory, ids,
+                    normalizedKeyword, org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+            case "price_desc" -> productRepository.findPublicOrderByPriceDesc(PUBLIC_STATUSES, filterCategory, ids,
+                    normalizedKeyword, org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+            default -> productRepository.findPublic(PUBLIC_STATUSES, filterCategory, ids, normalizedKeyword,
+                    org.springframework.data.domain.PageRequest.of(safePage, safeSize, publicSort(sortKey)));
+        };
+        return result.map(this::toPublicDTO);
+    }
+
+    /**
+     * 前台商品詳情：未上架或已停用的商品視為不存在
+     */
+    public ProductDTO getPublicProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .filter(p -> PUBLIC_STATUSES.contains(p.getStatus()) && !Boolean.FALSE.equals(p.getEnabled()))
+                .orElseThrow(() -> new BusinessException("商品不存在"));
+        return toPublicDTO(product);
+    }
+
+    /** 前台用 DTO：移除成本價等內部資料，只保留啟用中的規格 */
+    private ProductDTO toPublicDTO(Product product) {
+        ProductDTO dto = toDTO(product);
+        dto.setCostPrice(null);
+        if (dto.getSpecifications() != null) {
+            dto.setSpecifications(dto.getSpecifications().stream()
+                    .filter(spec -> !Boolean.FALSE.equals(spec.getEnabled()))
+                    .peek(spec -> spec.setCost(null))
+                    .collect(java.util.stream.Collectors.toList()));
+        }
+        return dto;
+    }
+
+    private void collectCategoryTree(Long categoryId, java.util.Set<Long> result) {
+        if (categoryId == null || !result.add(categoryId)) {
+            return;
+        }
+        productCategoryRepository.findByParentId(categoryId)
+                .forEach(child -> collectCategoryTree(child.getId(), result));
+    }
+
+    private static org.springframework.data.domain.Sort publicSort(String sort) {
+        org.springframework.data.domain.Sort byId = org.springframework.data.domain.Sort.by("id");
+        if ("name".equals(sort)) {
+            return org.springframework.data.domain.Sort.by("name").and(byId);
+        }
+        return org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+                .and(byId.descending());
+    }
+
     /**
      * 分頁查詢商品
      */

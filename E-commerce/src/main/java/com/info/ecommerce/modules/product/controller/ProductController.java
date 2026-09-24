@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.product.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.service.ProductService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final CurrentUserService currentUserService;
 
     @PostMapping
     @Operation(summary = "創建商品")
@@ -43,7 +45,10 @@ public class ProductController {
     @Operation(summary = "取得商品詳情")
     public ApiResponse<ProductDTO> getProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
-        return ApiResponse.success(productService.getProduct(id));
+        // 未上架商品只有後台可見
+        return ApiResponse.success(currentUserService.isStaff()
+                ? productService.getProduct(id)
+                : productService.getPublicProduct(id));
     }
 
     @DeleteMapping("/{id}")
@@ -60,6 +65,9 @@ public class ProductController {
     public ApiResponse<Page<ProductDTO>> listProducts(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(null, null, null, page, size));
+        }
         Pageable pageable = PageRequest.of(page, size);
         return ApiResponse.success(productService.listProducts(pageable));
     }
@@ -70,6 +78,9 @@ public class ProductController {
             @Parameter(description = "分類 ID") @PathVariable Long categoryId,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(categoryId, null, null, page, size));
+        }
         Pageable pageable = PageRequest.of(page, size);
         return ApiResponse.success(productService.listProductsByCategory(categoryId, pageable));
     }
@@ -81,6 +92,9 @@ public class ProductController {
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
+        if (!currentUserService.isStaff() && !ProductService.PUBLIC_STATUSES.contains(status)) {
+            return ApiResponse.success(Page.empty(pageable));
+        }
         return ApiResponse.success(productService.listProductsByStatus(status, pageable));
     }
 
@@ -90,6 +104,9 @@ public class ProductController {
             @Parameter(description = "關鍵字") @RequestParam String keyword,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(null, keyword, null, page, size));
+        }
         Pageable pageable = PageRequest.of(page, size);
         return ApiResponse.success(productService.searchProducts(keyword, pageable));
     }

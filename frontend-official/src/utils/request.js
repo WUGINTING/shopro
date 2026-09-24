@@ -23,7 +23,6 @@ service.interceptors.request.use(
     return config;
   },
   error => {
-    console.error('請求錯誤：', error);
     return Promise.reject(error);
   }
 );
@@ -46,8 +45,6 @@ service.interceptors.response.use(
     return res;
   },
   error => {
-    console.error('回應錯誤：', error);
-
     let message = '網路錯誤，請稍後再試';
 
     if (error.response) {

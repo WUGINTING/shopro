@@ -5,8 +5,14 @@
  * @returns {Array} 購物車商品列表
  */
 export function getCartItems() {
-  const cartData = localStorage.getItem('shop_cart');
-  return cartData ? JSON.parse(cartData) : [];
+  try {
+    const cartData = localStorage.getItem('shop_cart');
+    const items = cartData ? JSON.parse(cartData) : [];
+    return Array.isArray(items) ? items : [];
+  } catch (error) {
+    // 資料損毀或無法存取 localStorage 時視為空購物車
+    return [];
+  }
 }
 
 /**
@@ -117,15 +123,29 @@ export function updateCartItemSpec(productId, oldSpecId, newSpec) {
   });
 
   if (itemIndex > -1) {
+    // 若購物車已有相同商品的新規格，合併為同一筆
+    const duplicateIndex = cartItems.findIndex(
+      (item, index) => index !== itemIndex && item.id === productId && item.specification?.id === newSpec.id
+    );
+    if (duplicateIndex > -1) {
+      cartItems[duplicateIndex].quantity += cartItems[itemIndex].quantity;
+      if (newSpec.stock !== null && newSpec.stock !== undefined && cartItems[duplicateIndex].quantity > newSpec.stock) {
+        cartItems[duplicateIndex].quantity = Math.max(newSpec.stock, 1);
+      }
+      cartItems.splice(itemIndex, 1);
+      saveCartItems(cartItems);
+      return cartItems;
+    }
+
     // 更新規格和價格
     cartItems[itemIndex].specification = newSpec;
     cartItems[itemIndex].selectedPrice = newSpec.price;
     cartItems[itemIndex].selectedSku = newSpec.sku;
     cartItems[itemIndex].price = newSpec.price;
     
-    // 檢查數量是否超過新規格的庫存
-    if (cartItems[itemIndex].quantity > newSpec.stock) {
-      cartItems[itemIndex].quantity = newSpec.stock;
+    // 檢查數量是否超過新規格的庫存（未追蹤庫存時不限制）
+    if (newSpec.stock !== null && newSpec.stock !== undefined && cartItems[itemIndex].quantity > newSpec.stock) {
+      cartItems[itemIndex].quantity = Math.max(newSpec.stock, 1);
     }
   }
 
@@ -149,7 +169,7 @@ export function clearCart() {
 export function getCartTotal() {
   const cartItems = getCartItems();
   return cartItems.reduce((total, item) => {
-    return total + item.price * item.quantity;
+    return total + (Number(item.selectedPrice ?? item.price) || 0) * item.quantity;
   }, 0);
 }
 
