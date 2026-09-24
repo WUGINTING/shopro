@@ -38,6 +38,9 @@ import http from 'src/utils/request.js';
 const STORAGE_PREFIX = 'shop_popup_seen_';
 
 const ad = ref(null);
+
+// 只接受 http(s) 或站內路徑的連結（後端也會驗證）
+const safeLink = url => (/^(https?:\/\/|\/(?!\/))/i.test(url || '') ? url : null);
 const isVisible = ref(false);
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -72,7 +75,7 @@ onMounted(async () => {
     const list = Array.isArray(response?.data) ? response.data : [];
     const popup = list.find(item => (item.imageUrl || item.title) && !alreadySeen(item));
     if (popup) {
-      ad.value = popup;
+      ad.value = { ...popup, linkUrl: safeLink(popup.linkUrl) };
       isVisible.value = true;
       markSeen(popup);
     }

@@ -27,7 +27,7 @@ public class CustomPageService {
         }
 
         CustomPage customPage = new CustomPage();
-        BeanUtils.copyProperties(dto, customPage, "id");
+        BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
         customPage = customPageRepository.save(customPage);
         return toDTO(customPage);
     }
@@ -41,7 +41,12 @@ public class CustomPageService {
             throw new BusinessException("頁面別名已存在");
         }
 
+        Boolean currentEnabled = customPage.getEnabled();
         BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
+        if (customPage.getEnabled() == null) {
+            // 未傳入時保留原本的啟用狀態
+            customPage.setEnabled(currentEnabled != null ? currentEnabled : Boolean.TRUE);
+        }
         customPage = customPageRepository.save(customPage);
         return toDTO(customPage);
     }
@@ -69,7 +74,12 @@ public class CustomPageService {
     }
 
     public Page<CustomPageDTO> listCustomPages(Pageable pageable) {
-        return customPageRepository.findAll(pageable).map(this::toDTO);
+        // 未指定排序時依排序值、ID 排列，分頁結果才穩定
+        Pageable sorted = pageable.getSort().isSorted() ? pageable
+                : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        org.springframework.data.domain.Sort.by("sortOrder").ascending().and(
+                                org.springframework.data.domain.Sort.by("id").ascending()));
+        return customPageRepository.findAll(sorted).map(this::toDTO);
     }
 
     public List<CustomPageDTO> listAllCustomPages() {

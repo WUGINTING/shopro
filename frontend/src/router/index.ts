@@ -117,6 +117,18 @@ const router = createRouter({
           meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
+          path: 'custom-pages',
+          name: 'customPages',
+          component: () => import('@/views/CustomPageView.vue'),
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+        },
+        {
+          path: 'popup-ads',
+          name: 'popupAds',
+          component: () => import('@/views/PopupAdView.vue'),
+          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+        },
+        {
           path: 'order-qa',
           name: 'orderQA',
           component: () => import('@/views/OrderQAView.vue'),
