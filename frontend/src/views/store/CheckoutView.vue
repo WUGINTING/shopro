@@ -296,6 +296,7 @@ const submitCheckout = async () => {
       shippingAddress: form.value.shippingMethod === 'DELIVERY' ? form.value.shippingAddress : null,
       shippingMethod: form.value.shippingMethod === 'STORE_PICKUP' ? 'STORE_PICKUP' : 'HOME_DELIVERY',
       paymentMethod: form.value.paymentMethod === 'COD' ? 'COD' : 'ECPAY',
+      channel: 'ADMIN_STORE',
       items: items.value.map((item) => ({
         productId: item.productId,
         specificationId: item.specificationId ?? null,

@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.info.ecommerce.modules.auth.service.EmailVerificationService emailVerificationService;
+    private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
 
     @PostMapping("/register")
     @Operation(summary = "註冊新用戶", description = "創建新用戶帳戶並返回JWT令牌")
@@ -60,5 +62,21 @@ public class AuthController {
     @Operation(summary = "Google SSO 登入/註冊", description = "使用 Google ID Token 進行登入或註冊")
     public ApiResponse<AuthResponse> googleLogin(@Valid @RequestBody com.info.ecommerce.modules.auth.dto.GoogleLoginRequest request) {
         return ApiResponse.success("登入成功", authService.googleLogin(request.getIdToken()));
+    }
+
+    @PostMapping("/email-verification")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "寄送 Email 驗證信", description = "寄送驗證連結到目前登入帳號的 Email")
+    public ApiResponse<Void> sendEmailVerification() {
+        emailVerificationService.sendVerification(currentUserService.currentUser()
+                .orElseThrow(() -> new com.info.ecommerce.common.exception.BusinessException("請先登入")));
+        return ApiResponse.success("驗證信已寄出，請至信箱點擊連結完成驗證", null);
+    }
+
+    @PostMapping("/email-verification/confirm")
+    @Operation(summary = "完成 Email 驗證", description = "以驗證信中的 token 完成驗證")
+    public ApiResponse<Void> confirmEmailVerification(@RequestBody java.util.Map<String, String> body) {
+        emailVerificationService.confirm(body.getOrDefault("token", ""));
+        return ApiResponse.success("Email 驗證完成", null);
     }
 }

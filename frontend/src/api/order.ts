@@ -17,6 +17,8 @@ export interface StorefrontCheckoutRequest {
   notes?: string
   shippingMethod: 'HOME_DELIVERY' | 'STORE_PICKUP'
   paymentMethod: 'ECPAY' | 'COD'
+  /** 下單來源，決定付款完成後導回的頁面 */
+  channel?: 'STOREFRONT' | 'ADMIN_STORE'
   items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
 }
 

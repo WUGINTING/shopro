@@ -31,7 +31,16 @@ public class OrderQAService {
      */
     @Transactional
     public OrderQADTO askQuestion(OrderQADTO dto) {
-        OrderQA qa = convertToEntity(dto);
+        if (dto.getOrderId() == null || dto.getQuestion() == null || dto.getQuestion().isBlank()) {
+            throw new com.info.ecommerce.common.exception.BusinessException("請輸入訂單與問題內容");
+        }
+        // 提問一律建立新紀錄，只接受提問欄位；ID 與回答欄位不可由呼叫端指定（避免覆寫他人問答或偽造店家回覆）
+        OrderQA qa = new OrderQA();
+        qa.setOrderId(dto.getOrderId());
+        qa.setAskerType(dto.getAskerType());
+        qa.setAskerId(dto.getAskerId());
+        qa.setAskerName(dto.getAskerName());
+        qa.setQuestion(dto.getQuestion().trim());
         qa = orderQARepository.save(qa);
 
         // 發送訂單問答通知

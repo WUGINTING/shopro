@@ -32,6 +32,7 @@ const router = createRouter({
           component: () => import('@/views/store/CheckoutView.vue'),
           meta: { requiresAuth: true, roles: ['CUSTOMER'] }
         },
+        { path: 'verify-email', name: 'verifyEmail', component: () => import('@/views/store/VerifyEmailView.vue') },
         { path: 'order/success', name: 'orderSuccess', component: () => import('@/views/store/OrderSuccessView.vue') },
         { path: 'brand', name: 'brand', component: () => import('@/views/store/BrandView.vue') },
         { path: 'contact', name: 'contact', component: () => import('@/views/store/ContactView.vue') },
@@ -138,13 +139,13 @@ const router = createRouter({
           path: 'operation-logs',
           name: 'operationLogs',
           component: () => import('@/views/OperationLogView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+          meta: { roles: ['ADMIN'] }
         },
         {
           path: 'users',
           name: 'users',
           component: () => import('@/views/UserView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER'] }
+          meta: { roles: ['ADMIN'] }
         },
         {
           path: 'profile',
@@ -180,19 +181,19 @@ const router = createRouter({
           path: 'payment-settings',
           name: 'paymentSettings',
           component: () => import('@/views/PaymentSettingsView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER'] }
+          meta: { roles: ['ADMIN'] }
         },
         {
           path: 'ecpay-config',
           name: 'ecpayConfig',
           component: () => import('@/views/EcPayConfigView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER'] }
+          meta: { roles: ['ADMIN'] }
         },
         {
           path: 'payment-callback-logs',
           name: 'paymentCallbackLogs',
           component: () => import('@/views/PaymentCallbackLogView.vue'),
-          meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
+          meta: { roles: ['ADMIN'] }
         },
         {
           path: 'marketing',

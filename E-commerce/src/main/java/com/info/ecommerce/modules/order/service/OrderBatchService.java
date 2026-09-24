@@ -51,6 +51,9 @@ public class OrderBatchService {
                 
                 orderRepository.save(order);
 
+                if (oldStatus == OrderStatus.CANCELLED && dto.getTargetStatus() != OrderStatus.CANCELLED) {
+                    orderStockService.reserveAgain(orderId, order.getOrderNumber());
+                }
                 if (dto.getTargetStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
                     orderStockService.release(orderId, order.getOrderNumber());
                     eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.CANCELLED));

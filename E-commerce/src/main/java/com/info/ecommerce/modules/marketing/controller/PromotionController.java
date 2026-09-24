@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.marketing.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.marketing.dto.PromotionDTO;
 import com.info.ecommerce.modules.marketing.service.PromotionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class PromotionController {
 
     private final PromotionService promotionService;
+    private final CurrentUserService currentUserService;
 
     @PostMapping
     @Operation(summary = "創建促銷活動")
@@ -39,7 +41,9 @@ public class PromotionController {
     @Operation(summary = "取得促銷活動詳情")
     public ApiResponse<PromotionDTO> getPromotion(
             @Parameter(description = "活動 ID") @PathVariable Long id) {
-        return ApiResponse.success(promotionService.getPromotion(id));
+        return ApiResponse.success(currentUserService.isStaff()
+                ? promotionService.getPromotion(id)
+                : promotionService.getCurrentPromotion(id));
     }
 
     @DeleteMapping("/{id}")
@@ -55,6 +59,11 @@ public class PromotionController {
     public ApiResponse<Page<PromotionDTO>> listPromotions(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        if (!currentUserService.isStaff()) {
+            // 前台只看得到進行中的促銷，並限制每頁數量
+            return ApiResponse.success(promotionService.listCurrentPromotions(
+                    PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50))));
+        }
         Pageable pageable = PageRequest.of(page, size);
         return ApiResponse.success(promotionService.listPromotions(pageable));
     }

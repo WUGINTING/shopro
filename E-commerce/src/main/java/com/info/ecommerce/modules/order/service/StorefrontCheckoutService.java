@@ -78,8 +78,14 @@ public class StorefrontCheckoutService {
     @Value("${app.storefront-url:}")
     private String storefrontUrl;
 
+    @Value("${app.admin-store-url:}")
+    private String adminStoreUrl;
+
     /** 訂單歷程動作：前台結帳（newStatus 欄位記錄付款方式 ECPAY / COD，供逾期未付款清理判斷） */
     public static final String ACTION_STOREFRONT_CHECKOUT = "STOREFRONT_CHECKOUT";
+
+    /** 訂單歷程動作：建立線上付款（逾期清理從最後一次付款請求起算） */
+    public static final String ACTION_PAYMENT_REQUESTED = "PAYMENT_REQUESTED";
 
     /**
      * 結帳試算：驗證品項並計算小計、運費與總額
@@ -94,6 +100,9 @@ public class StorefrontCheckoutService {
         List<StorefrontQuoteDTO.Line> lines = new ArrayList<>();
         // 同一商品/規格若重複出現，合併數量後再檢查庫存
         Map<String, Integer> requestedQuantities = new HashMap<>();
+        // 購買數量限制以「商品」為單位（不同規格合計）
+        Map<Long, Integer> productQuantities = new java.util.LinkedHashMap<>();
+        Map<Long, Product> productsById = new HashMap<>();
 
         for (StorefrontCheckoutRequest.Item item : items) {
             if (item.getProductId() == null || item.getQuantity() == null || item.getQuantity() < 1) {
@@ -144,13 +153,8 @@ public class StorefrontCheckoutService {
                 unitPrice = productPrice(product);
             }
 
-            if (product.getMinPurchaseQuantity() != null && totalQuantity < product.getMinPurchaseQuantity()) {
-                throw new BusinessException("商品「" + product.getName() + "」最少需購買 " + product.getMinPurchaseQuantity() + " 件");
-            }
-            if (product.getMaxPurchaseQuantity() != null && product.getMaxPurchaseQuantity() > 0
-                    && totalQuantity > product.getMaxPurchaseQuantity()) {
-                throw new BusinessException("商品「" + product.getName() + "」每筆訂單最多購買 " + product.getMaxPurchaseQuantity() + " 件");
-            }
+            productQuantities.merge(product.getId(), item.getQuantity(), Integer::sum);
+            productsById.putIfAbsent(product.getId(), product);
 
             lines.add(StorefrontQuoteDTO.Line.builder()
                     .productId(product.getId())
@@ -162,6 +166,18 @@ public class StorefrontCheckoutService {
                     .quantity(item.getQuantity())
                     .subtotalAmount(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())))
                     .build());
+        }
+
+        for (Map.Entry<Long, Integer> entry : productQuantities.entrySet()) {
+            Product product = productsById.get(entry.getKey());
+            int quantity = entry.getValue();
+            if (product.getMinPurchaseQuantity() != null && quantity < product.getMinPurchaseQuantity()) {
+                throw new BusinessException("商品「" + product.getName() + "」最少需購買 " + product.getMinPurchaseQuantity() + " 件");
+            }
+            if (product.getMaxPurchaseQuantity() != null && product.getMaxPurchaseQuantity() > 0
+                    && quantity > product.getMaxPurchaseQuantity()) {
+                throw new BusinessException("商品「" + product.getName() + "」每筆訂單最多購買 " + product.getMaxPurchaseQuantity() + " 件");
+            }
         }
 
         BigDecimal subtotal = lines.stream()
@@ -237,7 +253,7 @@ public class StorefrontCheckoutService {
                 .build();
 
         if (PAYMENT_ECPAY.equals(paymentMethod)) {
-            createOnlinePayment(order, result);
+            createOnlinePayment(order, result, "ADMIN_STORE".equalsIgnoreCase(request.getChannel()));
         }
 
         return result;
@@ -260,7 +276,7 @@ public class StorefrontCheckoutService {
     /**
      * 待付款的線上付款訂單重新建立綠界付款（例如付款頁關閉或逾時）
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public StorefrontCheckoutResultDTO payAgain(String orderNumber, String email) {
         Order order = findOwnedOrder(orderNumber, email);
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
@@ -274,7 +290,7 @@ public class StorefrontCheckoutService {
                 .order(orderDTO)
                 .paymentMethod(PAYMENT_ECPAY)
                 .build();
-        createOnlinePayment(orderDTO, result);
+        createOnlinePayment(orderDTO, result, false);
         return result;
     }
 
@@ -297,7 +313,7 @@ public class StorefrontCheckoutService {
                 .orElse(null);
     }
 
-    private void createOnlinePayment(OrderDTO order, StorefrontCheckoutResultDTO result) {
+    private void createOnlinePayment(OrderDTO order, StorefrontCheckoutResultDTO result, boolean adminStore) {
         if (order.getTotalAmount() == null || order.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             result.setPaymentError("訂單金額為 0，無需線上付款");
             return;
@@ -312,7 +328,11 @@ public class StorefrontCheckoutService {
             paymentRequest.setCustomerName(order.getCustomerName());
             paymentRequest.setCustomerEmail(order.getCustomerEmail());
             paymentRequest.setCustomerPhone(order.getCustomerPhone());
-            if (!isBlank(storefrontUrl)) {
+            if (adminStore && !isBlank(adminStoreUrl)) {
+                // 後台 App 的顧客商城：回到該 App 的訂單完成頁
+                paymentRequest.setClientBackUrl(adminStoreUrl.replaceAll("/+$", "")
+                        + "/order/success?orderNumber=" + order.getOrderNumber());
+            } else if (!isBlank(storefrontUrl)) {
                 // 付款完成後「返回商店」回到前台訂單完成頁（完成頁會查詢最新付款狀態）
                 paymentRequest.setClientBackUrl(storefrontUrl.replaceAll("/+$", "")
                         + "/shop/order/success?orderNumber=" + order.getOrderNumber());
@@ -327,6 +347,8 @@ public class StorefrontCheckoutService {
                         ? response.getErrorMessage() : "建立線上付款失敗");
             } else {
                 result.setPaymentUrl(response.getPaymentUrl());
+                orderHistoryService.recordHistory(order.getId(), ACTION_PAYMENT_REQUESTED, "建立綠界線上付款",
+                        null, null, null, "顧客");
             }
         } catch (Exception e) {
             // 付款建立失敗不回滾訂單：訂單保持待付款，客人可稍後再付款或聯繫客服

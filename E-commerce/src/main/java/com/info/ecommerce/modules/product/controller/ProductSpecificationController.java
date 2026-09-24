@@ -22,6 +22,7 @@ public class ProductSpecificationController {
 
     private final ProductSpecificationService specificationService;
     private final CurrentUserService currentUserService;
+    private final com.info.ecommerce.modules.product.service.ProductService productService;
 
     /** 前台（非員工）不回傳成本價 */
     private ProductSpecificationDTO forCaller(ProductSpecificationDTO dto) {
@@ -68,13 +69,20 @@ public class ProductSpecificationController {
     @Operation(summary = "取得規格詳情")
     public ApiResponse<ProductSpecificationDTO> getSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id) {
-        return ApiResponse.success(forCaller(specificationService.getSpecification(id)));
+        ProductSpecificationDTO spec = specificationService.getSpecification(id);
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(spec.getProductId());
+        }
+        return ApiResponse.success(forCaller(spec));
     }
 
     @GetMapping("/product/{productId}")
     @Operation(summary = "取得商品的所有規格")
     public ApiResponse<List<ProductSpecificationDTO>> listProductSpecifications(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(productId);
+        }
         List<ProductSpecificationDTO> specs = specificationService.listProductSpecifications(productId);
         specs.forEach(this::forCaller);
         return ApiResponse.success(specs);

@@ -51,6 +51,9 @@ public class StorefrontCheckoutRequest {
     @Schema(description = "付款方式：ECPAY（線上付款）/ COD（貨到付款），預設 ECPAY")
     private String paymentMethod;
 
+    @Schema(description = "下單來源：STOREFRONT（前台商城，預設）/ ADMIN_STORE（後台 App 的顧客商城），決定付款完成後導回的頁面")
+    private String channel;
+
     @NotEmpty(message = "購物車是空的")
     @Size(max = 100, message = "單筆訂單最多 100 項商品")
     @Valid

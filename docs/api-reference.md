@@ -105,7 +105,7 @@ POST /api/auth/login
 ### Google 登入
 
 ```http
-POST /api/auth/google-login
+POST /api/auth/google
 ```
 
 **請求：**
@@ -114,6 +114,19 @@ POST /api/auth/google-login
   "idToken": "google_id_token_here"
 }
 ```
+
+後端以 `GOOGLE_CLIENT_ID` 驗證 ID Token；只能登入或建立會員（CUSTOMER）帳號，Google 登入的會員 Email 視為已驗證。
+
+### Email 驗證
+
+會員註冊後 `emailVerified` 為 `false`，驗證前「我的訂單」不會列出以該 Email 下的訂單（避免他人註冊你的 Email 來查看訂單）。
+
+```http
+POST /api/auth/email-verification            # 需登入；寄驗證信到目前帳號的 Email（連結 24 小時內有效）
+POST /api/auth/email-verification/confirm    # 公開；body: { "token": "<信中連結的 token>" }
+```
+
+驗證信連結為 `${ADMIN_STORE_URL}/verify-email?token=...`，需設定 SMTP 才能寄出。
 
 ---
 

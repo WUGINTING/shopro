@@ -46,7 +46,7 @@ public class OrderStockService {
      */
     @Transactional
     public void reserve(Long orderId, String orderNumber) {
-        if (orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RESERVED)) {
+        if (reservedCount(orderId) > 0) {
             return;
         }
         reserveItems(orderItemRepository.findByOrderId(orderId), orderNumber);
@@ -58,8 +58,7 @@ public class OrderStockService {
      */
     @Transactional
     public void release(Long orderId, String orderNumber) {
-        if (!orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RESERVED)
-                || orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RELEASED)) {
+        if (!holdsStock(orderId)) {
             return;
         }
         returnItems(orderItemRepository.findByOrderId(orderId), "訂單 " + orderNumber + " 取消，歸還庫存");
@@ -80,10 +79,31 @@ public class OrderStockService {
         orderHistoryService.recordHistory(orderId, "STOCK_ADJUSTED", "訂單品項修改，已重新計算庫存", null, null, null, "系統");
     }
 
-    /** 訂單目前是否佔用庫存（已扣且尚未歸還） */
+    /**
+     * 已取消的前台訂單被恢復（改回待付款、已付款等）時重新扣庫存；庫存不足時丟出例外，狀態變更整筆回滾。
+     * 從未扣過庫存的訂單（後台建立）不處理。
+     */
+    @Transactional
+    public void reserveAgain(Long orderId, String orderNumber) {
+        long reserved = reservedCount(orderId);
+        if (reserved == 0 || reserved > releasedCount(orderId)) {
+            return;
+        }
+        reserveItems(orderItemRepository.findByOrderId(orderId), orderNumber);
+        orderHistoryService.recordHistory(orderId, ACTION_RESERVED, "訂單恢復，已重新扣除商品庫存", null, null, null, "系統");
+    }
+
+    /** 訂單目前是否佔用庫存（扣除次數多於歸還次數） */
     public boolean holdsStock(Long orderId) {
-        return orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RESERVED)
-                && !orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RELEASED);
+        return reservedCount(orderId) > releasedCount(orderId);
+    }
+
+    private long reservedCount(Long orderId) {
+        return orderHistoryRepository.countByOrderIdAndActionType(orderId, ACTION_RESERVED);
+    }
+
+    private long releasedCount(Long orderId) {
+        return orderHistoryRepository.countByOrderIdAndActionType(orderId, ACTION_RELEASED);
     }
 
     private void reserveItems(List<OrderItem> items, String orderNumber) {

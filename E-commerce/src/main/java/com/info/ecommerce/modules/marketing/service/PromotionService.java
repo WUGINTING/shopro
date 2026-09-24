@@ -63,6 +63,22 @@ public class PromotionService {
         return promotionRepository.findAll(pageable).map(this::toDTO);
     }
 
+    /** 前台：只列出進行中的促銷 */
+    public Page<PromotionDTO> listCurrentPromotions(Pageable pageable) {
+        return promotionRepository.findCurrent(java.time.LocalDate.now(), pageable).map(this::toDTO);
+    }
+
+    /** 前台：未啟用或不在活動期間的促銷視為不存在 */
+    public PromotionDTO getCurrentPromotion(Long id) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        Promotion promotion = promotionRepository.findById(id)
+                .filter(p -> Boolean.TRUE.equals(p.getEnabled())
+                        && (p.getStartDate() == null || !p.getStartDate().isAfter(today))
+                        && (p.getEndDate() == null || !p.getEndDate().isBefore(today)))
+                .orElseThrow(() -> new BusinessException("促銷活動不存在"));
+        return toDTO(promotion);
+    }
+
     public Page<PromotionDTO> listPromotionsByEnabled(Boolean enabled, Pageable pageable) {
         return promotionRepository.findByEnabled(enabled, pageable).map(this::toDTO);
     }

@@ -64,21 +64,44 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from '@/api/axios'
+import type { ApiResponse } from '@/api/types'
+import { useAuthStore } from '@/stores/auth'
 import { trackEvent } from '@/utils/tracking'
 import { getOrderStatusColor, getOrderStatusLabel, getOrderStatusTextColor } from '@/utils/orderStatus'
 
 const route = useRoute()
 const router = useRouter()
 
+const authStore = useAuthStore()
+
+// 從綠界返回時網址只有訂單編號，以登入會員的 Email 向後端查詢實際金額與付款狀態
+const liveOrder = ref<{ status?: string; totalAmount?: number } | null>(null)
+
 const orderNumber = computed(() => String(route.query.orderNumber || ''))
-const amount = computed(() => Number(route.query.amount || 0))
-const orderStatus = computed(() => String(route.query.status || 'PENDING_PAYMENT'))
+const amount = computed(() => Number(liveOrder.value?.totalAmount ?? route.query.amount ?? 0))
+const orderStatus = computed(() => String(liveOrder.value?.status || route.query.status || 'PENDING_PAYMENT'))
+
+const loadLiveStatus = async () => {
+  const email = authStore.user?.email
+  if (!orderNumber.value || !email) return
+  try {
+    const response = await axios.get<any, ApiResponse<{ order: { status: string; totalAmount: number } }>>(
+      '/storefront/orders/lookup',
+      { params: { orderNumber: orderNumber.value, email } }
+    )
+    liveOrder.value = response.data?.order ?? null
+  } catch {
+    // 查詢失敗時沿用網址資訊
+  }
+}
 const hasTrustedQuery = computed(() => Boolean(orderNumber.value) && amount.value > 0)
 const amountDisplay = computed(() => amount.value.toLocaleString('zh-TW'))
 
 onMounted(() => {
+  loadLiveStatus()
   let items: Array<Record<string, unknown>> = []
   const raw = sessionStorage.getItem('last_purchase_items')
   if (raw) {

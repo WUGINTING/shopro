@@ -32,6 +32,8 @@ export interface AuthResponse {
   email: string
   /** 使用?��???*/
   role: string
+  /** Email 是否已驗證 */
+  emailVerified?: boolean
 }
 
 /**
@@ -47,6 +49,8 @@ export interface User {
   email: string
   /** 使用?��???*/
   role: 'ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER'
+  /** Email 是否已驗證（會員需驗證後才能查看以該 Email 下的訂單） */
+  emailVerified?: boolean
   /** ?�否?�用 */
   enabled?: boolean
   /** ?�建?��? */
@@ -175,6 +179,16 @@ export const authApi = {
    */
   googleLogin: (idToken: string) => {
     return axios.post<any, ApiResponse<AuthResponse>>('/auth/google', { idToken })
+  },
+
+  /** 寄送 Email 驗證信到目前帳號的 Email */
+  sendEmailVerification: () => {
+    return axios.post<any, ApiResponse<void>>('/auth/email-verification')
+  },
+
+  /** 以驗證信中的 token 完成 Email 驗證 */
+  confirmEmailVerification: (token: string) => {
+    return axios.post<any, ApiResponse<void>>('/auth/email-verification/confirm', { token })
   }
 }
 

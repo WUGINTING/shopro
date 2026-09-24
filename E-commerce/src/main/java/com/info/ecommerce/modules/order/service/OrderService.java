@@ -65,6 +65,22 @@ public class OrderService {
     }
 
     /**
+     * 取消仍未付款的訂單（逾期未付款清理使用）。先鎖定訂單列並重新確認狀態，
+     * 與付款回呼互斥，避免在付款成功的同時把訂單取消。
+     *
+     * @return 是否確實取消
+     */
+    @Transactional
+    public boolean cancelIfStillUnpaid(Long id, String operatorName) {
+        Order locked = orderRepository.findByIdForUpdate(id).orElse(null);
+        if (locked == null || locked.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            return false;
+        }
+        updateOrderStatus(id, OrderStatus.CANCELLED, null, operatorName);
+        return true;
+    }
+
+    /**
      * 狀態變為已付款或已取消時通知顧客（交易提交後寄送）
      */
     private void publishStatusEmail(Long orderId, OrderStatus oldStatus, OrderStatus newStatus) {
@@ -346,6 +362,8 @@ public class OrderService {
 
         if (dto.getStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
             orderStockService.release(id, order.getOrderNumber());
+        } else if (oldStatus == OrderStatus.CANCELLED && dto.getStatus() != null && dto.getStatus() != OrderStatus.CANCELLED) {
+            orderStockService.reserveAgain(id, order.getOrderNumber());
         }
         publishStatusEmail(id, oldStatus, dto.getStatus());
 
@@ -465,6 +483,8 @@ public class OrderService {
 
         if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
             orderStockService.release(id, order.getOrderNumber());
+        } else if (oldStatus == OrderStatus.CANCELLED && newStatus != OrderStatus.CANCELLED) {
+            orderStockService.reserveAgain(id, order.getOrderNumber());
         }
         publishStatusEmail(id, oldStatus, newStatus);
 

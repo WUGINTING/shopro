@@ -155,6 +155,9 @@ class PaymentCallbackServiceTest {
         testOrder.setStatus(OrderStatus.PAID);
         when(orderRepository.findByOrderNumber("TEST20240101001"))
                 .thenReturn(Optional.of(testOrder));
+        // 同一筆交易已記錄 → 綠界重送的重複通知
+        when(orderPaymentRepository.findByOrderIdAndGatewayTransactionId(1L, "ECPAY2024010112345"))
+                .thenReturn(Optional.of(OrderPayment.builder().id(9L).orderId(1L).build()));
 
         // Act
         boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
@@ -357,5 +360,36 @@ class PaymentCallbackServiceTest {
         assertTrue(result);
         assertEquals(OrderStatus.PAID, testOrder.getStatus());
         verify(memberService).addTotalSpent(1L, new BigDecimal("1000"));
+    }
+
+    @Test
+    void testHandlePaymentSuccess_SecondPaymentOnPaidOrder_IsRecordedAndFlagged() {
+        testOrder.setStatus(OrderStatus.PAID);
+        when(orderRepository.findByOrderNumber("TEST20240101001")).thenReturn(Optional.of(testOrder));
+        when(orderPaymentRepository.findByOrderIdAndGatewayTransactionId(anyLong(), anyString())).thenReturn(Optional.empty());
+        when(orderPaymentRepository.save(any(OrderPayment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
+
+        assertTrue(result);
+        assertEquals(OrderStatus.PAID, testOrder.getStatus());
+        verify(orderPaymentRepository).save(any(OrderPayment.class));
+        verify(orderHistoryService).recordHistory(eq(1L), eq("PAYMENT_UNEXPECTED"), anyString(), anyString(), anyString(), isNull(), isNull());
+        verify(adminNotificationService).createNotification(any(), eq(1L), isNull(), eq("需處理的付款"), anyString());
+    }
+
+    @Test
+    void testHandlePaymentSuccess_PaymentAfterCancellation_IsRecordedNotDropped() {
+        testOrder.setStatus(OrderStatus.CANCELLED);
+        when(orderRepository.findByOrderNumber("TEST20240101001")).thenReturn(Optional.of(testOrder));
+        when(orderPaymentRepository.findByOrderIdAndGatewayTransactionId(anyLong(), anyString())).thenReturn(Optional.empty());
+        when(orderPaymentRepository.save(any(OrderPayment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
+
+        assertTrue(result);
+        assertEquals(OrderStatus.CANCELLED, testOrder.getStatus());
+        verify(orderPaymentRepository).save(any(OrderPayment.class));
+        verify(adminNotificationService).createNotification(any(), eq(1L), isNull(), eq("需處理的付款"), anyString());
     }
 }

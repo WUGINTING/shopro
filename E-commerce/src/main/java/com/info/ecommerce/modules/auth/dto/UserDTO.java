@@ -40,6 +40,8 @@ public class UserDTO {
 
     private Boolean enabled;
 
+    private Boolean emailVerified;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

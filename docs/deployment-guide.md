@@ -55,10 +55,12 @@ set -a; source .env; set +a
 | `DEMO_USERS` | 否 | `true` 時建立 manager/staff/customer 示範帳號（僅限開發） |
 | `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
 | `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
+| `ADMIN_STORE_URL` | prod 必填 | 後台 App 網址：在後台 App 顧客商城下單的訂單付款後導回 `/order/success`，會員 Email 驗證信的連結也指向 `/verify-email` |
 | `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
-| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | 建議 | SMTP 設定；設定後會寄送顧客訂單通知信（訂單成立、付款完成、訂單取消），未設定則不寄信 |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | 建議 | SMTP 設定；設定後會寄送顧客訂單通知信（訂單成立、付款完成、訂單取消）與會員 Email 驗證信；未設定則不寄信，會員也無法自行完成 Email 驗證 |
 | `MAIL_FROM` / `STORE_NAME` | 建議 | 通知信寄件地址與顯示名稱（預設「遇日小舖」） |
-| `ORDER_UNPAID_TIMEOUT_HOURS` | 否 | 前台線上付款訂單逾期未付款自動取消並歸還庫存的時數（預設 72；0 = 停用） |
+| `ORDER_UNPAID_TIMEOUT_HOURS` | 否 | 前台線上付款訂單自最後一次建立付款起，逾期未付款自動取消並歸還庫存的時數（預設 72；0 = 停用） |
+| `ECPAY_EXPIRE_DAYS` | 否 | 綠界 ATM / 超商代碼繳費期限天數（預設 2），須短於上一項期限 |
 | `ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | prod 必填 | 綠界金鑰（未設定時使用綠界公開測試商店） |
 | `ECPAY_NOTIFY_URL` | prod 必填 | 綠界伺服器付款通知網址，必須能從網際網路連線：`https://<api 網域>/api/payment-gateway/callback/ecpay` |
 | `ECPAY_RETURN_URL` | prod 必填 | 後台商城付款後的「返回商店」網址 |
@@ -126,6 +128,7 @@ ADMIN_INITIAL_PASSWORD=<首次啟動的管理員密碼，登入後請立即修�
 
 CORS_ALLOWED_ORIGINS=https://admin.yourdomain.com,https://shop.yourdomain.com
 STOREFRONT_URL=https://shop.yourdomain.com
+ADMIN_STORE_URL=https://admin.yourdomain.com
 FILE_UPLOAD_DIR=/var/lib/shopro/uploads/images
 
 ECPAY_MERCHANT_ID=<production_merchant_id>
@@ -136,6 +139,8 @@ ECPAY_NOTIFY_URL=https://api.yourdomain.com/api/payment-gateway/callback/ecpay
 ```
 
 `prod` profile 預設關閉 Swagger（需要時設 `API_DOCS_ENABLED=true`），並以 `ddl-auto=validate` 啟動；首次部署或升級需要變更資料表時，可暫時設 `JPA_DDL_AUTO=update`。
+
+> 本版新增 `users.email_verified` 欄位。從舊版升級時請以 `JPA_DDL_AUTO=update` 啟動一次（或手動 `ALTER TABLE users ADD email_verified BIT NULL`），之後再改回 `validate`。既有帳號的欄位為 NULL，視為已驗證；新註冊的會員需點擊驗證信（或使用 Google 登入）後，才能在「我的訂單」看到以該 Email 下的訂單。
 
 #### 3. 建立 systemd 服務
 
@@ -277,7 +282,8 @@ server {
 ```
 
 上線前檢查：
-- 後端 `STOREFRONT_URL` 設為前台網址（綠界付款完成後導回 `/shop/order/success`）。
+- 後端 `STOREFRONT_URL` 設為前台網址（綠界付款完成後導回 `/shop/order/success`），`ADMIN_STORE_URL` 設為後台 App 網址。
+- 設定 SMTP（`SPRING_MAIL_*`、`MAIL_FROM`），否則不會寄出訂單通知信與會員 Email 驗證信。
 - `ECPAY_NOTIFY_URL` 必須是綠界伺服器能連到的 HTTPS 網址，否則訂單不會變成「已付款」。
 - 後台「商店內容設定」填好聯絡 Email、電話、營業時間與地址（前台頁尾與商店介紹會顯示）。
 - 需要自訂退換貨、隱私權、服務條款、常見問題內容時，建立對應 slug（`returns`、`privacy`、`terms`、`faq`）的自訂頁面；未建立時顯示內建預設內容。

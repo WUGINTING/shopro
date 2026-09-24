@@ -170,8 +170,46 @@ class RoleBasedAccessControlTest {
                 .andExpect(status().isBadRequest());
     }
 
+    private void markCustomerEmailVerified() {
+        User customer = userRepository.findByEmail("customer@test.com").orElseThrow();
+        customer.setEmailVerified(true);
+        userRepository.save(customer);
+    }
+
+    @Test
+    void testUnverifiedEmail_CannotReadOrdersPlacedWithThatEmail() throws Exception {
+        // 任何人都能註冊他人的 Email；未驗證前不可存取該 Email 的訂單
+        Order victims = saveOrder("ORDVICTIM0000000001", "customer@test.com");
+        mockMvc.perform(get("/api/orders/" + victims.getId()).header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testEmailVerificationFlow_AndPurposeTokenIsNotALoginToken() throws Exception {
+        User customer = userRepository.findByEmail("customer@test.com").orElseThrow();
+        String verifyToken = jwtService.generatePurposeToken("email-verify", String.valueOf(customer.getId()),
+                java.util.Map.of("email", "customer@test.com"), 60_000);
+
+        // 驗證連結的 token 不能當作登入憑證
+        mockMvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + verifyToken))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/email-verification/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + verifyToken + "\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.emailVerified").value(true));
+
+        // 偽造 / 過期的連結無效
+        mockMvc.perform(post("/api/auth/email-verification/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"bogus\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void testCustomerCanOnlyReadOwnOrders() throws Exception {
+        markCustomerEmailVerified();
         Order own = saveOrder("ORDOWN0000000000001", "customer@test.com");
         Order other = saveOrder("ORDOTHER00000000001", "someone@else.com");
 
@@ -181,6 +219,14 @@ class RoleBasedAccessControlTest {
         mockMvc.perform(get("/api/orders/" + other.getId()).header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/orders/" + other.getId()).header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testCustomerMyOrders_WithQueryString() throws Exception {
+        markCustomerEmailVerified();
+        // RegexRequestMatcher 會比對查詢參數；帶 ?page= 的請求也必須允許
+        mockMvc.perform(get("/api/orders/my?page=0&size=20").header("Authorization", "Bearer " + customerToken))
                 .andExpect(status().isOk());
     }
 

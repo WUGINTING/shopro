@@ -43,11 +43,19 @@ public class CurrentUserService {
         return currentUser().map(user -> user.getRole() != null && user.getRole() != Role.CUSTOMER).orElse(false);
     }
 
-    /** 目前會員對應的 CRM 會員 */
+    /**
+     * 目前會員對應的 CRM 會員（以 Email 對應）。
+     * 會員帳號的 Email 必須已驗證，否則任何人都能註冊他人 Email 來查看對方的訂單。
+     */
     public Optional<Member> currentMember() {
         return currentUser()
+                .filter(this::emailTrusted)
                 .map(User::getEmail)
                 .flatMap(memberRepository::findByEmail);
+    }
+
+    private boolean emailTrusted(User user) {
+        return user.getRole() != Role.CUSTOMER || user.isEmailConfirmed();
     }
 
     /**
@@ -58,7 +66,7 @@ public class CurrentUserService {
             return;
         }
         User user = currentUser().orElseThrow(() -> new AccessDeniedException("請先登入"));
-        boolean ownsByEmail = orderCustomerEmail != null && user.getEmail() != null
+        boolean ownsByEmail = emailTrusted(user) && orderCustomerEmail != null && user.getEmail() != null
                 && orderCustomerEmail.trim().equalsIgnoreCase(user.getEmail().trim());
         boolean ownsByMember = orderCustomerId != null && currentMember()
                 .map(member -> Objects.equals(member.getId(), orderCustomerId))

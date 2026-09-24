@@ -194,4 +194,26 @@ class StorefrontCheckoutIntegrationTest {
                 .andExpect(status().isOk());
         assertEquals(3, specStock(), "取消後依目前品項（1 件）歸還");
     }
+
+    @Test
+    void restoringCancelledOrder_reservesStockAgain_orFailsWhenSoldOut() throws Exception {
+        JsonNode order = checkout(checkoutBody("restore@example.com", cup.getId(), blueCup.getId(), 2));
+        long orderId = order.get("id").asLong();
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
+        assertEquals(3, specStock());
+
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PENDING_PAYMENT")
+                        .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
+        assertEquals(1, specStock(), "恢復訂單需重新扣庫存");
+
+        // 再取消後，他人買光庫存，就無法恢復
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
+        checkout(checkoutBody("other@example.com", cup.getId(), blueCup.getId(), 3));
+        assertEquals(0, specStock());
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
+                        .header("Authorization", "Bearer " + adminToken)).andExpect(status().isBadRequest());
+        assertEquals(0, specStock());
+    }
 }

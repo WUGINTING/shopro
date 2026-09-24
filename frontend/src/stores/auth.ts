@@ -42,6 +42,16 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(userData))
   }
 
+  /** 重新讀取個人資料（例如 Email 驗證完成後更新狀態） */
+  async function refreshUser() {
+    if (!token.value) return
+    const response = await authApi.getProfile()
+    if (response?.data) {
+      user.value = response.data
+      localStorage.setItem('user', JSON.stringify(response.data))
+    }
+  }
+
   function clearAuth() {
     token.value = null
     user.value = null
@@ -71,6 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
     canAccessCustomer,
     initialize,
     setAuth,
+    refreshUser,
     clearAuth,
     logout
   }

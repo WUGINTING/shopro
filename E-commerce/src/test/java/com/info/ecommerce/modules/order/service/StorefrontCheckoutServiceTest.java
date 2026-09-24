@@ -400,4 +400,16 @@ class StorefrontCheckoutServiceTest {
         assertThrows(BusinessException.class, () -> storefrontCheckoutService.payAgain("ORD3", "buyer@example.com"));
         verifyNoInteractions(ecPayService);
     }
+
+    @Test
+    void quote_purchaseLimitsApplyPerProductAcrossSpecs() {
+        specProduct.setMaxPurchaseQuantity(2);
+        ProductSpecification white = ProductSpecification.builder()
+            .id(21L).productId(2L).specName("白色").price(new BigDecimal("350")).stock(10).enabled(true).build();
+        when(productSpecificationRepository.findById(21L)).thenReturn(Optional.of(white));
+
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+            storefrontCheckoutService.quote(List.of(item(2L, 20L, 2), item(2L, 21L, 1)), null));
+        assertTrue(ex.getMessage().contains("最多購買 2 件"));
+    }
 }

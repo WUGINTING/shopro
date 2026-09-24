@@ -77,7 +77,7 @@ class OrderStockServiceTest {
 
     @Test
     void reserve_isIdempotent() {
-        when(orderHistoryRepository.existsByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(true);
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(1L);
 
         orderStockService.reserve(1L, "ORD1");
 
@@ -86,8 +86,8 @@ class OrderStockServiceTest {
 
     @Test
     void release_onlyOnceAndOnlyWhenReserved() {
-        when(orderHistoryRepository.existsByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(true);
-        when(orderHistoryRepository.existsByOrderIdAndActionType(1L, OrderStockService.ACTION_RELEASED)).thenReturn(false);
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(1L);
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RELEASED)).thenReturn(0L);
         when(orderItemRepository.findByOrderId(1L)).thenReturn(List.of(specItem(2)));
         when(productSpecificationRepository.incrementStock(20L, 2)).thenReturn(1);
         when(productSpecificationRepository.findById(20L))
@@ -99,8 +99,32 @@ class OrderStockServiceTest {
         verify(orderHistoryService).recordHistory(eq(1L), eq(OrderStockService.ACTION_RELEASED), anyString(), any(), any(), any(), any());
 
         // 未扣過庫存的訂單（例如後台建立）不歸還
-        when(orderHistoryRepository.existsByOrderIdAndActionType(2L, OrderStockService.ACTION_RESERVED)).thenReturn(false);
+        when(orderHistoryRepository.countByOrderIdAndActionType(2L, OrderStockService.ACTION_RESERVED)).thenReturn(0L);
         orderStockService.release(2L, "ORD2");
         verify(orderItemRepository, never()).findByOrderId(2L);
+    }
+
+    @Test
+    void reserveAgain_afterCancellation_deductsStockAgain() {
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(1L);
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RELEASED)).thenReturn(1L);
+        when(orderItemRepository.findByOrderId(1L)).thenReturn(List.of(specItem(2)));
+        when(productSpecificationRepository.decrementStock(20L, 2)).thenReturn(1);
+        when(productSpecificationRepository.findById(20L))
+                .thenReturn(Optional.of(ProductSpecification.builder().id(20L).stock(1).build()));
+
+        orderStockService.reserveAgain(1L, "ORD1");
+
+        verify(productSpecificationRepository).decrementStock(20L, 2);
+        verify(orderHistoryService).recordHistory(eq(1L), eq(OrderStockService.ACTION_RESERVED), anyString(), any(), any(), any(), any());
+    }
+
+    @Test
+    void reserveAgain_ignoresOrdersThatNeverReservedStock() {
+        when(orderHistoryRepository.countByOrderIdAndActionType(1L, OrderStockService.ACTION_RESERVED)).thenReturn(0L);
+
+        orderStockService.reserveAgain(1L, "ORD1");
+
+        verifyNoInteractions(orderItemRepository, productSpecificationRepository);
     }
 }

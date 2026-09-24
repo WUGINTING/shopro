@@ -86,7 +86,42 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        // 用途型 token（例如 Email 驗證連結）不可當作登入憑證
+        return extractClaim(token, claims -> claims.get(PURPOSE_CLAIM)) == null
+                && (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+    }
+
+    private static final String PURPOSE_CLAIM = "purpose";
+
+    /**
+     * 產生特定用途的短效 token（例如 Email 驗證），與登入 token 以 purpose 宣告區隔
+     */
+    public String generatePurposeToken(String purpose, String subject, Map<String, Object> claims, long ttlMillis) {
+        Map<String, Object> allClaims = new HashMap<>(claims);
+        allClaims.put(PURPOSE_CLAIM, purpose);
+        return Jwts.builder()
+                .claims(allClaims)
+                .subject(subject)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + ttlMillis))
+                .signWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey)))
+                .compact();
+    }
+
+    /**
+     * 驗證用途型 token 的簽章、有效期與用途；不符合時回傳 empty
+     */
+    public java.util.Optional<Claims> parsePurposeToken(String token, String purpose) {
+        try {
+            Claims claims = extractAllClaims(token);
+            if (!purpose.equals(claims.get(PURPOSE_CLAIM)) || claims.getExpiration() == null
+                    || claims.getExpiration().before(new Date())) {
+                return java.util.Optional.empty();
+            }
+            return java.util.Optional.of(claims);
+        } catch (RuntimeException e) {
+            return java.util.Optional.empty();
+        }
     }
 
     private boolean isTokenExpired(String token) {

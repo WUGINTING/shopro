@@ -53,6 +53,8 @@ public class AuthService {
                 // 公開註冊不可自選角色，避免任何人註冊成 ADMIN
                 .role(Role.CUSTOMER)
                 .enabled(true)
+                // Email 需驗證後才會連結到該 Email 的訂單與會員資料
+                .emailVerified(false)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -67,6 +69,7 @@ public class AuthService {
                 .username(savedUser.getUsername())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
+                .emailVerified(savedUser.isEmailConfirmed())
                 .build();
     }
 
@@ -98,6 +101,7 @@ public class AuthService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .emailVerified(user.isEmailConfirmed())
                 .build();
     }
 
@@ -114,6 +118,7 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .enabled(user.getEnabled())
+                .emailVerified(user.isEmailConfirmed())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -141,6 +146,8 @@ public class AuthService {
                 throw new BusinessException("Email 已存在：" + request.getEmail());
             }
             user.setEmail(request.getEmail());
+            // 變更 Email 後需重新驗證
+            user.setEmailVerified(false);
         }
 
         // Update password if both current and new passwords are provided
@@ -160,6 +167,7 @@ public class AuthService {
                 .email(updatedUser.getEmail())
                 .role(updatedUser.getRole())
                 .enabled(updatedUser.getEnabled())
+                .emailVerified(updatedUser.isEmailConfirmed())
                 .createdAt(updatedUser.getCreatedAt())
                 .updatedAt(updatedUser.getUpdatedAt())
                 .build();
@@ -193,6 +201,7 @@ public class AuthService {
                         .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for OAuth users
                         .role(Role.CUSTOMER) // Default role for Google OAuth users
                         .enabled(true)
+                        .emailVerified(true) // Google 已驗證此 Email
                         .build();
                 user = userRepository.save(user);
                 
@@ -206,6 +215,14 @@ public class AuthService {
                 // Check if user account is enabled
                 if (!user.getEnabled()) {
                     throw new BusinessException("此帳號已被停用，無法登入");
+                }
+
+                // 他人可能先以此 Email 註冊（未驗證）：Google 證明了 Email 擁有權，
+                // 將帳號標記為已驗證並更換密碼，使先前設定的密碼失效
+                if (!user.isEmailConfirmed()) {
+                    user.setEmailVerified(true);
+                    user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                    user = userRepository.save(user);
                 }
                 
                 // Update last login time for existing member
@@ -222,6 +239,7 @@ public class AuthService {
                     .username(user.getUsername())
                     .email(user.getEmail())
                     .role(user.getRole())
+                    .emailVerified(user.isEmailConfirmed())
                     .build();
         } catch (BusinessException e) {
             throw e;

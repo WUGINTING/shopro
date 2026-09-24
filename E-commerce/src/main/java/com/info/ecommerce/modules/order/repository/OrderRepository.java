@@ -21,6 +21,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByOrderNumberStartingWith(String orderNumberPrefix);
 
+    /** 鎖定訂單列（付款回呼與逾期取消互斥，避免已付款訂單被取消） */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.id = :id")
+    Optional<Order> findByIdForUpdate(@Param("id") Long id);
+
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdBefore);
     
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);

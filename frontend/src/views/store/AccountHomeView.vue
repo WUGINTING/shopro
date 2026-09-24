@@ -6,6 +6,8 @@
       <p class="sf-page-lead">把高頻任務放在最前面，讓查訂單、管理地址與回購流程更順暢。</p>
     </section>
 
+    <EmailVerifyBanner />
+
     <div class="row q-col-gutter-md">
       <div v-for="card in cards" :key="card.path" class="col-12 col-md-4">
         <q-card bordered class="sf-card full-height sf-elevate-hover">
@@ -26,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import EmailVerifyBanner from '@/components/store/EmailVerifyBanner.vue'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { trackEvent } from '@/utils/tracking'

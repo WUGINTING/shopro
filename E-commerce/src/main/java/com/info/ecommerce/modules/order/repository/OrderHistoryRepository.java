@@ -19,5 +19,9 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
 
     boolean existsByOrderIdAndActionType(Long orderId, String actionType);
 
+    long countByOrderIdAndActionType(Long orderId, String actionType);
+
+    List<OrderHistory> findByOrderIdAndActionTypeInOrderByCreatedAtDesc(Long orderId, java.util.Collection<String> actionTypes);
+
     List<OrderHistory> findByOrderIdAndActionType(Long orderId, String actionType);
 }

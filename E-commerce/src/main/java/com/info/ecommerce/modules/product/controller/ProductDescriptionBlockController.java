@@ -19,11 +19,21 @@ import java.util.List;
 public class ProductDescriptionBlockController {
 
     private final ProductDescriptionBlockService blockService;
+    private final com.info.ecommerce.modules.product.service.ProductService productService;
+    private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
+
+    /** 未上架商品的描述內容只有後台看得到 */
+    private void assertVisible(Long productId) {
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(productId);
+        }
+    }
 
     @GetMapping
     @Operation(summary = "獲取商品的所有描述區塊")
     public ApiResponse<List<ProductDescriptionBlockDTO>> getProductBlocks(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
+        assertVisible(productId);
         return ApiResponse.success(blockService.getProductBlocks(productId));
     }
 
@@ -31,6 +41,7 @@ public class ProductDescriptionBlockController {
     @Operation(summary = "獲取商品的手動區塊（區塊1~3）")
     public ApiResponse<List<ProductDescriptionBlockDTO>> getManualBlocks(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
+        assertVisible(productId);
         return ApiResponse.success(blockService.getManualBlocks(productId));
     }
 
@@ -38,6 +49,7 @@ public class ProductDescriptionBlockController {
     @Operation(summary = "獲取商品的自動區塊（區塊1~7）")
     public ApiResponse<List<ProductDescriptionBlockDTO>> getAutoBlocks(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
+        assertVisible(productId);
         return ApiResponse.success(blockService.getAutoBlocks(productId));
     }
 

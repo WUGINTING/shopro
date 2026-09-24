@@ -178,6 +178,19 @@ public class ProductService {
     }
 
     /**
+     * 前台依狀態查詢（只允許前台可見狀態，排除停用商品並移除成本價）
+     */
+    public Page<ProductDTO> listPublicProductsByStatus(ProductStatus status, int page, int size) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0),
+                Math.min(Math.max(size, 1), MAX_PUBLIC_PAGE_SIZE), publicSort("newest"));
+        if (!PUBLIC_STATUSES.contains(status)) {
+            return Page.empty(pageable);
+        }
+        return productRepository.findPublic(List.of(status), false, List.of(-1L), null, pageable)
+                .map(this::toPublicDTO);
+    }
+
+    /**
      * 前台商品詳情：未上架或已停用的商品視為不存在
      */
     public ProductDTO getPublicProduct(Long id) {
@@ -185,6 +198,17 @@ public class ProductService {
                 .filter(p -> PUBLIC_STATUSES.contains(p.getStatus()) && !Boolean.FALSE.equals(p.getEnabled()))
                 .orElseThrow(() -> new BusinessException("商品不存在"));
         return toPublicDTO(product);
+    }
+
+    /** 前台存取商品附屬資料（規格、圖片、描述區塊）前確認商品已上架 */
+    public void assertPubliclyVisible(Long productId) {
+        getPublicProductEntity(productId);
+    }
+
+    private Product getPublicProductEntity(Long productId) {
+        return productRepository.findById(productId)
+                .filter(p -> PUBLIC_STATUSES.contains(p.getStatus()) && !Boolean.FALSE.equals(p.getEnabled()))
+                .orElseThrow(() -> new BusinessException("商品不存在"));
     }
 
     /** 前台用 DTO：移除成本價等內部資料，只保留啟用中的規格 */

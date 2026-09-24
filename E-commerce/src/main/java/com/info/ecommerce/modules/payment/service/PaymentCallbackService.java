@@ -64,12 +64,36 @@ public class PaymentCallbackService {
                 return false;
             }
 
-            Order order = orderOpt.get();
+            // 鎖定訂單列：與逾期未付款取消互斥，並取得最新狀態
+            Order found = orderOpt.get();
+            Order order = orderRepository.findByIdForUpdate(found.getId()).orElse(found);
             log.info("Order found: {}, current status: {}", orderNumber, order.getStatus());
 
-            // 重複通知（綠界會重送直到收到 1|OK）：已付款則直接確認，不重複寫入
-            if (order.getStatus() == OrderStatus.PAID) {
-                log.info("Order {} is already PAID, acknowledging duplicate callback", order.getOrderNumber());
+            boolean alreadyRecorded = response.getTransactionId() != null && orderPaymentRepository
+                    .findByOrderIdAndGatewayTransactionId(order.getId(), response.getTransactionId()).isPresent();
+
+            // 重複通知（綠界會重送直到收到 1|OK）：同一筆交易已記錄，直接確認，不重複寫入
+            if (alreadyRecorded && order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+                log.info("Payment {} for order {} already recorded, acknowledging duplicate callback",
+                        response.getTransactionId(), order.getOrderNumber());
+                return true;
+            }
+
+            // 訂單已付款 / 已取消 / 已退款等，卻收到另一筆成功付款：記錄款項並通知人工處理（退款或恢復訂單）
+            if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+                createOrUpdatePayment(order, response);
+                createOrUpdateTransaction(order, response, PaymentGatewayStatus.SUCCESS);
+                orderHistoryService.recordHistory(order.getId(), "PAYMENT_UNEXPECTED",
+                        String.format("訂單狀態為「%s」時收到付款 - 閘道: %s, 交易ID: %s, 金額: %s",
+                                order.getStatus().getDescription(), response.getGateway().getDisplayName(),
+                                response.getTransactionId(), response.getAmount()),
+                        order.getStatus().name(), order.getStatus().name(), null, null);
+                adminNotificationService.createNotification(AdminNotificationType.PAYMENT_COMPLETED, order.getId(), null,
+                        "需處理的付款", "訂單 #" + order.getOrderNumber() + " 目前為「" + order.getStatus().getDescription()
+                                + "」，但收到一筆 NT$" + response.getAmount() + " 的付款（交易 " + response.getTransactionId()
+                                + "），請確認後退款或恢復訂單");
+                log.warn("Unexpected payment for order {} in status {}", order.getOrderNumber(), order.getStatus());
+                // 款項已記錄，回覆成功避免綠界重送
                 return true;
             }
 
@@ -84,24 +108,6 @@ public class PaymentCallbackService {
                 adminNotificationService.createNotification(AdminNotificationType.PAYMENT_COMPLETED, order.getId(), null,
                         "付款金額異常", "訂單 #" + order.getOrderNumber() + " 付款金額 NT$" + response.getAmount()
                                 + " 與訂單金額 NT$" + order.getTotalAmount() + " 不符，請人工確認");
-                return false;
-            }
-            
-            // 檢查訂單狀態（只允許待付款狀態的訂單進行支付成功處理）
-            // 注意：數據庫約束允許：PENDING_PAYMENT, PAID, PROCESSING, COMPLETED, CANCELLED, REFUNDED
-            // 支付成功後更新為 PAID（已付款）狀態
-            if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-                log.warn("Order {} is not in PENDING_PAYMENT or PROCESSING status, current status: {}", 
-                        orderNumber, order.getStatus());
-                // 如果已經是完成、取消或退款狀態，不需要處理
-                if (order.getStatus() == OrderStatus.COMPLETED || 
-                    order.getStatus() == OrderStatus.CANCELLED || 
-                    order.getStatus() == OrderStatus.REFUNDED ||
-                    order.getStatus() == OrderStatus.PROCESSING) {
-                    log.info("Order {} is already in status: {}, skipping payment update", 
-                            orderNumber, order.getStatus());
-                    return true;
-                }
                 return false;
             }
             

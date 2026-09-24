@@ -31,6 +31,13 @@ public class EcPayService implements PaymentGatewayService {
     private final EcPayConfig ecPayConfig;
 
     /**
+     * ATM / 超商代碼繳費期限（天）。須短於逾期未付款自動取消的期限（ORDER_UNPAID_TIMEOUT_HOURS），
+     * 避免客人在訂單取消後仍能以舊代碼付款。
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.payment.ecpay-expire-days:2}")
+    private int expireDays = 2;
+
+    /**
      * 創建 ECPay 支付請求
      */
     @Override
@@ -196,6 +203,11 @@ public class EcPayService implements PaymentGatewayService {
         params.put("ItemName", request.getProductName());
         params.put("ReturnURL", ecPayConfig.getNotifyUrl());
         params.put("ChoosePayment", "ALL"); // 顯示所有付款方式
+        // 繳費期限：ATM 以天、超商代碼以分鐘計；超商條碼的期限單位與代碼衝突，因此不開放條碼
+        int days = Math.max(1, Math.min(expireDays, 60));
+        params.put("ExpireDate", String.valueOf(days));
+        params.put("StoreExpireDate", String.valueOf(days * 24 * 60));
+        params.put("IgnorePayment", "BARCODE");
         params.put("EncryptType", "1"); // SHA256
         // 完整訂單編號放在 CustomField1（會原樣回傳），MerchantTradeNo 可能因 20 字元限制被截斷
         params.put("CustomField1", originalOrderNumber);

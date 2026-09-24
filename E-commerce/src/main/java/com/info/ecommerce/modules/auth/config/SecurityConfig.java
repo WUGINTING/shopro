@@ -47,6 +47,8 @@ public class SecurityConfig {
 
     static final String[] STAFF_ROLES = {"ADMIN", "MANAGER", "STAFF"};
 
+    // 注意：RegexRequestMatcher 比對的字串包含查詢參數，因此所有 regex 結尾都允許選用的 ?query
+
     /** 前台公開唯讀 API（GET） */
     static final String[] PUBLIC_GET = {
             "/api/products",
@@ -100,18 +102,20 @@ public class SecurityConfig {
                         .requestMatchers(API_DOCS).permitAll()
 
                         // 1. 公開
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/google",
+                                "/api/auth/email-verification/confirm").permitAll()
                         .requestMatchers("/api/storefront/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payment-gateway/callback/ecpay").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/products/\\d+$")).permitAll()
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/products/\\d+(\\?.*)?$")).permitAll()
 
                         // 2. 已登入（會員）：控制器內檢查只能存取自己的資料
                         .requestMatchers("/api/auth/profile").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/email-verification").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/orders/my").authenticated()
-                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/\\d+$")).authenticated()
-                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/customer/\\d+$")).authenticated()
-                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/qa/order/\\d+$")).authenticated()
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/\\d+(\\?.*)?$")).authenticated()
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/customer/\\d+(\\?.*)?$")).authenticated()
+                        .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/qa/order/\\d+(\\?.*)?$")).authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/orders/qa").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/payment-gateway/create", "/api/payment-gateway/confirm").authenticated()
 

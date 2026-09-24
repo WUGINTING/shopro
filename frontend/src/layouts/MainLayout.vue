@@ -504,7 +504,7 @@
               </q-item-section>
             </q-item>
             <q-item
-              v-if="authStore.canAccessManager"
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('paymentSettings')"
@@ -519,7 +519,7 @@
               </q-item-section>
             </q-item>
             <q-item
-              v-if="authStore.canAccessManager"
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('ecpayConfig')"
@@ -534,6 +534,7 @@
               </q-item-section>
             </q-item>
             <q-item
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('paymentCallbackLogs')"
@@ -569,7 +570,7 @@
           </q-item>
 
           <q-item
-            v-if="authStore.canAccessStaff"
+            v-if="authStore.canAccessAdmin"
             clickable
             v-ripple
             :active="isActive('operationLogs')"
@@ -585,7 +586,7 @@
           </q-item>
 
           <q-item
-            v-if="authStore.canAccessManager"
+            v-if="authStore.canAccessAdmin"
             clickable
             v-ripple
             :active="isActive('users')"

@@ -191,7 +191,8 @@ const handleLogin = async () => {
         id: response.data.id,
         username: response.data.username,
         email: response.data.email,
-        role: response.data.role as any
+        role: response.data.role as any,
+        emailVerified: response.data.emailVerified
       })
 
       $q.notify({
