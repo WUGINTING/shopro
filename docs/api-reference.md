@@ -344,6 +344,67 @@ PUT /api/orders/{id}/status
 
 ---
 
+## 前台訂單模組（訪客結帳，不需登入）
+
+前台商城（`frontend-official`）使用。所有金額由後端依商品 / 規格價格與物流設定重新計算，前端不傳價格。
+運費取自已啟用的物流設定（`shipping_config.shippingMethod` = `HOME_DELIVERY` / `STORE_PICKUP`）；未設定宅配時預設運費 100、滿 1000 免運，門市自取免運。
+
+### 結帳試算
+
+```http
+POST /api/storefront/orders/quote
+```
+
+**請求：**
+```json
+{
+  "items": [
+    { "productId": 1, "specificationId": 1, "quantity": 2 },
+    { "productId": 2, "quantity": 1 }
+  ],
+  "shippingMethod": "HOME_DELIVERY"
+}
+```
+
+**回應 `data`：** `lines[]`（含後端單價、小計）、`subtotalAmount`、`shippingFee`、`freeShippingThreshold`、`totalAmount`。
+商品未上架、規格不符、未選規格或庫存不足時回傳 400 與可讀訊息（例如「商品「日式茶杯 (藍色)」庫存不足，目前剩餘 3 件」）。
+
+### 訪客結帳
+
+```http
+POST /api/storefront/orders/checkout
+```
+
+**請求：**
+```json
+{
+  "customerName": "王小明",
+  "customerPhone": "0912345678",
+  "customerEmail": "buyer@example.com",
+  "shippingAddress": "台北市信義區市府路 1 號",
+  "notes": "請下午送達",
+  "shippingMethod": "HOME_DELIVERY",
+  "paymentMethod": "ECPAY",
+  "items": [{ "productId": 1, "specificationId": 1, "quantity": 2 }]
+}
+```
+
+- `shippingMethod`：`HOME_DELIVERY`（需填地址）/ `STORE_PICKUP`
+- `paymentMethod`：`ECPAY`（綠界線上付款）/ `COD`（貨到付款 / 取貨時付款）
+- 依 Email 找到或自動建立 CRM 會員，訂單狀態為 `PENDING_PAYMENT`
+
+**回應 `data`：** `order`（OrderDTO）、`paymentMethod`、`paymentUrl`（ECPAY 時提供，前端需以 POST 表單導向）、`paymentError`（建立付款失敗時的訊息，訂單仍保留）。
+
+### 查詢訂單
+
+```http
+GET /api/storefront/orders/lookup?orderNumber={訂單編號}&email={下單 Email}
+```
+
+Email 不分大小寫；訂單編號與 Email 不相符時回傳 400「查無此訂單」。
+
+---
+
 ## 訂單折扣模組
 
 ### 取得折扣列表

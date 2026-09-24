@@ -102,6 +102,7 @@
               </q-btn-dropdown>
             </div>
 
+            <router-link to="/shop/order/lookup" class="nav-link">訂單查詢</router-link>
             <a href="#" class="nav-link">會員中心</a>
           </nav>
 
@@ -224,6 +225,13 @@
             </q-list>
           </q-expansion-item>
 
+          <q-item clickable v-ripple to="/shop/order/lookup">
+            <q-item-section avatar>
+              <q-icon name="receipt_long" />
+            </q-item-section>
+            <q-item-section>訂單查詢</q-item-section>
+          </q-item>
+
           <q-item clickable v-ripple>
             <q-item-section avatar>
               <q-icon name="person" />
@@ -265,7 +273,7 @@
             <div class="footer-col">
               <h4 class="footer-title">顧客服務</h4>
               <ul class="footer-links">
-                <li><a href="#">訂單查詢</a></li>
+                <li><router-link to="/shop/order/lookup">訂單查詢</router-link></li>
                 <li><a href="#">退換貨說明</a></li>
                 <li><a href="#">常見問題</a></li>
               </ul>
@@ -392,12 +400,15 @@ onMounted(() => {
   document.body.classList.add('shop-body');
   updateCartCount();
   window.addEventListener('scroll', handleScroll);
+  // 購物車在任何頁面異動（加入、結帳清空）時同步徽章數量
+  window.addEventListener('cart-updated', updateCartCount);
 });
 
 // 在卸載時移除 body class
 onUnmounted(() => {
   document.body.classList.remove('shop-body');
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('cart-updated', updateCartCount);
 });
 
 // 搜尋功能

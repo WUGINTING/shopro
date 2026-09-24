@@ -1,0 +1,367 @@
+<template>
+  <q-page class="order-lookup-page">
+    <div class="lookup-container">
+      <h1 class="page-title">訂單查詢</h1>
+      <p class="page-subtitle">輸入訂單編號與下單時填寫的電子郵件，即可查詢訂單狀態與明細。</p>
+
+      <q-form class="lookup-form" @submit="search">
+        <q-input
+          v-model="form.orderNumber"
+          outlined
+          dense
+          label="訂單編號 *"
+          :rules="[val => !!(val && val.trim()) || '請輸入訂單編號']"
+          class="lookup-input"
+        >
+          <template v-slot:prepend>
+            <q-icon name="receipt_long" />
+          </template>
+        </q-input>
+        <q-input
+          v-model="form.email"
+          outlined
+          dense
+          type="email"
+          label="電子郵件 *"
+          :rules="[
+            val => !!(val && val.trim()) || '請輸入電子郵件',
+            val => /.+@.+\..+/.test(val) || '請輸入正確的電子郵件格式',
+          ]"
+          class="lookup-input"
+        >
+          <template v-slot:prepend>
+            <q-icon name="email" />
+          </template>
+        </q-input>
+        <q-btn
+          type="submit"
+          unelevated
+          color="primary"
+          icon="search"
+          label="查詢"
+          :loading="loading"
+          class="lookup-btn"
+        />
+      </q-form>
+
+      <div v-if="errorMessage" class="lookup-error">
+        <q-icon name="error_outline" size="20px" />
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <div v-if="order" class="order-card">
+        <div class="order-header">
+          <div>
+            <div class="order-number">{{ order.orderNumber }}</div>
+            <div class="order-date">下單時間：{{ formatDate(order.createdAt, 'YYYY-MM-DD HH:mm') }}</div>
+          </div>
+          <q-badge
+            :color="statusInfo.color"
+            :label="statusInfo.label"
+            class="status-badge"
+          />
+        </div>
+
+        <div class="order-section">
+          <h2 class="section-title">訂購商品</h2>
+          <div v-for="item in order.items" :key="item.id" class="order-item">
+            <div class="item-name">
+              {{ item.productName }}
+              <span v-if="item.productSpec" class="item-spec">（{{ item.productSpec }}）</span>
+            </div>
+            <div class="item-qty">NT$ {{ money(item.unitPrice) }} x {{ item.quantity }}</div>
+            <div class="item-amount">NT$ {{ money(item.subtotalAmount) }}</div>
+          </div>
+        </div>
+
+        <div class="order-section amounts">
+          <div class="amount-row">
+            <span>商品小計</span>
+            <span>NT$ {{ money(order.subtotalAmount) }}</span>
+          </div>
+          <div v-if="Number(order.discountAmount) > 0" class="amount-row">
+            <span>折扣</span>
+            <span>-NT$ {{ money(order.discountAmount) }}</span>
+          </div>
+          <div class="amount-row">
+            <span>運費</span>
+            <span>NT$ {{ money(order.shippingFee) }}</span>
+          </div>
+          <div class="amount-row total">
+            <span>訂單總額</span>
+            <span>NT$ {{ money(order.totalAmount) }}</span>
+          </div>
+        </div>
+
+        <div class="order-section">
+          <h2 class="section-title">收件資訊</h2>
+          <div class="info-row"><span>收件人</span><span>{{ order.customerName }}</span></div>
+          <div class="info-row"><span>聯絡電話</span><span>{{ order.customerPhone }}</span></div>
+          <div class="info-row">
+            <span>配送方式</span><span>{{ pickupLabel }}</span>
+          </div>
+          <div v-if="order.shippingAddress" class="info-row">
+            <span>收件地址</span><span>{{ order.shippingAddress }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </q-page>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { lookupOrder } from 'src/api/order.js';
+import { formatDate } from 'src/utils/format.js';
+import { ORDER_STATUS_MAP, PICKUP_TYPE_MAP } from 'src/utils/checkout.js';
+
+const route = useRoute();
+
+const form = ref({
+  orderNumber: route.query.orderNumber || '',
+  email: route.query.email || '',
+});
+
+const loading = ref(false);
+const errorMessage = ref('');
+const order = ref(null);
+
+const statusInfo = computed(
+  () => ORDER_STATUS_MAP[order.value?.status] || { label: order.value?.status || '', color: 'grey' }
+);
+
+const pickupLabel = computed(() => PICKUP_TYPE_MAP[order.value?.pickupType] || '宅配到府');
+
+const money = value => Number(value || 0).toLocaleString();
+
+const search = async () => {
+  loading.value = true;
+  errorMessage.value = '';
+  order.value = null;
+  try {
+    const res = await lookupOrder(form.value.orderNumber.trim(), form.value.email.trim());
+    order.value = res.data;
+  } catch (error) {
+    errorMessage.value = error.displayMessage || '查詢失敗，請稍後再試';
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  if (form.value.orderNumber && form.value.email) {
+    search();
+  }
+});
+</script>
+
+<style lang="scss" scoped>
+@import '../../../css/variables.scss';
+
+.order-lookup-page {
+  background: $shop-bg-light;
+  min-height: 100vh;
+}
+
+.lookup-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.page-title {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: $shop-text;
+}
+
+.page-subtitle {
+  margin: 0 0 24px;
+  color: $shop-text-secondary;
+}
+
+.lookup-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: start;
+  background: $shop-white;
+  border: 1px solid $shop-border;
+  border-radius: 12px;
+  padding: 20px 20px 4px;
+  box-shadow: $shop-shadow-sm;
+
+  .lookup-btn {
+    height: 40px;
+    min-width: 100px;
+  }
+}
+
+.lookup-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: lighten($shop-danger, 40%);
+  color: darken($shop-danger, 10%);
+  border-left: 3px solid $shop-danger;
+}
+
+.order-card {
+  margin-top: 24px;
+  background: $shop-white;
+  border: 1px solid $shop-border;
+  border-radius: 12px;
+  box-shadow: $shop-shadow-sm;
+  overflow: hidden;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid $shop-border;
+
+  .order-number {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $shop-text;
+  }
+
+  .order-date {
+    font-size: 0.85rem;
+    color: $shop-text-secondary;
+    margin-top: 4px;
+  }
+
+  .status-badge {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}
+
+.order-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid $shop-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .section-title {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: $shop-text;
+  }
+}
+
+.order-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px dashed $shop-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .item-name {
+    color: $shop-text;
+  }
+
+  .item-spec {
+    color: $shop-text-secondary;
+    font-size: 0.9rem;
+  }
+
+  .item-qty {
+    color: $shop-text-secondary;
+    white-space: nowrap;
+  }
+
+  .item-amount {
+    font-weight: 600;
+    color: $shop-text;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 90px;
+  }
+}
+
+.amounts {
+  background: $shop-bg-light;
+
+  .amount-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    color: $shop-text-secondary;
+
+    &.total {
+      margin-top: 6px;
+      padding-top: 12px;
+      border-top: 1px solid $shop-border;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: $shop-text;
+
+      span:last-child {
+        color: $shop-danger;
+      }
+    }
+  }
+}
+
+.info-row {
+  display: flex;
+  gap: 16px;
+  padding: 6px 0;
+
+  span:first-child {
+    width: 80px;
+    flex-shrink: 0;
+    color: $shop-text-secondary;
+  }
+
+  span:last-child {
+    color: $shop-text;
+    word-break: break-all;
+  }
+}
+
+@media (max-width: $breakpoint-sm) {
+  .lookup-form {
+    grid-template-columns: 1fr;
+
+    .lookup-btn {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+  }
+
+  .order-item {
+    grid-template-columns: 1fr auto;
+
+    .item-qty {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .item-amount {
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+  }
+}
+</style>

@@ -49,6 +49,14 @@ const routes = [
         path: '/shop/checkout',
         component: () => import('pages/shop/CheckoutPage.vue'),
       },
+      {
+        path: '/shop/order/success',
+        component: () => import('pages/shop/order/success.vue'),
+      },
+      {
+        path: '/shop/order/lookup',
+        component: () => import('pages/shop/order/lookup.vue'),
+      },
     ],
   },
 

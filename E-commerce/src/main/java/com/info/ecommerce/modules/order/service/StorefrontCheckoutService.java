@@ -1,0 +1,349 @@
+package com.info.ecommerce.modules.order.service;
+
+import com.info.ecommerce.common.exception.BusinessException;
+import com.info.ecommerce.modules.crm.entity.Member;
+import com.info.ecommerce.modules.crm.repository.MemberRepository;
+import com.info.ecommerce.modules.order.dto.OrderDTO;
+import com.info.ecommerce.modules.order.dto.OrderItemDTO;
+import com.info.ecommerce.modules.order.dto.StorefrontCheckoutRequest;
+import com.info.ecommerce.modules.order.dto.StorefrontCheckoutResultDTO;
+import com.info.ecommerce.modules.order.dto.StorefrontQuoteDTO;
+import com.info.ecommerce.modules.order.entity.Order;
+import com.info.ecommerce.modules.order.enums.OrderStatus;
+import com.info.ecommerce.modules.order.enums.PickupType;
+import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.payment.dto.PaymentRequestDTO;
+import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
+import com.info.ecommerce.modules.payment.enums.PaymentGateway;
+import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
+import com.info.ecommerce.modules.payment.service.PaymentGatewayFactory;
+import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.entity.ProductSpecification;
+import com.info.ecommerce.modules.product.enums.ProductStatus;
+import com.info.ecommerce.modules.product.repository.ProductRepository;
+import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
+import com.info.ecommerce.modules.system.entity.ShippingConfig;
+import com.info.ecommerce.modules.system.repository.ShippingConfigRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 前台結帳服務
+ * 提供訪客結帳（不需登入）：試算、建立訂單、以訂單編號 + Email 查詢訂單。
+ * 所有金額皆以後端商品/規格/物流設定重新計算，不信任前端傳入的價格。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class StorefrontCheckoutService {
+
+    public static final String SHIPPING_HOME_DELIVERY = "HOME_DELIVERY";
+    public static final String SHIPPING_STORE_PICKUP = "STORE_PICKUP";
+    public static final String PAYMENT_ECPAY = "ECPAY";
+    public static final String PAYMENT_COD = "COD";
+
+    /** 後台未設定宅配物流時的預設運費規則（與前台原本顯示一致：運費 100、滿 1000 免運） */
+    static final BigDecimal DEFAULT_HOME_DELIVERY_FEE = new BigDecimal("100");
+    static final BigDecimal DEFAULT_FREE_SHIPPING_THRESHOLD = new BigDecimal("1000");
+
+    private final ProductRepository productRepository;
+    private final ProductSpecificationRepository productSpecificationRepository;
+    private final ShippingConfigRepository shippingConfigRepository;
+    private final MemberRepository memberRepository;
+    private final OrderRepository orderRepository;
+    private final OrderService orderService;
+    private final PaymentGatewayFactory paymentGatewayFactory;
+
+    /**
+     * 結帳試算：驗證品項並計算小計、運費與總額
+     */
+    @Transactional(readOnly = true)
+    public StorefrontQuoteDTO quote(List<StorefrontCheckoutRequest.Item> items, String shippingMethod) {
+        if (items == null || items.isEmpty()) {
+            throw new BusinessException("購物車是空的");
+        }
+
+        String method = normalizeShippingMethod(shippingMethod);
+        List<StorefrontQuoteDTO.Line> lines = new ArrayList<>();
+        // 同一商品/規格若重複出現，合併數量後再檢查庫存
+        Map<String, Integer> requestedQuantities = new HashMap<>();
+
+        for (StorefrontCheckoutRequest.Item item : items) {
+            if (item.getProductId() == null || item.getQuantity() == null || item.getQuantity() < 1) {
+                throw new BusinessException("購物車品項資料不完整");
+            }
+
+            Product product = productRepository.findById(item.getProductId())
+                    .orElseThrow(() -> new BusinessException("商品不存在或已下架"));
+            if (product.getStatus() != ProductStatus.ACTIVE || Boolean.FALSE.equals(product.getEnabled())) {
+                throw new BusinessException("商品「" + product.getName() + "」目前無法購買");
+            }
+
+            String key = item.getProductId() + ":" + item.getSpecificationId();
+            int totalQuantity = requestedQuantities.merge(key, item.getQuantity(), Integer::sum);
+
+            BigDecimal unitPrice;
+            String specName = null;
+            String sku = product.getSku();
+
+            if (item.getSpecificationId() != null) {
+                ProductSpecification spec = productSpecificationRepository.findById(item.getSpecificationId())
+                        .orElseThrow(() -> new BusinessException("商品「" + product.getName() + "」的規格不存在"));
+                if (!product.getId().equals(spec.getProductId())) {
+                    throw new BusinessException("商品規格不屬於該商品");
+                }
+                if (Boolean.FALSE.equals(spec.getEnabled())) {
+                    throw new BusinessException("商品「" + product.getName() + "」的規格「" + spec.getSpecName() + "」目前無法購買");
+                }
+                if (spec.getStock() != null && totalQuantity > spec.getStock()) {
+                    throw new BusinessException("商品「" + product.getName() + " (" + spec.getSpecName() + ")」庫存不足，目前剩餘 "
+                            + Math.max(spec.getStock(), 0) + " 件");
+                }
+                unitPrice = spec.getPrice() != null ? spec.getPrice() : productPrice(product);
+                specName = spec.getSpecName();
+                if (spec.getSku() != null && !spec.getSku().isEmpty()) {
+                    sku = spec.getSku();
+                }
+            } else {
+                if (!productSpecificationRepository.findByProductIdAndEnabledTrue(product.getId()).isEmpty()) {
+                    throw new BusinessException("請選擇商品「" + product.getName() + "」的規格");
+                }
+                unitPrice = productPrice(product);
+            }
+
+            if (product.getMinPurchaseQuantity() != null && totalQuantity < product.getMinPurchaseQuantity()) {
+                throw new BusinessException("商品「" + product.getName() + "」最少需購買 " + product.getMinPurchaseQuantity() + " 件");
+            }
+            if (product.getMaxPurchaseQuantity() != null && product.getMaxPurchaseQuantity() > 0
+                    && totalQuantity > product.getMaxPurchaseQuantity()) {
+                throw new BusinessException("商品「" + product.getName() + "」每筆訂單最多購買 " + product.getMaxPurchaseQuantity() + " 件");
+            }
+
+            lines.add(StorefrontQuoteDTO.Line.builder()
+                    .productId(product.getId())
+                    .specificationId(item.getSpecificationId())
+                    .productName(product.getName())
+                    .specName(specName)
+                    .sku(sku)
+                    .unitPrice(unitPrice)
+                    .quantity(item.getQuantity())
+                    .subtotalAmount(unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .build());
+        }
+
+        BigDecimal subtotal = lines.stream()
+                .map(StorefrontQuoteDTO.Line::getSubtotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        ShippingRule rule = resolveShippingRule(method);
+        BigDecimal shippingFee = rule.threshold() != null && subtotal.compareTo(rule.threshold()) >= 0
+                ? BigDecimal.ZERO
+                : rule.baseFee();
+
+        return StorefrontQuoteDTO.builder()
+                .lines(lines)
+                .subtotalAmount(subtotal)
+                .shippingFee(shippingFee)
+                .freeShippingThreshold(rule.threshold())
+                .totalAmount(subtotal.add(shippingFee))
+                .shippingMethod(method)
+                .build();
+    }
+
+    /**
+     * 訪客結帳：建立訂單，若選擇線上付款則同時建立綠界付款請求
+     */
+    @Transactional
+    public StorefrontCheckoutResultDTO checkout(StorefrontCheckoutRequest request) {
+        String shippingMethod = normalizeShippingMethod(request.getShippingMethod());
+        String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
+
+        if (SHIPPING_HOME_DELIVERY.equals(shippingMethod) && isBlank(request.getShippingAddress())) {
+            throw new BusinessException("宅配到府請填寫收件地址");
+        }
+
+        StorefrontQuoteDTO quote = quote(request.getItems(), shippingMethod);
+        Member member = findOrCreateMember(request);
+
+        OrderDTO orderDTO = OrderDTO.builder()
+                .customerId(member.getId())
+                .customerName(request.getCustomerName().trim())
+                .customerPhone(request.getCustomerPhone().trim())
+                .customerEmail(normalizeEmail(request.getCustomerEmail()))
+                .status(OrderStatus.PENDING_PAYMENT)
+                .pickupType(SHIPPING_STORE_PICKUP.equals(shippingMethod) ? PickupType.STORE_PICKUP : PickupType.DELIVERY)
+                .subtotalAmount(quote.getSubtotalAmount())
+                .discountAmount(BigDecimal.ZERO)
+                .shippingFee(quote.getShippingFee())
+                .totalAmount(quote.getTotalAmount())
+                .shippingAddress(SHIPPING_STORE_PICKUP.equals(shippingMethod) ? null : request.getShippingAddress().trim())
+                .notes(buildNotes(request.getNotes(), paymentMethod, shippingMethod))
+                .isDraft(false)
+                .items(quote.getLines().stream()
+                        .map(line -> OrderItemDTO.builder()
+                                .productId(line.getProductId())
+                                .specificationId(line.getSpecificationId())
+                                .unitPrice(line.getUnitPrice())
+                                .quantity(line.getQuantity())
+                                .discountAmount(BigDecimal.ZERO)
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+
+        OrderDTO order = orderService.createOrder(orderDTO);
+
+        StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()
+                .order(order)
+                .paymentMethod(paymentMethod)
+                .build();
+
+        if (PAYMENT_ECPAY.equals(paymentMethod)) {
+            createOnlinePayment(order, result);
+        }
+
+        return result;
+    }
+
+    /**
+     * 訪客以訂單編號 + Email 查詢訂單
+     */
+    @Transactional(readOnly = true)
+    public OrderDTO lookupOrder(String orderNumber, String email) {
+        if (isBlank(orderNumber) || isBlank(email)) {
+            throw new BusinessException("請輸入訂單編號與電子郵件");
+        }
+        Order order = orderRepository.findByOrderNumber(orderNumber.trim())
+                .filter(o -> o.getCustomerEmail() != null
+                        && o.getCustomerEmail().trim().equalsIgnoreCase(email.trim()))
+                .orElseThrow(() -> new BusinessException("查無此訂單，請確認訂單編號與電子郵件是否正確"));
+        return orderService.getOrder(order.getId());
+    }
+
+    private void createOnlinePayment(OrderDTO order, StorefrontCheckoutResultDTO result) {
+        if (order.getTotalAmount() == null || order.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            result.setPaymentError("訂單金額為 0，無需線上付款");
+            return;
+        }
+        try {
+            PaymentRequestDTO paymentRequest = new PaymentRequestDTO();
+            paymentRequest.setOrderId(order.getId());
+            paymentRequest.setOrderNumber(order.getOrderNumber());
+            paymentRequest.setAmount(order.getTotalAmount());
+            paymentRequest.setCurrency("TWD");
+            paymentRequest.setProductName(buildPaymentItemName(order));
+            paymentRequest.setCustomerName(order.getCustomerName());
+            paymentRequest.setCustomerEmail(order.getCustomerEmail());
+            paymentRequest.setCustomerPhone(order.getCustomerPhone());
+
+            PaymentResponseDTO response = paymentGatewayFactory
+                    .getPaymentGatewayService(PaymentGateway.ECPAY)
+                    .createPayment(paymentRequest);
+
+            if (response == null || response.getStatus() == PaymentGatewayStatus.FAILED || isBlank(response.getPaymentUrl())) {
+                result.setPaymentError(response != null && response.getErrorMessage() != null
+                        ? response.getErrorMessage() : "建立線上付款失敗");
+            } else {
+                result.setPaymentUrl(response.getPaymentUrl());
+            }
+        } catch (Exception e) {
+            // 付款建立失敗不回滾訂單：訂單保持待付款，客人可稍後再付款或聯繫客服
+            log.error("Failed to create ECPay payment for order {}", order.getOrderNumber(), e);
+            result.setPaymentError("建立線上付款失敗，訂單已保留為待付款狀態");
+        }
+    }
+
+    private Member findOrCreateMember(StorefrontCheckoutRequest request) {
+        String email = normalizeEmail(request.getCustomerEmail());
+        return memberRepository.findByEmail(email).orElseGet(() -> memberRepository.save(Member.builder()
+                .name(request.getCustomerName().trim())
+                .email(email)
+                .phone(request.getCustomerPhone().trim())
+                .address(isBlank(request.getShippingAddress()) ? null : request.getShippingAddress().trim())
+                .notes("前台結帳自動建立")
+                .build()));
+    }
+
+    private ShippingRule resolveShippingRule(String shippingMethod) {
+        List<ShippingConfig> configs = shippingConfigRepository.findByEnabledOrderBySortOrderAsc(true);
+        for (ShippingConfig config : configs) {
+            if (shippingMethod.equalsIgnoreCase(config.getShippingMethod())) {
+                BigDecimal baseFee = config.getBaseShippingFee() != null ? config.getBaseShippingFee() : BigDecimal.ZERO;
+                BigDecimal threshold = config.getFreeShippingThreshold() != null
+                        && config.getFreeShippingThreshold().compareTo(BigDecimal.ZERO) > 0
+                        ? config.getFreeShippingThreshold() : null;
+                return new ShippingRule(baseFee, threshold);
+            }
+        }
+        if (SHIPPING_STORE_PICKUP.equals(shippingMethod)) {
+            return new ShippingRule(BigDecimal.ZERO, null);
+        }
+        return new ShippingRule(DEFAULT_HOME_DELIVERY_FEE, DEFAULT_FREE_SHIPPING_THRESHOLD);
+    }
+
+    private static BigDecimal productPrice(Product product) {
+        if (product.getSalePrice() != null && product.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
+            return product.getSalePrice();
+        }
+        if (product.getBasePrice() != null) {
+            return product.getBasePrice();
+        }
+        throw new BusinessException("商品「" + product.getName() + "」尚未設定價格");
+    }
+
+    private static String normalizeShippingMethod(String shippingMethod) {
+        if (isBlank(shippingMethod)) {
+            return SHIPPING_HOME_DELIVERY;
+        }
+        String method = shippingMethod.trim().toUpperCase();
+        if (!SHIPPING_HOME_DELIVERY.equals(method) && !SHIPPING_STORE_PICKUP.equals(method)) {
+            throw new BusinessException("不支援的配送方式: " + shippingMethod);
+        }
+        return method;
+    }
+
+    private static String normalizePaymentMethod(String paymentMethod) {
+        if (isBlank(paymentMethod)) {
+            return PAYMENT_ECPAY;
+        }
+        String method = paymentMethod.trim().toUpperCase();
+        if (!PAYMENT_ECPAY.equals(method) && !PAYMENT_COD.equals(method)) {
+            throw new BusinessException("不支援的付款方式: " + paymentMethod);
+        }
+        return method;
+    }
+
+    private static String buildNotes(String customerNotes, String paymentMethod, String shippingMethod) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[前台訂單] 付款方式：").append(PAYMENT_COD.equals(paymentMethod) ? "貨到付款" : "線上付款（綠界）");
+        sb.append("；配送方式：").append(SHIPPING_STORE_PICKUP.equals(shippingMethod) ? "門市自取" : "宅配到府");
+        if (!isBlank(customerNotes)) {
+            sb.append("\n顧客備註：").append(customerNotes.trim());
+        }
+        return sb.toString();
+    }
+
+    private static String buildPaymentItemName(OrderDTO order) {
+        // 綠界 CheckMacValue 目前未處理 ( ) ! * 等特殊字元的 .NET 編碼差異，品名維持純英數，與後台商城一致
+        return "Shopro Order " + order.getOrderNumber();
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private record ShippingRule(BigDecimal baseFee, BigDecimal threshold) {
+    }
+}

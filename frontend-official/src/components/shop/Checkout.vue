@@ -54,7 +54,7 @@
 
                   <div class="item-meta">
                     <span class="item-price">
-                      NT$ {{ (item.selectedPrice || item.price).toLocaleString() }}
+                      NT$ {{ unitPrice(item).toLocaleString() }}
                     </span>
                     <span class="item-quantity">x {{ item.quantity }}</span>
                   </div>
@@ -62,7 +62,7 @@
 
                 <!-- 小計 -->
                 <div class="item-subtotal">
-                  NT$ {{ ((item.selectedPrice || item.price) * item.quantity).toLocaleString() }}
+                  NT$ {{ (unitPrice(item) * item.quantity).toLocaleString() }}
                 </div>
 
                 <!-- 移除按鈕 -->
@@ -101,7 +101,7 @@
               <h5 class="section-title">收件人資訊</h5>
             </div>
 
-            <div class="form-content">
+            <q-form ref="recipientFormRef" class="form-content" @submit.prevent>
               <div class="form-row">
                 <q-input
                   v-model="recipientInfo.name"
@@ -156,11 +156,12 @@
 
               <div class="form-row">
                 <q-input
+                  v-if="shippingMethod === 'HOME_DELIVERY'"
                   v-model="recipientInfo.address"
                   outlined
                   label="收件地址 *"
                   dense
-                  :rules="[val => !!val || '請輸入收件地址']"
+                  :rules="[val => !!(val && val.trim()) || '請輸入收件地址']"
                   class="form-input"
                 >
                   <template v-slot:prepend>
@@ -183,6 +184,41 @@
                     <q-icon name="note" />
                   </template>
                 </q-input>
+              </div>
+            </q-form>
+          </div>
+
+          <!-- 配送方式 -->
+          <div class="section shipping-section">
+            <div class="section-header">
+              <q-icon name="local_shipping" size="24px" color="primary" />
+              <h5 class="section-title">配送方式</h5>
+            </div>
+
+            <div class="payment-options">
+              <q-option-group
+                v-model="shippingMethod"
+                :options="shippingOptions"
+                color="primary"
+                inline
+                class="payment-group"
+              >
+                <template v-slot:label="opt">
+                  <div class="payment-option-label">
+                    <q-icon :name="opt.icon" size="24px" />
+                    <span>{{ opt.label }}</span>
+                  </div>
+                </template>
+              </q-option-group>
+
+              <div class="payment-note">
+                <q-icon name="info" size="18px" color="grey-6" />
+                <span v-if="shippingMethod === 'HOME_DELIVERY'">
+                  商品將寄送至您填寫的收件地址
+                </span>
+                <span v-else>
+                  訂單備妥後將以電話或 Email 通知您至門市取貨
+                </span>
               </div>
             </div>
           </div>
@@ -213,70 +249,19 @@
               <!-- 付款方式說明 -->
               <div class="payment-note">
                 <q-icon name="info" size="18px" color="grey-6" />
-                <span v-if="paymentMethod === 'credit-card'">
-                  支援 VISA、MasterCard、JCB 等主要信用卡
+                <span v-if="paymentMethod === 'ECPAY'">
+                  送出訂單後將導向綠界金流頁面，可選擇信用卡、ATM 轉帳或超商代碼繳費
                 </span>
-                <span v-else-if="paymentMethod === 'atm'">
-                  提交訂單後將提供銀行帳號資訊，請於 3 天內完成轉帳
-                </span>
-                <span v-else-if="paymentMethod === 'cod'">
-                  商品送達時請準備現金付款給配送人員
+                <span v-else-if="shippingMethod === 'STORE_PICKUP'">
+                  請於門市取貨時付款
                 </span>
                 <span v-else>
-                  訂單提交後將導向第三方支付平台完成付款
+                  商品送達時請準備現金付款給配送人員
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- 優惠券 -->
-          <div class="section coupon-section">
-            <div class="section-header">
-              <q-icon name="local_offer" size="24px" color="primary" />
-              <h5 class="section-title">優惠券</h5>
-            </div>
-
-            <div class="coupon-input-wrapper">
-              <q-input
-                v-model="couponCode"
-                outlined
-                label="輸入優惠券代碼"
-                dense
-                class="coupon-input"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="confirmation_number" />
-                </template>
-              </q-input>
-              <q-btn
-                unelevated
-                color="primary"
-                label="套用"
-                @click="applyCoupon"
-                :loading="applyingCoupon"
-                :disable="!couponCode"
-                class="apply-coupon-btn"
-              />
-            </div>
-
-            <!-- 已套用的優惠券 -->
-            <div v-if="appliedCoupon" class="applied-coupon">
-              <div class="coupon-info">
-                <q-icon name="check_circle" color="positive" size="20px" />
-                <span class="coupon-name">{{ appliedCoupon.name }}</span>
-                <span class="coupon-discount">-NT$ {{ appliedCoupon.discount.toLocaleString() }}</span>
-              </div>
-              <q-btn
-                flat
-                round
-                dense
-                icon="close"
-                size="sm"
-                @click="removeCoupon"
-                class="remove-coupon-btn"
-              />
-            </div>
-          </div>
         </div>
 
         <!-- 右側：訂單摘要 -->
@@ -299,13 +284,9 @@
                   <span class="label">運費</span>
                   <span class="value">
                     <span v-if="shippingFee > 0">NT$ {{ shippingFee.toLocaleString() }}</span>
+                    <span v-else-if="shippingMethod === 'STORE_PICKUP'" class="free-shipping">門市自取免運</span>
                     <span v-else class="free-shipping">免運費</span>
                   </span>
-                </div>
-
-                <div v-if="appliedCoupon" class="summary-row discount">
-                  <span class="label">優惠折抵</span>
-                  <span class="value">-NT$ {{ appliedCoupon.discount.toLocaleString() }}</span>
                 </div>
 
                 <q-separator class="summary-divider" />
@@ -317,11 +298,21 @@
                 </div>
 
                 <!-- 免運費提示 -->
-                <div v-if="freeShippingThreshold && subtotal < freeShippingThreshold" class="free-shipping-tip">
+                <div v-if="freeShippingThreshold && subtotal < freeShippingThreshold && shippingFee > 0" class="free-shipping-tip">
                   <q-icon name="local_shipping" size="18px" />
                   <span>
                     再消費 NT$ {{ (freeShippingThreshold - subtotal).toLocaleString() }} 即可免運費
                   </span>
+                </div>
+
+                <!-- 試算中 / 試算錯誤（如庫存不足） -->
+                <div v-if="quoting" class="quote-status">
+                  <q-spinner size="18px" color="primary" />
+                  <span>正在確認最新價格與庫存...</span>
+                </div>
+                <div v-else-if="quoteError" class="quote-error">
+                  <q-icon name="error_outline" size="18px" />
+                  <span>{{ quoteError }}</span>
                 </div>
               </div>
 
@@ -372,19 +363,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { getCartItems, clearCart, removeFromCart } from 'src/utils/cart.js';
-import { getProductDetail, getProductSpecifications } from 'src/api/product.js';
+import { quoteOrder, checkoutOrder, toOrderItems } from 'src/api/order.js';
+import {
+  getCheckoutDraft,
+  saveCheckoutDraft,
+  saveLastOrder,
+  redirectToPayment,
+} from 'src/utils/checkout.js';
 
 const router = useRouter();
 const $q = useQuasar();
 
+const recipientFormRef = ref(null);
+
 // 購物車商品
 const cartItems = ref([]);
 
-// 收件人資訊
+// 收件人資訊（自動帶入上次填寫的資料）
 const recipientInfo = ref({
   name: '',
   phone: '',
@@ -393,19 +392,23 @@ const recipientInfo = ref({
   note: '',
 });
 
-// 付款方式
-const paymentMethod = ref('credit-card');
-const paymentOptions = [
-  { label: '信用卡', value: 'credit-card', icon: 'credit_card' },
-  { label: 'ATM轉帳', value: 'atm', icon: 'account_balance' },
-  { label: '貨到付款', value: 'cod', icon: 'local_shipping' },
-  { label: '第三方支付', value: 'third-party', icon: 'account_balance_wallet' },
+// 配送方式
+const shippingMethod = ref('HOME_DELIVERY');
+const shippingOptions = [
+  { label: '宅配到府', value: 'HOME_DELIVERY', icon: 'local_shipping' },
+  { label: '門市自取', value: 'STORE_PICKUP', icon: 'storefront' },
 ];
 
-// 優惠券
-const couponCode = ref('');
-const appliedCoupon = ref(null);
-const applyingCoupon = ref(false);
+// 付款方式
+const paymentMethod = ref('ECPAY');
+const paymentOptions = computed(() => [
+  { label: '線上付款（信用卡 / ATM / 超商）', value: 'ECPAY', icon: 'credit_card' },
+  {
+    label: shippingMethod.value === 'STORE_PICKUP' ? '取貨時付款' : '貨到付款',
+    value: 'COD',
+    icon: 'payments',
+  },
+]);
 
 // 條款同意
 const agreeTerms = ref(false);
@@ -413,46 +416,90 @@ const agreeTerms = ref(false);
 // 提交狀態
 const submitting = ref(false);
 
-// 運費設定
-const freeShippingThreshold = 1000; // 滿千免運
-const baseShippingFee = 100; // 基本運費
+// 後端試算結果（價格、運費一律以後端為準）
+const quote = ref(null);
+const quoting = ref(false);
+const quoteError = ref('');
+let quoteSeq = 0;
+
+const itemKey = (productId, specId) => `${productId}-${specId || 'default'}`;
+
+const quotedLines = computed(() => {
+  const map = new Map();
+  (quote.value?.lines || []).forEach(line => {
+    map.set(itemKey(line.productId, line.specificationId), line);
+  });
+  return map;
+});
+
+// 單價：有後端試算時使用後端價格，否則暫以購物車價格顯示
+const unitPrice = item => {
+  const line = quotedLines.value.get(itemKey(item.id, item.specification?.id));
+  return Number(line?.unitPrice ?? item.selectedPrice ?? item.price ?? 0);
+};
 
 // 計算商品小計
 const subtotal = computed(() => {
-  return cartItems.value.reduce((total, item) => {
-    return total + (item.selectedPrice || item.price) * item.quantity;
-  }, 0);
+  if (quote.value) return Number(quote.value.subtotalAmount);
+  return cartItems.value.reduce((total, item) => total + unitPrice(item) * item.quantity, 0);
 });
 
-// 計算運費
-const shippingFee = computed(() => {
-  if (subtotal.value >= freeShippingThreshold) {
-    return 0;
-  }
-  return baseShippingFee;
-});
+// 運費
+const shippingFee = computed(() => Number(quote.value?.shippingFee ?? 0));
 
-// 計算總金額
+// 免運門檻
+const freeShippingThreshold = computed(() =>
+  quote.value?.freeShippingThreshold ? Number(quote.value.freeShippingThreshold) : null
+);
+
+// 總金額
 const totalAmount = computed(() => {
-  let total = subtotal.value + shippingFee.value;
-  if (appliedCoupon.value) {
-    total -= appliedCoupon.value.discount;
-  }
-  return Math.max(total, 0);
+  if (quote.value) return Number(quote.value.totalAmount);
+  return subtotal.value + shippingFee.value;
 });
 
 // 是否可以提交
 const canSubmit = computed(() => {
   return (
     cartItems.value.length > 0 &&
+    !!quote.value &&
+    !quoteError.value &&
+    !quoting.value &&
     recipientInfo.value.name &&
     recipientInfo.value.phone &&
     recipientInfo.value.email &&
-    recipientInfo.value.address &&
+    (shippingMethod.value === 'STORE_PICKUP' || recipientInfo.value.address) &&
     agreeTerms.value &&
     !submitting.value
   );
 });
+
+// 向後端試算金額並檢查庫存
+const refreshQuote = async () => {
+  if (cartItems.value.length === 0) {
+    quote.value = null;
+    quoteError.value = '';
+    return;
+  }
+
+  const seq = ++quoteSeq;
+  quoting.value = true;
+  try {
+    const res = await quoteOrder({
+      items: toOrderItems(cartItems.value),
+      shippingMethod: shippingMethod.value,
+    });
+    if (seq !== quoteSeq) return;
+    quote.value = res.data;
+    quoteError.value = '';
+  } catch (error) {
+    if (seq !== quoteSeq) return;
+    quote.value = null;
+    quoteError.value = error.displayMessage || '無法確認商品價格與庫存，請稍後再試';
+  } finally {
+    if (seq === quoteSeq) quoting.value = false;
+  }
+};
 
 // 載入購物車資料
 const loadCartData = () => {
@@ -460,7 +507,7 @@ const loadCartData = () => {
 };
 
 // 移除購物車商品
-const removeCartItem = (item) => {
+const removeCartItem = item => {
   const specId = item.specification?.id || null;
   removeFromCart(item.id, specId);
   cartItems.value = getCartItems();
@@ -480,6 +527,7 @@ const removeCartItem = (item) => {
       position: 'top',
       timeout: 1500,
     });
+    refreshQuote();
   }
 };
 
@@ -493,68 +541,16 @@ const goToShop = () => {
   router.push('/shop');
 };
 
-// 套用優惠券
-const applyCoupon = async () => {
-  if (!couponCode.value.trim()) {
-    return;
-  }
-
-  applyingCoupon.value = true;
-
-  try {
-    // 模擬 API 呼叫
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 模擬優惠券驗證
-    if (couponCode.value.toUpperCase() === 'DISCOUNT100') {
-      appliedCoupon.value = {
-        code: couponCode.value,
-        name: '滿額折扣',
-        discount: 100,
-      };
-      $q.notify({
-        type: 'positive',
-        message: '優惠券套用成功！',
-        position: 'top',
-        timeout: 2000,
-      });
-      couponCode.value = '';
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: '優惠券代碼無效或已過期',
-        position: 'top',
-        timeout: 2000,
-      });
-    }
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '套用優惠券失敗，請稍後再試',
-      position: 'top',
-      timeout: 2000,
-    });
-  } finally {
-    applyingCoupon.value = false;
-  }
-};
-
-// 移除優惠券
-const removeCoupon = () => {
-  appliedCoupon.value = null;
-  $q.notify({
-    type: 'info',
-    message: '已移除優惠券',
-    position: 'top',
-    timeout: 1500,
-  });
-};
-
 // 顯示服務條款
 const showTerms = () => {
   $q.dialog({
     title: '服務條款',
-    message: '這裡是服務條款內容...',
+    message: [
+      '1. 訂單成立後，我們將以您填寫的電子郵件與電話聯繫出貨及取貨事宜。',
+      '2. 商品價格、運費以結帳頁面最終顯示金額為準。',
+      '3. 如遇商品缺貨，我們將主動聯繫您並協助退款或更換商品。',
+      '4. 商品到貨後享有七天鑑賞期（食品等依法不適用之商品除外），如需退換貨請聯繫客服。',
+    ].join('<br>'),
     html: true,
   });
 };
@@ -563,7 +559,11 @@ const showTerms = () => {
 const showPrivacy = () => {
   $q.dialog({
     title: '隱私政策',
-    message: '這裡是隱私政策內容...',
+    message: [
+      '您於結帳時提供的姓名、電話、電子郵件與地址，僅用於訂單處理、配送及客服聯繫。',
+      '線上付款由綠界科技處理，本站不會儲存您的信用卡資訊。',
+      '除法令要求或配送所需外，我們不會將您的個人資料提供給第三方。',
+    ].join('<br>'),
     html: true,
   });
 };
@@ -574,66 +574,104 @@ const submitOrder = async () => {
     return;
   }
 
+  const valid = await recipientFormRef.value?.validate();
+  if (!valid) {
+    return;
+  }
+
   submitting.value = true;
 
   try {
-    // 準備訂單資料
-    const orderData = {
-      items: cartItems.value,
-      recipient: recipientInfo.value,
-      payment: paymentMethod.value,
-      coupon: appliedCoupon.value,
-      subtotal: subtotal.value,
-      shippingFee: shippingFee.value,
-      totalAmount: totalAmount.value,
-    };
+    const res = await checkoutOrder({
+      customerName: recipientInfo.value.name,
+      customerPhone: recipientInfo.value.phone,
+      customerEmail: recipientInfo.value.email,
+      shippingAddress: shippingMethod.value === 'HOME_DELIVERY' ? recipientInfo.value.address : null,
+      notes: recipientInfo.value.note,
+      shippingMethod: shippingMethod.value,
+      paymentMethod: paymentMethod.value,
+      items: toOrderItems(cartItems.value),
+    });
 
-    console.log('訂單資料:', orderData);
+    const result = res.data;
+    const order = result.order;
 
-    // 模擬 API 呼叫
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    saveLastOrder({
+      orderNumber: order.orderNumber,
+      email: order.customerEmail,
+      totalAmount: order.totalAmount,
+      paymentMethod: result.paymentMethod,
+      paymentError: result.paymentError || null,
+      shippingMethod: shippingMethod.value,
+      itemCount: order.items?.length || cartItems.value.length,
+    });
 
-    // 清空購物車
     clearCart();
 
-    // 顯示成功訊息
-    $q.notify({
-      type: 'positive',
-      message: '訂單已成功送出！',
-      position: 'top',
-      timeout: 2000,
-    });
-
-    // 導向訂單完成頁面或訂單列表
-    setTimeout(() => {
-      $q.dialog({
-        title: '訂單提交成功',
-        message: '感謝您的訂購！我們將盡快處理您的訂單。',
-        persistent: true,
-        ok: {
-          label: '查看訂單',
-          color: 'primary',
-        },
-      }).onOk(() => {
-        // 導向訂單頁面
-        router.push('/shop');
+    if (result.paymentMethod === 'ECPAY' && result.paymentUrl) {
+      $q.notify({
+        type: 'positive',
+        message: '訂單已建立，正在前往付款頁面...',
+        position: 'top',
+        timeout: 2000,
       });
-    }, 500);
-  } catch (error) {
-    console.error('提交訂單失敗:', error);
-    $q.notify({
-      type: 'negative',
-      message: '訂單提交失敗，請稍後再試',
-      position: 'top',
-      timeout: 2000,
+      redirectToPayment(result.paymentUrl);
+      return;
+    }
+
+    router.push({
+      path: '/shop/order/success',
+      query: { orderNumber: order.orderNumber },
     });
+  } catch (error) {
+    // 錯誤訊息已由 request 攔截器顯示；若為庫存或價格問題，重新試算讓畫面同步
+    refreshQuote();
   } finally {
     submitting.value = false;
   }
 };
 
-onMounted(() => {
+// 自動保存填寫中的收件資料（不含備註）
+watch(
+  () => ({
+    name: recipientInfo.value.name,
+    phone: recipientInfo.value.phone,
+    email: recipientInfo.value.email,
+    address: recipientInfo.value.address,
+    shippingMethod: shippingMethod.value,
+  }),
+  draft => saveCheckoutDraft(draft),
+  { deep: true }
+);
+
+watch(shippingMethod, () => {
+  refreshQuote();
+});
+
+// 購物車抽屜中修改數量或規格時，同步結帳明細並重新試算（送出訂單清空購物車時不處理）
+const handleCartUpdated = () => {
+  if (submitting.value) return;
   loadCartData();
+  refreshQuote();
+};
+
+onBeforeUnmount(() => {
+  window.removeEventListener('cart-updated', handleCartUpdated);
+});
+
+onMounted(() => {
+  const draft = getCheckoutDraft();
+  recipientInfo.value.name = draft.name || '';
+  recipientInfo.value.phone = draft.phone || '';
+  recipientInfo.value.email = draft.email || '';
+  recipientInfo.value.address = draft.address || '';
+  if (draft.shippingMethod === 'STORE_PICKUP') {
+    shippingMethod.value = 'STORE_PICKUP';
+  }
+
+  loadCartData();
+  refreshQuote();
+  window.addEventListener('cart-updated', handleCartUpdated);
 });
 </script>
 
@@ -891,47 +929,6 @@ onMounted(() => {
   }
 }
 
-// 優惠券
-.coupon-input-wrapper {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-
-  .coupon-input {
-    flex: 1;
-  }
-
-  .apply-coupon-btn {
-    min-width: 80px;
-  }
-}
-
-.applied-coupon {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: lighten($shop-success, 50%);
-  border-radius: 8px;
-  border: 1px solid $shop-success;
-
-  .coupon-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .coupon-name {
-      font-weight: 500;
-      color: $shop-text;
-    }
-
-    .coupon-discount {
-      font-weight: 600;
-      color: $shop-success;
-    }
-  }
-}
-
 // 訂單摘要
 .order-summary-section {
   .summary-content {
@@ -989,6 +986,28 @@ onMounted(() => {
 
   .summary-divider {
     margin: 8px 0;
+  }
+
+  .quote-status,
+  .quote-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+  }
+
+  .quote-status {
+    background: $shop-bg-light;
+    color: $shop-text-secondary;
+  }
+
+  .quote-error {
+    background: lighten($shop-danger, 40%);
+    color: darken($shop-danger, 10%);
+    border-left: 3px solid $shop-danger;
   }
 
   .free-shipping-tip {

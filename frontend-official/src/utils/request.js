@@ -54,7 +54,8 @@ service.interceptors.response.use(
       // 伺服器回應了錯誤狀態碼
       switch (error.response.status) {
         case 400:
-          message = '請求參數錯誤';
+          // 後端業務錯誤（如庫存不足）會帶有可讀訊息
+          message = error.response.data?.message || '請求參數錯誤';
           break;
         case 401:
           message = '未授權，請重新登入';
@@ -79,12 +80,16 @@ service.interceptors.response.use(
       message = '無法連接到伺服器';
     }
 
-    Notify.create({
-      type: 'negative',
-      message,
-      position: 'top',
-    });
+    // 呼叫端可傳入 { silent: true } 自行處理錯誤顯示
+    if (!error.config?.silent) {
+      Notify.create({
+        type: 'negative',
+        message,
+        position: 'top',
+      });
+    }
 
+    error.displayMessage = message;
     return Promise.reject(error);
   }
 );
