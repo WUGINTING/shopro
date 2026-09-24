@@ -242,6 +242,9 @@ npx quasar build          # 輸出至 dist/spa
 前台預設呼叫同網域的 `/api`（見 `frontend-official/.env.production`），請讓網站伺服器反向代理到後端；路由為 history 模式，需要 SPA fallback：
 
 ```nginx
+# 公開的結帳 / 訂單查詢 API 限流（每個 IP 每秒 2 次，允許短暫突增）
+limit_req_zone $binary_remote_addr zone=storefront_orders:10m rate=2r/s;
+
 server {
     listen 443 ssl;
     server_name shop.yourdomain.com;
@@ -252,6 +255,14 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+
+    location /api/storefront/orders/ {
+        limit_req zone=storefront_orders burst=10 nodelay;
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /api {
