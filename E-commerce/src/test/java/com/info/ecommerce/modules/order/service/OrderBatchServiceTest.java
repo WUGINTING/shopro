@@ -39,6 +39,9 @@ class OrderBatchServiceTest {
     @Mock
     private OrderStockService orderStockService;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private OrderBatchService orderBatchService;
 

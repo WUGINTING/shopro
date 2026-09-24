@@ -1,5 +1,7 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.order.event.OrderEmailEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.crm.entity.Member;
 import com.info.ecommerce.modules.crm.repository.MemberRepository;
@@ -71,6 +73,7 @@ public class StorefrontCheckoutService {
     private final OrderStockService orderStockService;
     private final OrderHistoryService orderHistoryService;
     private final OrderHistoryRepository orderHistoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.storefront-url:}")
     private String storefrontUrl;
@@ -226,6 +229,7 @@ public class StorefrontCheckoutService {
         orderHistoryService.recordHistory(order.getId(), ACTION_STOREFRONT_CHECKOUT,
                 "前台結帳：" + (PAYMENT_COD.equals(paymentMethod) ? "貨到付款" : "線上付款（綠界）"),
                 null, paymentMethod, null, "顧客");
+        eventPublisher.publishEvent(new OrderEmailEvent(order.getId(), OrderEmailEvent.Type.CREATED));
 
         StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()
                 .order(order)

@@ -1,5 +1,7 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.order.event.OrderEmailEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.order.dto.BatchOrderUpdateDTO;
 import com.info.ecommerce.modules.order.entity.Order;
@@ -25,6 +27,7 @@ public class OrderBatchService {
     private final OrderHistoryService orderHistoryService;
     private final MemberService memberService;
     private final OrderStockService orderStockService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 批次更新訂單狀態
@@ -50,6 +53,9 @@ public class OrderBatchService {
 
                 if (dto.getTargetStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
                     orderStockService.release(orderId, order.getOrderNumber());
+                    eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.CANCELLED));
+                } else if (dto.getTargetStatus() == OrderStatus.PAID && oldStatus != OrderStatus.PAID) {
+                    eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.PAID));
                 }
                 
                 // 記錄歷史

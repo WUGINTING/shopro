@@ -1,5 +1,7 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.order.event.OrderEmailEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.order.dto.OrderDTO;
 import com.info.ecommerce.modules.order.dto.OrderItemDTO;
@@ -47,6 +49,7 @@ public class OrderService {
     private final MemberService memberService;
     private final AdminNotificationService adminNotificationService;
     private final OrderStockService orderStockService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 生成訂單編號
@@ -59,6 +62,20 @@ public class OrderService {
         String random = String.format("%04d", (int)(Math.random() * 10000));
         // 總長度：3(ORD) + 12(時間戳) + 4(隨機數) = 19字元
         return "ORD" + timestamp + random;
+    }
+
+    /**
+     * 狀態變為已付款或已取消時通知顧客（交易提交後寄送）
+     */
+    private void publishStatusEmail(Long orderId, OrderStatus oldStatus, OrderStatus newStatus) {
+        if (newStatus == null || newStatus == oldStatus) {
+            return;
+        }
+        if (newStatus == OrderStatus.PAID) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.PAID));
+        } else if (newStatus == OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.CANCELLED));
+        }
     }
 
     /**
@@ -330,6 +347,7 @@ public class OrderService {
         if (dto.getStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
             orderStockService.release(id, order.getOrderNumber());
         }
+        publishStatusEmail(id, oldStatus, dto.getStatus());
 
         // 記錄歷史
         if (oldStatus != dto.getStatus()) {
@@ -448,6 +466,7 @@ public class OrderService {
         if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
             orderStockService.release(id, order.getOrderNumber());
         }
+        publishStatusEmail(id, oldStatus, newStatus);
 
         // 記錄歷史
         orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",

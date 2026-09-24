@@ -56,6 +56,8 @@ set -a; source .env; set +a
 | `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
 | `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
 | `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | 建議 | SMTP 設定；設定後會寄送顧客訂單通知信（訂單成立、付款完成、訂單取消），未設定則不寄信 |
+| `MAIL_FROM` / `STORE_NAME` | 建議 | 通知信寄件地址與顯示名稱（預設「遇日小舖」） |
 | `ORDER_UNPAID_TIMEOUT_HOURS` | 否 | 前台線上付款訂單逾期未付款自動取消並歸還庫存的時數（預設 72；0 = 停用） |
 | `ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | prod 必填 | 綠界金鑰（未設定時使用綠界公開測試商店） |
 | `ECPAY_NOTIFY_URL` | prod 必填 | 綠界伺服器付款通知網址，必須能從網際網路連線：`https://<api 網域>/api/payment-gateway/callback/ecpay` |

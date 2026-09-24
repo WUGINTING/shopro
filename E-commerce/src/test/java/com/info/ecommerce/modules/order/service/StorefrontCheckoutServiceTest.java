@@ -90,6 +90,9 @@ class StorefrontCheckoutServiceTest {
     @Mock
     private OrderHistoryRepository orderHistoryRepository;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private StorefrontCheckoutService storefrontCheckoutService;
 
@@ -248,6 +251,8 @@ class StorefrontCheckoutServiceTest {
         assertNull(result.getPaymentUrl());
         verifyNoInteractions(ecPayService);
         verify(orderStockService).reserve(100L, "ORD2026010112000001");
+        verify(eventPublisher).publishEvent(new com.info.ecommerce.modules.order.event.OrderEmailEvent(
+            100L, com.info.ecommerce.modules.order.event.OrderEmailEvent.Type.CREATED));
         verify(orderHistoryService).recordHistory(eq(100L), eq(StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT),
             anyString(), isNull(), eq("COD"), isNull(), anyString());
     }

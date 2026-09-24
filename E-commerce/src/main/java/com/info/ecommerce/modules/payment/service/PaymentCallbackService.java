@@ -1,5 +1,7 @@
 package com.info.ecommerce.modules.payment.service;
 
+import com.info.ecommerce.modules.order.event.OrderEmailEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderPayment;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
@@ -42,6 +44,7 @@ public class PaymentCallbackService {
     private final MemberService memberService;
     private final AdminNotificationService adminNotificationService;
     private final OrderStockService orderStockService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 處理支付成功回調
@@ -138,6 +141,7 @@ public class PaymentCallbackService {
             } catch (Exception e) {
                 log.error("Failed to update member total spent for order {}", order.getOrderNumber(), e);
             }
+            eventPublisher.publishEvent(new OrderEmailEvent(order.getId(), OrderEmailEvent.Type.PAID));
             adminNotificationService.createNotification(AdminNotificationType.PAYMENT_COMPLETED, order.getId(), null,
                     "收款完成", "訂單 #" + order.getOrderNumber() + " 已完成線上付款，金額：NT$" + order.getTotalAmount());
 
@@ -242,6 +246,7 @@ public class PaymentCallbackService {
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
             orderStockService.release(order.getId(), order.getOrderNumber());
+            eventPublisher.publishEvent(new OrderEmailEvent(order.getId(), OrderEmailEvent.Type.CANCELLED));
             
             // 記錄歷史
             orderHistoryService.recordHistory(

@@ -56,6 +56,9 @@ class PaymentCallbackServiceTest {
     @Mock
     private OrderStockService orderStockService;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private PaymentCallbackService paymentCallbackService;
 

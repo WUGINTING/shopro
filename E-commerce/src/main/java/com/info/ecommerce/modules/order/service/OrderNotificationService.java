@@ -3,8 +3,13 @@ package com.info.ecommerce.modules.order.service;
 import com.info.ecommerce.modules.order.entity.OrderNotification;
 import com.info.ecommerce.modules.order.enums.NotificationType;
 import com.info.ecommerce.modules.order.repository.OrderNotificationRepository;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,8 +17,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 訂單通知服務 - Email/SMS 通知
- * 注意：此為簡化版本，實際應該整合真實的郵件和簡訊服務
+ * 訂單通知服務 - Email / SMS
+ * <p>Email 透過 Spring Mail 寄送：設定 MAIL_HOST 等環境變數後啟用；未設定時不寄送並如實記錄為未寄出。
+ * 簡訊尚未串接服務商，一律記錄為未寄出。</p>
  */
 @Slf4j
 @Service
@@ -21,9 +27,21 @@ import java.util.List;
 public class OrderNotificationService {
 
     private final OrderNotificationRepository orderNotificationRepository;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+
+    @Value("${app.mail.from:}")
+    private String mailFrom;
+
+    @Value("${app.mail.store-name:遇日小舖}")
+    private String storeName;
+
+    /** 是否已設定郵件伺服器（未設定 spring.mail.host 時不會有 JavaMailSender） */
+    public boolean isEmailEnabled() {
+        return mailSenderProvider.getIfAvailable() != null;
+    }
 
     /**
-     * 發送訂單通知
+     * 發送訂單通知並記錄結果
      */
     @Transactional
     public void sendNotification(Long orderId, NotificationType type, String recipient, 
@@ -36,27 +54,51 @@ public class OrderNotificationService {
             .content(content)
             .isSent(false)
             .build();
-        
+        deliver(notification);
+        orderNotificationRepository.save(notification);
+    }
+
+    /**
+     * 實際寄送，並將結果寫回通知記錄
+     */
+    private void deliver(OrderNotification notification) {
         try {
-            // 這裡應該調用實際的郵件或簡訊服務
-            // 目前僅記錄日誌
-            if (type == NotificationType.EMAIL) {
-                log.info("發送郵件通知到 {} - 主旨: {}", recipient, subject);
-                // TODO: 整合郵件服務
-            } else if (type == NotificationType.SMS) {
-                log.info("發送簡訊通知到 {} - 內容: {}", recipient, content);
-                // TODO: 整合簡訊服務
+            if (notification.getNotificationType() == NotificationType.EMAIL) {
+                JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+                if (mailSender == null) {
+                    markFailed(notification, "尚未設定郵件伺服器（MAIL_HOST）");
+                    return;
+                }
+                if (notification.getRecipient() == null || notification.getRecipient().isBlank()) {
+                    markFailed(notification, "缺少收件人");
+                    return;
+                }
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+                if (mailFrom != null && !mailFrom.isBlank()) {
+                    helper.setFrom(mailFrom, storeName);
+                }
+                helper.setTo(notification.getRecipient());
+                helper.setSubject(notification.getSubject() != null ? notification.getSubject() : storeName + " 訂單通知");
+                helper.setText(notification.getContent() != null ? notification.getContent() : "", false);
+                mailSender.send(message);
+                log.info("已寄送郵件通知至 {} - 主旨: {}", notification.getRecipient(), notification.getSubject());
+            } else {
+                markFailed(notification, "尚未串接簡訊服務");
+                return;
             }
-            
             notification.setIsSent(true);
             notification.setSentAt(LocalDateTime.now());
+            notification.setErrorMessage(null);
         } catch (Exception e) {
             log.error("發送通知失敗: {}", e.getMessage());
-            notification.setIsSent(false);
-            notification.setErrorMessage(e.getMessage());
+            markFailed(notification, e.getMessage());
         }
-        
-        orderNotificationRepository.save(notification);
+    }
+
+    private static void markFailed(OrderNotification notification, String reason) {
+        notification.setIsSent(false);
+        notification.setErrorMessage(reason);
     }
 
     /**
@@ -94,20 +136,20 @@ public class OrderNotificationService {
     }
 
     /**
-     * 重新發送未成功的通知
+     * 重新發送未成功的 Email 通知（更新原記錄，不另外新增）
      */
     @Transactional
     public void retryFailedNotifications() {
+        if (!isEmailEnabled()) {
+            return;
+        }
         List<OrderNotification> failedNotifications = orderNotificationRepository.findByIsSent(false);
-        
         for (OrderNotification notification : failedNotifications) {
-            sendNotification(
-                notification.getOrderId(),
-                notification.getNotificationType(),
-                notification.getRecipient(),
-                notification.getSubject(),
-                notification.getContent()
-            );
+            if (notification.getNotificationType() != NotificationType.EMAIL) {
+                continue;
+            }
+            deliver(notification);
+            orderNotificationRepository.save(notification);
         }
     }
 

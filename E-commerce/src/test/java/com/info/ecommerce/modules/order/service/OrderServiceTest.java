@@ -64,6 +64,9 @@ class OrderServiceTest {
     @Mock
     private OrderStockService orderStockService;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private OrderService orderService;
 
