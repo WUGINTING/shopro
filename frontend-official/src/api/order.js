@@ -47,3 +47,13 @@ export function checkoutOrder(data) {
 export function lookupOrder(orderNumber, email) {
   return http.get('/storefront/orders/lookup', { orderNumber, email }, { silent: true });
 }
+
+/**
+ * 待付款的線上付款訂單重新取得綠界付款網址
+ * @param {string} orderNumber - 訂單編號
+ * @param {string} email - 下單時填寫的電子郵件
+ * @returns {Promise} ApiResponse<StorefrontCheckoutResultDTO>
+ */
+export function payOrder(orderNumber, email) {
+  return http.post('/storefront/orders/pay', { orderNumber, email });
+}

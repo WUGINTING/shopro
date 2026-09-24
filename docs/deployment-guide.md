@@ -56,6 +56,7 @@ set -a; source .env; set +a
 | `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
 | `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
 | `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
+| `ORDER_UNPAID_TIMEOUT_HOURS` | 否 | 前台線上付款訂單逾期未付款自動取消並歸還庫存的時數（預設 72；0 = 停用） |
 | `ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | prod 必填 | 綠界金鑰（未設定時使用綠界公開測試商店） |
 | `ECPAY_NOTIFY_URL` | prod 必填 | 綠界伺服器付款通知網址，必須能從網際網路連線：`https://<api 網域>/api/payment-gateway/callback/ecpay` |
 | `ECPAY_RETURN_URL` | prod 必填 | 後台商城付款後的「返回商店」網址 |

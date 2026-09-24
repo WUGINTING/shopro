@@ -1451,7 +1451,7 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, orderQAApi, type Order, type OrderItem, type OrderQA, type PageResponse, type OrderQueryParams } from '@/api'
+import { orderApi, orderQAApi, type Order, type OrderItem, type OrderQA, type PageResponse, type LegacyPageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
 import { productApi, productSpecificationApi, type Product, type ProductSpecification } from '@/api/product'
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
@@ -1649,6 +1649,9 @@ const pagination = ref({
 // 訂單表單
 const form = ref<{
   customerId: number | null
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
   status: Order['status']
   pickupType: 'DELIVERY' | 'STORE_PICKUP' | 'CROSS_STORE_PICKUP'
   items: Array<OrderItem & { tempId?: number; subtotal?: number }>
@@ -1901,7 +1904,7 @@ const loadOrders = async (useFilter = false) => {
       totalCount = data.length
     } else if (data && typeof data === 'object' && 'content' in data) {
       // 如果是分頁對象，提取 content
-      const pageData = data as PageResponse<Order>
+      const pageData = data as LegacyPageResponse<Order>
       orderList = pageData.content || []
       totalCount = pageData.totalElements || pageData.total || 0
     } else if (data && typeof data === 'object') {
@@ -2313,7 +2316,10 @@ const getShippingStatusColor = (status: OrderShipment['shippingStatus']) => {
 }
 
 // 獲取訂單項目（兼容後端的 items 和前端的 orderItems）
-const getOrderItems = (order: Order | null): OrderItem[] => {
+// 部分舊資料的訂單項目可能帶有 specificationName（後端 OrderItemDTO 已無此欄位）
+type OrderItemWithLegacySpec = OrderItem & { specificationName?: string }
+
+const getOrderItems = (order: Order | null): OrderItemWithLegacySpec[] => {
   if (!order) return []
   const orderData = order as any
   // 後端返回的是 items，前端接口定義的是 orderItems

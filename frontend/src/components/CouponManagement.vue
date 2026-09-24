@@ -278,7 +278,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { couponApi, type Coupon } from '@/api/promotion'
 
 const $q = useQuasar()
@@ -313,7 +313,7 @@ const editingCoupon = ref<Partial<Coupon>>({
 })
 
 // 表格列定義
-const columns = [
+const columns: QTableColumn[] = [
   { name: 'code', label: '代碼', field: 'code', align: 'left' },
   { name: 'name', label: '名稱', field: 'name', align: 'left' },
   { name: 'type', label: '類型', field: 'type', align: 'center' },

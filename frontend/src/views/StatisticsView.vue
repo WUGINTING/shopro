@@ -153,7 +153,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import statisticsApi, { type StatisticsData } from '@/api/statistics'
 
 const $q = useQuasar()
@@ -163,14 +163,14 @@ const startDate = ref('')
 const endDate = ref('')
 const loading = ref(false)
 
-const productColumns = [
+const productColumns: QTableColumn[] = [
   { name: 'rank', label: '排名', align: 'center', field: 'rank' },
   { name: 'name', label: '商品名稱', align: 'left', field: 'name' },
   { name: 'sales', label: '銷售數量', align: 'center', field: 'sales', sortable: true },
   { name: 'revenue', label: '營收', align: 'right', field: 'revenue', sortable: true }
 ]
 
-const categoryColumns = [
+const categoryColumns: QTableColumn[] = [
   { name: 'rank', label: '排名', align: 'center', field: 'rank' },
   { name: 'name', label: '分類名稱', align: 'left', field: 'name' },
   { name: 'sales', label: '銷售數量', align: 'center', field: 'sales', sortable: true }
@@ -194,8 +194,8 @@ const initializeDateRange = () => {
   const end = new Date()
   const start = new Date(end)
   start.setDate(start.getDate() - 30)
-  endDate.value = end.toISOString().split('T')[0]
-  startDate.value = start.toISOString().split('T')[0]
+  endDate.value = end.toISOString().split('T')[0] ?? ''
+  startDate.value = start.toISOString().split('T')[0] ?? ''
 }
 
 onMounted(() => {

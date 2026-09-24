@@ -282,7 +282,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { promotionApi, type Promotion } from '@/api/promotion'
 import CouponManagement from '@/components/CouponManagement.vue'
 import { startPromotionTour, isPromotionTourCompleted } from '@/utils/promotionTour'
@@ -320,7 +320,7 @@ const editingPromotion = ref<Partial<Promotion>>({
 })
 
 // 表格列定義
-const promotionColumns = [
+const promotionColumns: QTableColumn[] = [
   { name: 'name', label: '活動名稱', field: 'name', align: 'left' },
   { name: 'type', label: '類型', field: 'type', align: 'center' },
   { name: 'discountValue', label: '折扣', field: 'discountValue', align: 'right' },

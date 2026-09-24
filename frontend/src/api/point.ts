@@ -4,7 +4,7 @@
  */
 
 import axiosInstance from './axios'
-import type { ApiResponse } from './types'
+import type { ApiResponse, SimplePageResponse } from './types'
 
 export interface PointRecord {
   id?: number
@@ -29,14 +29,6 @@ export interface BatchGrantRequest {
   memberIds: number[]
   points: number
   reason: string
-}
-
-export interface PageResponse<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  currentPage: number
-  pageSize: number
 }
 
 /**
@@ -109,7 +101,7 @@ export const pointApi = {
    * @description 分頁查詢所有會員的積點記錄（不限定會員）
    * @param {number} [page=0] - 頁碼
    * @param {number} [size=20] - 每頁數量
-   * @returns {Promise<PageResponse<PointRecord>>} 積點記錄分頁資料
+   * @returns {Promise<SimplePageResponse<PointRecord>>} 積點記錄分頁資料
    * @swagger GET /api/crm/points
    * @example
    * const records = await pointApi.getAllPoints(0, 20)
@@ -129,9 +121,9 @@ export const pointApi = {
         totalPages: pageData.totalPages || 0,
         currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
         pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
-      } as PageResponse<PointRecord>
+      } as SimplePageResponse<PointRecord>
     }
-    return pageData as PageResponse<PointRecord>
+    return pageData as SimplePageResponse<PointRecord>
   },
 
   /**
@@ -140,7 +132,7 @@ export const pointApi = {
    * @param {number} memberId - 會員 ID
    * @param {number} [page=0] - 頁碼
    * @param {number} [size=20] - 每頁數量
-   * @returns {Promise<PageResponse<PointRecord>>} 積點記錄分頁資料
+   * @returns {Promise<SimplePageResponse<PointRecord>>} 積點記錄分頁資料
    * @swagger GET /api/crm/points/member/{memberId}
    * @example
    * const records = await pointApi.getMemberPoints(123, 0, 20)
@@ -160,9 +152,9 @@ export const pointApi = {
         totalPages: pageData.totalPages || 0,
         currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
         pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
-      } as PageResponse<PointRecord>
+      } as SimplePageResponse<PointRecord>
     }
-    return pageData as PageResponse<PointRecord>
+    return pageData as SimplePageResponse<PointRecord>
   },
 
   /**

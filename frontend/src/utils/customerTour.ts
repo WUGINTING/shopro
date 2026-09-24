@@ -1,8 +1,8 @@
-import Shepherd from 'shepherd.js'
+import { createShepherdTour, type ShepherdTour, type ShepherdStepOptions } from './tour'
 import 'shepherd.js/dist/css/shepherd.css'
 
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過客戶管理導覽
 const TOUR_STORAGE_KEY = 'shopro-customer-tour-completed'
@@ -20,34 +20,15 @@ export const resetCustomerTour = (): void => {
 }
 
 // 初始化導覽
-export const initCustomerTour = (): Shepherd.Tour => {
+export const initCustomerTour = (): ShepherdTour => {
   // 每次都創建新實例，避免重用舊的步驟
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建客戶管理導覽步驟
-export const createCustomerTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createCustomerTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',

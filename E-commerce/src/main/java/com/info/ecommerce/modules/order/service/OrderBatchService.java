@@ -24,6 +24,7 @@ public class OrderBatchService {
     private final OrderRepository orderRepository;
     private final OrderHistoryService orderHistoryService;
     private final MemberService memberService;
+    private final OrderStockService orderStockService;
 
     /**
      * 批次更新訂單狀態
@@ -46,6 +47,10 @@ public class OrderBatchService {
                 }
                 
                 orderRepository.save(order);
+
+                if (dto.getTargetStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+                    orderStockService.release(orderId, order.getOrderNumber());
+                }
                 
                 // 記錄歷史
                 orderHistoryService.recordHistory(orderId, "BATCH_UPDATE_STATUS", 

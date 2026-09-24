@@ -16,4 +16,8 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     Page<OrderHistory> findByOrderId(Long orderId, Pageable pageable);
     
     List<OrderHistory> findByOperatorId(Long operatorId);
+
+    boolean existsByOrderIdAndActionType(Long orderId, String actionType);
+
+    List<OrderHistory> findByOrderIdAndActionType(Long orderId, String actionType);
 }

@@ -412,7 +412,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { memberApi, type Member, type PageResponse } from '@/api/member'
 import { startMemberTour, isMemberTourCompleted } from '@/utils/memberTour'
 
@@ -452,7 +452,7 @@ const editingMember = ref<Partial<Member>>({
 })
 
 // 表格列定義
-const columns = [
+const columns: QTableColumn[] = [
   { name: 'name', label: '名稱', field: 'name', align: 'left' },
   { name: 'email', label: '電子郵件', field: 'email', align: 'left' },
   { name: 'phone', label: '電話', field: 'phone', align: 'left' },

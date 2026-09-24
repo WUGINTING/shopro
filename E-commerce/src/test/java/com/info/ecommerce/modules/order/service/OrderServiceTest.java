@@ -61,6 +61,9 @@ class OrderServiceTest {
     @Mock
     private AdminNotificationService adminNotificationService;
 
+    @Mock
+    private OrderStockService orderStockService;
+
     @InjectMocks
     private OrderService orderService;
 

@@ -209,7 +209,9 @@ public class EcPayService implements PaymentGatewayService {
         }
         
         // 付款完成後的導向頁面
-        if (ecPayConfig.getReturnUrl() != null && !ecPayConfig.getReturnUrl().isEmpty()) {
+        if (request.getClientBackUrl() != null && !request.getClientBackUrl().isBlank()) {
+            params.put("ClientBackURL", request.getClientBackUrl());
+        } else if (ecPayConfig.getReturnUrl() != null && !ecPayConfig.getReturnUrl().isEmpty()) {
             params.put("ClientBackURL", ecPayConfig.getReturnUrl());
         }
         

@@ -11,6 +11,9 @@ import com.info.ecommerce.modules.order.dto.StorefrontQuoteDTO;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.enums.PickupType;
+import com.info.ecommerce.modules.order.dto.StorefrontOrderLookupDTO;
+import com.info.ecommerce.modules.order.entity.OrderHistory;
+import com.info.ecommerce.modules.order.repository.OrderHistoryRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.payment.dto.PaymentRequestDTO;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
@@ -20,12 +23,14 @@ import com.info.ecommerce.modules.payment.service.PaymentGatewayFactory;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
+import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
 import com.info.ecommerce.modules.system.entity.ShippingConfig;
 import com.info.ecommerce.modules.system.repository.ShippingConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,11 +62,21 @@ public class StorefrontCheckoutService {
 
     private final ProductRepository productRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
+    private final ProductInventoryRepository productInventoryRepository;
     private final ShippingConfigRepository shippingConfigRepository;
     private final MemberRepository memberRepository;
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final PaymentGatewayFactory paymentGatewayFactory;
+    private final OrderStockService orderStockService;
+    private final OrderHistoryService orderHistoryService;
+    private final OrderHistoryRepository orderHistoryRepository;
+
+    @Value("${app.storefront-url:}")
+    private String storefrontUrl;
+
+    /** 訂單歷程動作：前台結帳（newStatus 欄位記錄付款方式 ECPAY / COD，供逾期未付款清理判斷） */
+    public static final String ACTION_STOREFRONT_CHECKOUT = "STOREFRONT_CHECKOUT";
 
     /**
      * 結帳試算：驗證品項並計算小計、運費與總額
@@ -116,6 +131,12 @@ public class StorefrontCheckoutService {
             } else {
                 if (!productSpecificationRepository.findByProductIdAndEnabledTrue(product.getId()).isEmpty()) {
                     throw new BusinessException("請選擇商品「" + product.getName() + "」的規格");
+                }
+                Integer available = productInventoryRepository.findByProductIdAndSpecificationId(product.getId(), null)
+                        .map(inventory -> inventory.getAvailableStock())
+                        .orElse(null);
+                if (available != null && totalQuantity > available) {
+                    throw new BusinessException("商品「" + product.getName() + "」庫存不足，目前剩餘 " + Math.max(available, 0) + " 件");
                 }
                 unitPrice = productPrice(product);
             }
@@ -200,6 +221,11 @@ public class StorefrontCheckoutService {
                 .build();
 
         OrderDTO order = orderService.createOrder(orderDTO);
+        // 扣庫存：庫存不足時丟出例外，整筆訂單回滾
+        orderStockService.reserve(order.getId(), order.getOrderNumber());
+        orderHistoryService.recordHistory(order.getId(), ACTION_STOREFRONT_CHECKOUT,
+                "前台結帳：" + (PAYMENT_COD.equals(paymentMethod) ? "貨到付款" : "線上付款（綠界）"),
+                null, paymentMethod, null, "顧客");
 
         StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()
                 .order(order)
@@ -217,15 +243,54 @@ public class StorefrontCheckoutService {
      * 訪客以訂單編號 + Email 查詢訂單
      */
     @Transactional(readOnly = true)
-    public OrderDTO lookupOrder(String orderNumber, String email) {
+    public StorefrontOrderLookupDTO lookupOrder(String orderNumber, String email) {
+        Order order = findOwnedOrder(orderNumber, email);
+        String paymentMethod = storefrontPaymentMethod(order.getId());
+        return StorefrontOrderLookupDTO.builder()
+                .order(orderService.getOrder(order.getId()))
+                .paymentMethod(paymentMethod)
+                .canPayOnline(PAYMENT_ECPAY.equals(paymentMethod) && order.getStatus() == OrderStatus.PENDING_PAYMENT)
+                .build();
+    }
+
+    /**
+     * 待付款的線上付款訂單重新建立綠界付款（例如付款頁關閉或逾時）
+     */
+    @Transactional(readOnly = true)
+    public StorefrontCheckoutResultDTO payAgain(String orderNumber, String email) {
+        Order order = findOwnedOrder(orderNumber, email);
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BusinessException("訂單狀態為「" + order.getStatus().getDescription() + "」，無需付款");
+        }
+        if (!PAYMENT_ECPAY.equals(storefrontPaymentMethod(order.getId()))) {
+            throw new BusinessException("此訂單為貨到付款，請於取貨時付款");
+        }
+        OrderDTO orderDTO = orderService.getOrder(order.getId());
+        StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()
+                .order(orderDTO)
+                .paymentMethod(PAYMENT_ECPAY)
+                .build();
+        createOnlinePayment(orderDTO, result);
+        return result;
+    }
+
+    private Order findOwnedOrder(String orderNumber, String email) {
         if (isBlank(orderNumber) || isBlank(email)) {
             throw new BusinessException("請輸入訂單編號與電子郵件");
         }
-        Order order = orderRepository.findByOrderNumber(orderNumber.trim())
+        return orderRepository.findByOrderNumber(orderNumber.trim())
                 .filter(o -> o.getCustomerEmail() != null
                         && o.getCustomerEmail().trim().equalsIgnoreCase(email.trim()))
                 .orElseThrow(() -> new BusinessException("查無此訂單，請確認訂單編號與電子郵件是否正確"));
-        return orderService.getOrder(order.getId());
+    }
+
+    /** 前台結帳時記錄的付款方式（非前台訂單回傳 null） */
+    private String storefrontPaymentMethod(Long orderId) {
+        return orderHistoryRepository.findByOrderIdAndActionType(orderId, ACTION_STOREFRONT_CHECKOUT).stream()
+                .map(OrderHistory::getNewStatus)
+                .filter(method -> method != null && !method.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     private void createOnlinePayment(OrderDTO order, StorefrontCheckoutResultDTO result) {
@@ -243,6 +308,11 @@ public class StorefrontCheckoutService {
             paymentRequest.setCustomerName(order.getCustomerName());
             paymentRequest.setCustomerEmail(order.getCustomerEmail());
             paymentRequest.setCustomerPhone(order.getCustomerPhone());
+            if (!isBlank(storefrontUrl)) {
+                // 付款完成後「返回商店」回到前台訂單完成頁（完成頁會查詢最新付款狀態）
+                paymentRequest.setClientBackUrl(storefrontUrl.replaceAll("/+$", "")
+                        + "/shop/order/success?orderNumber=" + order.getOrderNumber());
+            }
 
             PaymentResponseDTO response = paymentGatewayFactory
                     .getPaymentGatewayService(PaymentGateway.ECPAY)

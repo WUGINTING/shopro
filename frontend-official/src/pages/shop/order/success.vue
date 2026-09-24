@@ -2,25 +2,25 @@
   <q-page class="order-success-page">
     <div class="success-container">
       <div class="success-card">
-        <q-icon
-          :name="hasPaymentIssue ? 'schedule' : 'check_circle'"
-          size="72px"
-          :color="hasPaymentIssue ? 'warning' : 'positive'"
+        <q-icon :name="headline.icon" size="72px" :color="headline.color" />
+        <h1 class="success-title">{{ headline.title }}</h1>
+        <p class="success-subtitle">{{ headline.subtitle }}</p>
+
+        <div v-if="checkingPayment" class="payment-checking">
+          <q-spinner size="18px" color="primary" />
+          <span>正在確認付款結果...</span>
+        </div>
+
+        <q-btn
+          v-if="canPayOnline && !checkingPayment"
+          unelevated
+          color="primary"
+          icon="credit_card"
+          label="前往付款"
+          :loading="paying"
+          class="pay-btn"
+          @click="payNow"
         />
-        <h1 class="success-title">
-          {{ hasPaymentIssue ? '訂單已建立，尚未完成付款' : '感謝您的訂購！' }}
-        </h1>
-        <p class="success-subtitle">
-          <template v-if="hasPaymentIssue">
-            {{ lastOrder.paymentError }}。訂單已保留為「待付款」，請聯繫客服協助完成付款。
-          </template>
-          <template v-else-if="lastOrder?.paymentMethod === 'COD'">
-            我們已收到您的訂單，將盡快為您備貨出貨。
-          </template>
-          <template v-else>
-            我們已收到您的訂單，付款結果確認後將為您安排出貨。
-          </template>
-        </p>
 
         <div v-if="orderNumber" class="order-info">
           <div class="info-row">
@@ -83,10 +83,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuasar, copyToClipboard } from 'quasar';
-import { getLastOrder } from 'src/utils/checkout.js';
+import { getLastOrder, redirectToPayment } from 'src/utils/checkout.js';
+import { lookupOrder, payOrder } from 'src/api/order.js';
 
 const route = useRoute();
 const $q = useQuasar();
@@ -100,9 +101,49 @@ const lastOrder = computed(() =>
   storedOrder && storedOrder.orderNumber === orderNumber.value ? storedOrder : null
 );
 
-const hasPaymentIssue = computed(
-  () => lastOrder.value?.paymentMethod === 'ECPAY' && !!lastOrder.value?.paymentError
-);
+// 後端即時狀態（綠界付款結果以伺服器通知為準）
+const liveStatus = ref(null);
+const canPayOnline = ref(false);
+const checkingPayment = ref(false);
+const paying = ref(false);
+let pollTimer = null;
+
+const isOnlinePayment = computed(() => lastOrder.value?.paymentMethod === 'ECPAY');
+
+const headline = computed(() => {
+  if (liveStatus.value === 'PAID' || liveStatus.value === 'PROCESSING' || liveStatus.value === 'COMPLETED') {
+    return {
+      icon: 'check_circle',
+      color: 'positive',
+      title: '付款完成，感謝您的訂購！',
+      subtitle: '我們已收到您的付款，將盡快為您安排出貨。',
+    };
+  }
+  if (liveStatus.value === 'CANCELLED') {
+    return {
+      icon: 'cancel',
+      color: 'grey',
+      title: '訂單已取消',
+      subtitle: '此訂單已取消，如有疑問請聯繫客服。',
+    };
+  }
+  if (isOnlinePayment.value) {
+    return {
+      icon: 'schedule',
+      color: 'warning',
+      title: '訂單已建立，尚未完成付款',
+      subtitle: lastOrder.value?.paymentError
+        ? `${lastOrder.value.paymentError}。您可以稍後再試一次付款。`
+        : '完成付款後我們將立即為您安排出貨。若已付款，付款結果可能需要幾分鐘才會更新。',
+    };
+  }
+  return {
+    icon: 'check_circle',
+    color: 'positive',
+    title: '感謝您的訂購！',
+    subtitle: '我們已收到您的訂單，將盡快為您備貨出貨。',
+  };
+});
 
 const paymentLabel = computed(() => {
   if (lastOrder.value?.paymentMethod === 'COD') {
@@ -119,6 +160,48 @@ const lookupLink = computed(() => ({
   },
 }));
 
+const refreshStatus = async () => {
+  if (!orderNumber.value || !lastOrder.value?.email) return;
+  try {
+    const res = await lookupOrder(orderNumber.value, lastOrder.value.email);
+    liveStatus.value = res.data.order?.status || null;
+    canPayOnline.value = !!res.data.canPayOnline;
+  } catch (error) {
+    // 查詢失敗時維持暫存摘要顯示
+  }
+};
+
+// 從綠界返回時付款通知可能稍晚到達，短暫輪詢幾次
+const pollPaymentStatus = async (remaining = 5) => {
+  checkingPayment.value = true;
+  await refreshStatus();
+  if (remaining > 1 && liveStatus.value === 'PENDING_PAYMENT') {
+    pollTimer = setTimeout(() => pollPaymentStatus(remaining - 1), 3000);
+    return;
+  }
+  checkingPayment.value = false;
+};
+
+const payNow = async () => {
+  paying.value = true;
+  try {
+    const res = await payOrder(orderNumber.value, lastOrder.value.email);
+    if (res.data.paymentUrl) {
+      redirectToPayment(res.data.paymentUrl);
+      return;
+    }
+    $q.notify({
+      type: 'warning',
+      message: res.data.paymentError || '暫時無法建立付款，請稍後再試或聯繫客服',
+      position: 'top',
+    });
+  } catch (error) {
+    // 錯誤訊息已由 request 攔截器顯示
+  } finally {
+    paying.value = false;
+  }
+};
+
 const copyOrderNumber = async () => {
   try {
     await copyToClipboard(orderNumber.value);
@@ -127,6 +210,18 @@ const copyOrderNumber = async () => {
     $q.notify({ type: 'warning', message: '複製失敗，請手動記下訂單編號', position: 'top' });
   }
 };
+
+onMounted(() => {
+  if (isOnlinePayment.value) {
+    pollPaymentStatus();
+  } else {
+    refreshStatus();
+  }
+});
+
+onBeforeUnmount(() => {
+  clearTimeout(pollTimer);
+});
 </script>
 
 <style lang="scss" scoped>
@@ -164,6 +259,19 @@ const copyOrderNumber = async () => {
   margin: 0 0 24px;
   color: $shop-text-secondary;
   line-height: 1.6;
+}
+
+.payment-checking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $shop-text-secondary;
+  margin-bottom: 20px;
+}
+
+.pay-btn {
+  margin-bottom: 24px;
+  min-width: 200px;
 }
 
 .order-info {

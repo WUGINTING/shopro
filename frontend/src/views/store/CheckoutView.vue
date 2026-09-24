@@ -49,7 +49,7 @@
                 autocomplete="tel"
                 inputmode="numeric"
                 hint="此欄位會自動暫存，方便下次結帳快速帶入。"
-                :rules="[(val: string) => !!val || '請輸入聯絡電話']"
+                :rules="[(val: string) => !!val || '請輸入聯絡電話', (val: string) => /^09\d{8}$/.test(val) || '請輸入正確的手機號碼格式 (09xxxxxxxx)']"
               />
 
               <q-input
@@ -171,7 +171,6 @@ import { QForm, useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
 import { orderApi } from '@/api/order'
-import { createEcPayPayment } from '@/api/payment'
 import { clearCart, getCartItems, removeFromCart, type CartItem } from '@/utils/storeCart'
 import { getCheckoutDraft, saveCheckoutDraft } from '@/utils/storePreferences'
 import { trackEvent } from '@/utils/tracking'
@@ -268,17 +267,14 @@ const submitCheckout = async () => {
 
   submitting.value = true
   try {
-    let customerId = authStore.user?.id
-    if (!customerId) {
+    let customerEmail = authStore.user?.email
+    if (!customerEmail) {
       const profileResponse = await authApi.getProfile()
-      customerId = profileResponse.data?.id
-      if (customerId && authStore.user) {
-        authStore.setAuth(authStore.token || '', { ...authStore.user, id: customerId })
-      }
+      customerEmail = profileResponse.data?.email
     }
 
-    if (!customerId) {
-      throw new Error('無法取得會員資訊，請重新登入後再試。')
+    if (!customerEmail) {
+      throw new Error('無法取得會員 Email，請重新登入後再試。')
     }
 
     trackEvent('checkout_submit', {
@@ -292,24 +288,24 @@ const submitCheckout = async () => {
       order_amount: total.value
     })
 
-    const payload = {
-      customerId,
+    // 價格、運費與付款金額一律由後端依商品資料計算
+    const response = await orderApi.storefrontCheckout({
       customerName: form.value.customerName,
       customerPhone: form.value.customerPhone,
-      customerEmail: authStore.user?.email,
-      pickupType: form.value.shippingMethod,
-      subtotalAmount: total.value,
-      discountAmount: 0,
-      shippingFee: 0,
-      shippingAddress: form.value.shippingAddress,
-      totalAmount: total.value,
-      status: 'PENDING_PAYMENT' as const,
-      items: items.value.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.price }))
-    }
+      customerEmail,
+      shippingAddress: form.value.shippingMethod === 'DELIVERY' ? form.value.shippingAddress : null,
+      shippingMethod: form.value.shippingMethod === 'STORE_PICKUP' ? 'STORE_PICKUP' : 'HOME_DELIVERY',
+      paymentMethod: form.value.paymentMethod === 'COD' ? 'COD' : 'ECPAY',
+      items: items.value.map((item) => ({
+        productId: item.productId,
+        specificationId: item.specificationId ?? null,
+        quantity: item.quantity
+      }))
+    })
 
-    const response = await orderApi.createOrder(payload as any)
-    const orderNumber = response.data?.orderNumber ?? `TEMP-${Date.now()}`
-    const amount = Number(response.data?.totalAmount ?? total.value)
+    const result = response.data
+    const orderNumber = result.order.orderNumber
+    const amount = Number(result.order.totalAmount)
 
     sessionStorage.setItem(
       'last_purchase_items',
@@ -318,23 +314,13 @@ const submitCheckout = async () => {
 
     clearCart()
 
-    if (form.value.paymentMethod === 'ECPAY') {
-      const paymentResponse = await createEcPayPayment({
-        orderId: response.data?.id,
-        orderNumber,
-        amount,
-        currency: 'TWD',
-        productName: `Shopro Order ${orderNumber}`,
-        customerName: form.value.customerName || authStore.user?.username,
-        customerEmail: authStore.user?.email,
-        customerPhone: form.value.customerPhone
-      })
-
-      const paymentUrl = paymentResponse.data?.paymentUrl
-      if (!paymentUrl) throw new Error('ECPay payment URL not found')
-
-      redirectToEcPay(paymentUrl)
-      return
+    if (result.paymentMethod === 'ECPAY') {
+      if (!result.paymentUrl) {
+        $q.notify({ type: 'warning', message: result.paymentError || '訂單已建立，但線上付款建立失敗，請聯繫客服。' })
+      } else {
+        redirectToEcPay(result.paymentUrl)
+        return
+      }
     }
 
     router.push({ path: '/order/success', query: { orderNumber, amount: String(amount) } })

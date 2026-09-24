@@ -49,6 +49,8 @@ export interface PageResponse<T> {
   pageSize: number
 }
 
+const API_BASE = '/crm/edm'
+
 /**
  * EDM 電子報 API 服務
  * @namespace edmApi

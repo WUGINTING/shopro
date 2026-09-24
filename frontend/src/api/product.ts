@@ -7,9 +7,16 @@ import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
 /**
- * 商品介面
- * @interface Product
+ * 商品狀態（對應後端 ProductStatus 列舉）
  */
+export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK'
+
+/**
+ * 管理後台顯示用的商品狀態
+ * @description 後端 ACTIVE / INACTIVE 在前端顯示為 PUBLISHED / UNPUBLISHED，其餘值（DRAFT、OUT_OF_STOCK）沿用原值
+ */
+export type ProductDisplayStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'OUT_OF_STOCK'
+
 /**
  * 商品介面
  * @interface Product
@@ -32,7 +39,7 @@ export interface Product {
   /** 成本價格 */
   costPrice?: number
   /** 商品狀態 */
-  status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+  status?: ProductStatus
   /** 銷售模式 */
   salesMode?: 'NORMAL' | 'PRE_ORDER' | 'TICKET' | 'SUBSCRIPTION' | 'STORE_ONLY'
   /** 分類 ID */

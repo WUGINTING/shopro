@@ -1,5 +1,6 @@
 package com.info.ecommerce.modules.payment.service;
 
+import com.info.ecommerce.modules.order.service.OrderStockService;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderPayment;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
@@ -51,6 +52,9 @@ class PaymentCallbackServiceTest {
 
     @Mock
     private AdminNotificationService adminNotificationService;
+
+    @Mock
+    private OrderStockService orderStockService;
 
     @InjectMocks
     private PaymentCallbackService paymentCallbackService;

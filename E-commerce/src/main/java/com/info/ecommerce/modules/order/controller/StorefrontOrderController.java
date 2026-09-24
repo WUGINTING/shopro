@@ -1,7 +1,8 @@
 package com.info.ecommerce.modules.order.controller;
 
 import com.info.ecommerce.common.ApiResponse;
-import com.info.ecommerce.modules.order.dto.OrderDTO;
+import com.info.ecommerce.modules.order.dto.StorefrontOrderLookupDTO;
+import com.info.ecommerce.modules.order.dto.StorefrontPayRequest;
 import com.info.ecommerce.modules.order.dto.StorefrontCheckoutRequest;
 import com.info.ecommerce.modules.order.dto.StorefrontCheckoutResultDTO;
 import com.info.ecommerce.modules.order.dto.StorefrontQuoteDTO;
@@ -38,9 +39,15 @@ public class StorefrontOrderController {
 
     @GetMapping("/lookup")
     @Operation(summary = "查詢訂單", description = "以訂單編號與下單時填寫的電子郵件查詢訂單")
-    public ApiResponse<OrderDTO> lookup(
+    public ApiResponse<StorefrontOrderLookupDTO> lookup(
             @Parameter(description = "訂單編號") @RequestParam String orderNumber,
             @Parameter(description = "下單時填寫的電子郵件") @RequestParam String email) {
         return ApiResponse.success(storefrontCheckoutService.lookupOrder(orderNumber, email));
+    }
+
+    @PostMapping("/pay")
+    @Operation(summary = "重新付款", description = "待付款的線上付款訂單重新取得綠界付款網址（以訂單編號 + 下單 Email 驗證）")
+    public ApiResponse<StorefrontCheckoutResultDTO> pay(@Valid @RequestBody StorefrontPayRequest request) {
+        return ApiResponse.success(storefrontCheckoutService.payAgain(request.getOrderNumber(), request.getEmail()));
     }
 }

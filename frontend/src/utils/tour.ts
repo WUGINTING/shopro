@@ -1,8 +1,28 @@
-import Shepherd from 'shepherd.js'
+import Shepherd, { type StepOptions, type Tour, type TourOptions } from 'shepherd.js'
 import 'shepherd.js/dist/css/shepherd.css'
 
+// 共用的 Shepherd 型別（Shepherd v14 以具名型別匯出，不再提供 Shepherd.* 命名空間）
+export type ShepherdTour = Tour
+export type ShepherdStepOptions = StepOptions
+
+// 所有導覽共用的 Tour 設定（每次回傳新物件，避免實例間共享可變狀態）
+// 註：Shepherd v14 已改用 Floating UI，舊的 popperOptions 設定不會被讀取，因此不列入
+export const getDefaultTourOptions = (): TourOptions => ({
+  useModalOverlay: true,
+  defaultStepOptions: {
+    cancelIcon: {
+      enabled: true
+    },
+    classes: 'shepherd-theme-custom',
+    scrollTo: { behavior: 'smooth', block: 'center' }
+  }
+})
+
+// 建立新的 Shepherd Tour 實例
+export const createShepherdTour = (): ShepherdTour => new Shepherd.Tour(getDefaultTourOptions())
+
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過導覽
 const TOUR_STORAGE_KEY = 'shopro-admin-tour-completed'
@@ -20,37 +40,18 @@ export const resetTour = (): void => {
 }
 
 // 初始化導覽
-export const initTour = (): Shepherd.Tour => {
+export const initTour = (): ShepherdTour => {
   if (tour) {
     return tour
   }
 
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建導覽步驟
-export const createTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',

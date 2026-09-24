@@ -36,10 +36,10 @@ const findItemIndex = (items: CartItem[], target: CartItem) => {
 
 export const addToCart = (item: CartItem): void => {
   const items = getCartItems()
-  const index = findItemIndex(items, item)
+  const existing = items[findItemIndex(items, item)]
 
-  if (index > -1) {
-    items[index].quantity += item.quantity
+  if (existing) {
+    existing.quantity += item.quantity
   } else {
     items.push(item)
   }

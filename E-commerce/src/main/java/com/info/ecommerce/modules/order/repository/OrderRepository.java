@@ -20,6 +20,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByOrderNumber(String orderNumber);
 
     List<Order> findByOrderNumberStartingWith(String orderNumberPrefix);
+
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdBefore);
     
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
     

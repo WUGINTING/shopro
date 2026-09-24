@@ -36,6 +36,9 @@ class OrderBatchServiceTest {
     @Mock
     private OrderHistoryService orderHistoryService;
 
+    @Mock
+    private OrderStockService orderStockService;
+
     @InjectMocks
     private OrderBatchService orderBatchService;
 

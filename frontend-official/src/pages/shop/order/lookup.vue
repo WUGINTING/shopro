@@ -62,6 +62,21 @@
           />
         </div>
 
+        <div v-if="canPayOnline" class="pay-banner">
+          <div class="pay-text">
+            <q-icon name="schedule" size="20px" />
+            <span>此訂單尚未完成付款，完成付款後我們將立即為您安排出貨。</span>
+          </div>
+          <q-btn
+            unelevated
+            color="primary"
+            icon="credit_card"
+            label="前往付款"
+            :loading="paying"
+            @click="payNow"
+          />
+        </div>
+
         <div class="order-section">
           <h2 class="section-title">訂購商品</h2>
           <div v-for="item in order.items" :key="item.id" class="order-item">
@@ -100,6 +115,9 @@
           <div class="info-row">
             <span>配送方式</span><span>{{ pickupLabel }}</span>
           </div>
+          <div v-if="paymentLabel" class="info-row">
+            <span>付款方式</span><span>{{ paymentLabel }}</span>
+          </div>
           <div v-if="order.shippingAddress" class="info-row">
             <span>收件地址</span><span>{{ order.shippingAddress }}</span>
           </div>
@@ -112,9 +130,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { lookupOrder } from 'src/api/order.js';
+import { useQuasar } from 'quasar';
+import { lookupOrder, payOrder } from 'src/api/order.js';
 import { formatDate } from 'src/utils/format.js';
-import { ORDER_STATUS_MAP, PICKUP_TYPE_MAP } from 'src/utils/checkout.js';
+import { ORDER_STATUS_MAP, PICKUP_TYPE_MAP, redirectToPayment } from 'src/utils/checkout.js';
+
+const $q = useQuasar();
 
 const route = useRoute();
 
@@ -126,6 +147,9 @@ const form = ref({
 const loading = ref(false);
 const errorMessage = ref('');
 const order = ref(null);
+const paymentMethod = ref(null);
+const canPayOnline = ref(false);
+const paying = ref(false);
 
 const statusInfo = computed(
   () => ORDER_STATUS_MAP[order.value?.status] || { label: order.value?.status || '', color: 'grey' }
@@ -133,19 +157,50 @@ const statusInfo = computed(
 
 const pickupLabel = computed(() => PICKUP_TYPE_MAP[order.value?.pickupType] || '宅配到府');
 
+const paymentLabel = computed(() => {
+  if (paymentMethod.value === 'ECPAY') return '線上付款（綠界）';
+  if (paymentMethod.value === 'COD') {
+    return order.value?.pickupType === 'STORE_PICKUP' ? '取貨時付款' : '貨到付款';
+  }
+  return '';
+});
+
 const money = value => Number(value || 0).toLocaleString();
 
 const search = async () => {
   loading.value = true;
   errorMessage.value = '';
   order.value = null;
+  canPayOnline.value = false;
   try {
     const res = await lookupOrder(form.value.orderNumber.trim(), form.value.email.trim());
-    order.value = res.data;
+    order.value = res.data.order;
+    paymentMethod.value = res.data.paymentMethod;
+    canPayOnline.value = !!res.data.canPayOnline;
   } catch (error) {
     errorMessage.value = error.displayMessage || '查詢失敗，請稍後再試';
   } finally {
     loading.value = false;
+  }
+};
+
+const payNow = async () => {
+  paying.value = true;
+  try {
+    const res = await payOrder(order.value.orderNumber, form.value.email.trim());
+    if (res.data.paymentUrl) {
+      redirectToPayment(res.data.paymentUrl);
+      return;
+    }
+    $q.notify({
+      type: 'warning',
+      message: res.data.paymentError || '暫時無法建立付款，請稍後再試或聯繫客服',
+      position: 'top',
+    });
+  } catch (error) {
+    // 錯誤訊息已由 request 攔截器顯示
+  } finally {
+    paying.value = false;
   }
 };
 
@@ -245,6 +300,24 @@ onMounted(() => {
   .status-badge {
     font-size: 0.85rem;
     padding: 6px 12px;
+  }
+}
+
+.pay-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  background: lighten($shop-warning, 35%);
+  border-bottom: 1px solid $shop-border;
+
+  .pay-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: darken($shop-warning, 25%);
   }
 }
 

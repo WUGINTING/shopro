@@ -4,7 +4,31 @@
  */
 
 import axios from './axios'
-import type { ApiResponse } from './types'
+import type { ApiResponse, PageResponse } from './types'
+
+/**
+ * 顧客結帳請求（不含價格，價格由後端計算）
+ */
+export interface StorefrontCheckoutRequest {
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  shippingAddress?: string | null
+  notes?: string
+  shippingMethod: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  paymentMethod: 'ECPAY' | 'COD'
+  items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
+}
+
+/**
+ * 顧客結帳結果
+ */
+export interface StorefrontCheckoutResult {
+  order: Order & { id: number; orderNumber: string; totalAmount: number }
+  paymentMethod: 'ECPAY' | 'COD'
+  paymentUrl?: string | null
+  paymentError?: string | null
+}
 
 /**
  * 訂單介面
@@ -25,16 +49,34 @@ export interface Order {
   customerEmail?: string
   /** 訂單總金額 */
   totalAmount: number
-  /** 訂單狀態 */
-  status: 'PENDING' | 'PENDING_PAYMENT' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
+  /** 訂單狀態（對應後端 OrderStatus 列舉） */
+  status: 'PENDING_PAYMENT' | 'PAID' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
+  /** 取貨方式（對應後端 PickupType 列舉） */
+  pickupType?: 'DELIVERY' | 'STORE_PICKUP' | 'CROSS_STORE_PICKUP'
+  /** 取貨門市 ID */
+  storeId?: number
+  /** 商品小計 */
+  subtotalAmount?: number
+  /** 折扣金額 */
+  discountAmount?: number
+  /** 運費 */
+  shippingFee?: number
+  /** 備註 */
+  notes?: string
   /** 配送地址 */
   shippingAddress?: string
-  /** 訂單項目 */
+  /** 是否為草稿 */
+  isDraft?: boolean
+  /** 訂單項目（後端 OrderDTO 欄位） */
+  items?: OrderItem[]
+  /** 訂單項目（兼容舊版） */
   orderItems?: OrderItem[]
   /** 創建時間 */
   createdAt?: string
   /** 更新時間 */
   updatedAt?: string
+  /** 完成時間 */
+  completedAt?: string
 }
 
 /**
@@ -144,6 +186,14 @@ export const orderApi = {
    *   orderItems: [{ productId: 1, quantity: 2, price: 500 }]
    * })
    */
+  /**
+   * 顧客結帳（價格、運費由後端計算，ECPAY 時一併回傳綠界付款網址）
+   * @swagger POST /api/storefront/orders/checkout
+   */
+  storefrontCheckout: (data: StorefrontCheckoutRequest) => {
+    return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/checkout', data)
+  },
+
   createOrder: (data: Order) => {
     return axios.post<any, ApiResponse<Order>>('/orders', data)
   },

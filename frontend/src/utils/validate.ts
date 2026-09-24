@@ -325,28 +325,29 @@ export const formatMoney = (
     result = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.')
   }
 
+  // String.prototype.split 至少回傳一個元素，故整數部分必定存在
+  let intPart = result[0] ?? ''
+  let decPart = result[1]
+
   const re = /(-?\d+)(\d{3})/
-  while (re.test(result[0])) {
-    result[0] = result[0].replace(re, '$1' + thousandsSep + '$2')
+  while (re.test(intPart)) {
+    intPart = intPart.replace(re, '$1' + thousandsSep + '$2')
   }
 
-  if (result[1]) {
+  if (decPart) {
     if (decimals !== null) {
       const prec = !isFinite(+decimals) ? 0 : Math.abs(decimals)
-      if (result[1].length < prec) {
-        result[1] += new Array(prec - result[1].length + 1).join('0')
+      if (decPart.length < prec) {
+        decPart += new Array(prec - decPart.length + 1).join('0')
       }
     }
 
     if (removeTrailingZeros) {
-      result[1] = result[1].replace(/0+$/, '')
-      if (result[1] === '') {
-        result[1] = undefined as any
-      }
+      decPart = decPart.replace(/0+$/, '')
     }
   }
 
-  return result[1] ? result[0] + decPoint + result[1] : result[0]
+  return decPart ? intPart + decPoint + decPart : intPart
 }
 
 /**
@@ -505,7 +506,7 @@ export const calculateASCIISum = (word: string): number => {
  * @returns {string} 下一個字母
  */
 export const getNextColumn = (column: string): string => {
-  const lastStr = column[column.length - 1]
+  const lastStr = column.charAt(column.length - 1)
   if (lastStr === 'Z') {
     return column.length > 1 ? `${getNextColumn(column.slice(0, -1))}A` : 'AA'
   } else {

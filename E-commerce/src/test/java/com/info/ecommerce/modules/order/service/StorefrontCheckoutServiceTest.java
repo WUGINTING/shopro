@@ -1,5 +1,6 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.crm.entity.Member;
 import com.info.ecommerce.modules.crm.repository.MemberRepository;
@@ -9,6 +10,8 @@ import com.info.ecommerce.modules.order.dto.StorefrontCheckoutResultDTO;
 import com.info.ecommerce.modules.order.dto.StorefrontQuoteDTO;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.enums.PickupType;
+import com.info.ecommerce.modules.order.entity.OrderHistory;
+import com.info.ecommerce.modules.order.repository.OrderHistoryRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.payment.dto.PaymentRequestDTO;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
@@ -39,6 +42,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 /**
@@ -71,6 +77,18 @@ class StorefrontCheckoutServiceTest {
 
     @Mock
     private PaymentGatewayService ecPayService;
+
+    @Mock
+    private OrderStockService orderStockService;
+
+    @Mock
+    private OrderHistoryService orderHistoryService;
+
+    @Mock
+    private ProductInventoryRepository productInventoryRepository;
+
+    @Mock
+    private OrderHistoryRepository orderHistoryRepository;
 
     @InjectMocks
     private StorefrontCheckoutService storefrontCheckoutService;
@@ -229,6 +247,9 @@ class StorefrontCheckoutServiceTest {
         assertEquals("COD", result.getPaymentMethod());
         assertNull(result.getPaymentUrl());
         verifyNoInteractions(ecPayService);
+        verify(orderStockService).reserve(100L, "ORD2026010112000001");
+        verify(orderHistoryService).recordHistory(eq(100L), eq(StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT),
+            anyString(), isNull(), eq("COD"), isNull(), anyString());
     }
 
     @Test
@@ -299,7 +320,14 @@ class StorefrontCheckoutServiceTest {
         when(orderRepository.findByOrderNumber("ORD1")).thenReturn(Optional.of(order));
         when(orderService.getOrder(100L)).thenReturn(dto);
 
-        assertSame(dto, storefrontCheckoutService.lookupOrder(" ORD1 ", "buyer@example.com"));
+        when(orderHistoryRepository.findByOrderIdAndActionType(100L, StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT))
+            .thenReturn(List.of(OrderHistory.builder().newStatus("ECPAY").build()));
+        order.setStatus(com.info.ecommerce.modules.order.enums.OrderStatus.PENDING_PAYMENT);
+
+        var result = storefrontCheckoutService.lookupOrder(" ORD1 ", "buyer@example.com");
+        assertSame(dto, result.getOrder());
+        assertEquals("ECPAY", result.getPaymentMethod());
+        assertTrue(result.isCanPayOnline());
     }
 
     @Test
@@ -310,5 +338,61 @@ class StorefrontCheckoutServiceTest {
         assertThrows(BusinessException.class, () ->
             storefrontCheckoutService.lookupOrder("ORD1", "someone@else.com"));
         verify(orderService, never()).getOrder(any());
+    }
+
+    @Test
+    void checkout_stockReservationFailure_abortsBeforePayment() {
+        when(memberRepository.findByEmail("buyer@example.com"))
+            .thenReturn(Optional.of(Member.builder().id(3L).email("buyer@example.com").build()));
+        doThrow(new BusinessException("庫存不足")).when(orderStockService).reserve(any(), any());
+
+        assertThrows(BusinessException.class, () -> storefrontCheckoutService.checkout(checkoutRequest().build()));
+        verifyNoInteractions(ecPayService);
+    }
+
+    @Test
+    void quote_rejectsProductLevelStockShortage() {
+        when(productInventoryRepository.findByProductIdAndSpecificationId(1L, null)).thenReturn(Optional.of(
+            com.info.ecommerce.modules.product.entity.ProductInventory.builder().productId(1L).availableStock(1).build()));
+
+        BusinessException ex = assertThrows(BusinessException.class, () ->
+            storefrontCheckoutService.quote(List.of(item(1L, null, 2)), null));
+        assertTrue(ex.getMessage().contains("庫存不足"));
+    }
+
+    @Test
+    void payAgain_createsNewPaymentForPendingOnlineOrder() {
+        Order order = Order.builder().id(100L).orderNumber("ORD1").customerEmail("buyer@example.com")
+            .status(com.info.ecommerce.modules.order.enums.OrderStatus.PENDING_PAYMENT).build();
+        when(orderRepository.findByOrderNumber("ORD1")).thenReturn(Optional.of(order));
+        when(orderHistoryRepository.findByOrderIdAndActionType(100L, StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT))
+            .thenReturn(List.of(OrderHistory.builder().newStatus("ECPAY").build()));
+        when(orderService.getOrder(100L)).thenReturn(OrderDTO.builder().id(100L).orderNumber("ORD1")
+            .totalAmount(new BigDecimal("298")).build());
+        when(ecPayService.createPayment(any(PaymentRequestDTO.class))).thenReturn(PaymentResponseDTO.builder()
+            .status(PaymentGatewayStatus.INITIATED).paymentUrl("https://payment-stage.ecpay.com.tw/x?a=1").build());
+
+        StorefrontCheckoutResultDTO result = storefrontCheckoutService.payAgain("ORD1", "BUYER@example.com");
+
+        assertNotNull(result.getPaymentUrl());
+        ArgumentCaptor<PaymentRequestDTO> captor = ArgumentCaptor.forClass(PaymentRequestDTO.class);
+        verify(ecPayService).createPayment(captor.capture());
+        assertEquals(0, new BigDecimal("298").compareTo(captor.getValue().getAmount()));
+    }
+
+    @Test
+    void payAgain_rejectsCodAndPaidOrders() {
+        Order cod = Order.builder().id(101L).orderNumber("ORD2").customerEmail("buyer@example.com")
+            .status(com.info.ecommerce.modules.order.enums.OrderStatus.PENDING_PAYMENT).build();
+        when(orderRepository.findByOrderNumber("ORD2")).thenReturn(Optional.of(cod));
+        when(orderHistoryRepository.findByOrderIdAndActionType(101L, StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT))
+            .thenReturn(List.of(OrderHistory.builder().newStatus("COD").build()));
+        assertThrows(BusinessException.class, () -> storefrontCheckoutService.payAgain("ORD2", "buyer@example.com"));
+
+        Order paid = Order.builder().id(102L).orderNumber("ORD3").customerEmail("buyer@example.com")
+            .status(com.info.ecommerce.modules.order.enums.OrderStatus.PAID).build();
+        when(orderRepository.findByOrderNumber("ORD3")).thenReturn(Optional.of(paid));
+        assertThrows(BusinessException.class, () -> storefrontCheckoutService.payAgain("ORD3", "buyer@example.com"));
+        verifyNoInteractions(ecPayService);
     }
 }

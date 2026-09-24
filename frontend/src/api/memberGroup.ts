@@ -4,7 +4,7 @@
  */
 
 import axiosInstance from './axios'
-import type { ApiResponse, PageResponse as ApiPageResponse } from './types'
+import type { ApiResponse, SimplePageResponse } from './types'
 
 export interface MemberGroup {
   id?: number
@@ -16,9 +16,9 @@ export interface MemberGroup {
   updatedAt?: string
 }
 
-// Use unified PageResponse type (imported from types.ts)
-// But for backward compatibility, keep this alias
-export type PageResponse<T> = ApiPageResponse<T>
+// getGroups 會將 Spring Data Page 轉換為扁平格式，故使用 SimplePageResponse
+// 為相容舊用法保留此別名
+export type PageResponse<T> = SimplePageResponse<T>
 
 /**
  * 會員群組 API 服務

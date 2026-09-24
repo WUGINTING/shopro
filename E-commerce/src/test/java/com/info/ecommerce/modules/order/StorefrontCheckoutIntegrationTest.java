@@ -1,0 +1,163 @@
+package com.info.ecommerce.modules.order;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.info.ecommerce.modules.auth.entity.Role;
+import com.info.ecommerce.modules.auth.entity.User;
+import com.info.ecommerce.modules.auth.repository.UserRepository;
+import com.info.ecommerce.modules.auth.service.JwtService;
+import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.entity.ProductInventory;
+import com.info.ecommerce.modules.product.entity.ProductSpecification;
+import com.info.ecommerce.modules.product.enums.ProductSalesMode;
+import com.info.ecommerce.modules.product.enums.ProductStatus;
+import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
+import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
+import com.info.ecommerce.modules.product.repository.ProductRepository;
+import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * 前台結帳整合測試（H2）：扣庫存、庫存不足整筆回滾、取消歸還庫存、訂單查詢
+ * 不使用 @Transactional，讓每個 API 呼叫各自提交，才能驗證回滾行為。
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+class StorefrontCheckoutIntegrationTest {
+
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductSpecificationRepository specificationRepository;
+    @Autowired private ProductInventoryRepository inventoryRepository;
+    @Autowired private InventoryMovementLogRepository movementLogRepository;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private JwtService jwtService;
+
+    private Product cup;
+    private ProductSpecification blueCup;
+    private Product cone;
+    private String adminToken;
+
+    @BeforeEach
+    void setUp() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        cup = productRepository.save(Product.builder()
+                .name("日式茶杯").sku("CUP-" + suffix)
+                .status(ProductStatus.ACTIVE).salesMode(ProductSalesMode.NORMAL).enabled(true)
+                .basePrice(new BigDecimal("350"))
+                .build());
+        blueCup = specificationRepository.save(ProductSpecification.builder()
+                .productId(cup.getId()).specName("藍色").sku("CUP-BL-" + suffix)
+                .price(new BigDecimal("380")).stock(3).enabled(true)
+                .build());
+        cone = productRepository.save(Product.builder()
+                .name("香草甜筒").sku("CONE-" + suffix)
+                .status(ProductStatus.ACTIVE).salesMode(ProductSalesMode.NORMAL).enabled(true)
+                .basePrice(new BigDecimal("120")).salePrice(new BigDecimal("99"))
+                .build());
+        inventoryRepository.save(ProductInventory.builder()
+                .productId(cone.getId()).warehouseId(1L).availableStock(5).lockedStock(0).safetyStock(1)
+                .build());
+
+        User admin = userRepository.save(User.builder()
+                .username("stock-admin-" + suffix).email("stock-admin-" + suffix + "@test.com")
+                .password(passwordEncoder.encode("x")).role(Role.ADMIN).enabled(true)
+                .build());
+        adminToken = jwtService.generateToken(admin);
+    }
+
+    private String checkoutBody(String email, long productId, Long specId, int quantity) {
+        return """
+                {"customerName":"王小明","customerPhone":"0912345678","customerEmail":"%s",
+                 "shippingAddress":"台北市信義區市府路 1 號","shippingMethod":"HOME_DELIVERY","paymentMethod":"COD",
+                 "items":[{"productId":%d,"specificationId":%s,"quantity":%d}]}
+                """.formatted(email, productId, specId == null ? "null" : specId.toString(), quantity);
+    }
+
+    private JsonNode checkout(String body) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/storefront/orders/checkout")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("order");
+    }
+
+    private int specStock() {
+        return specificationRepository.findById(blueCup.getId()).orElseThrow().getStock();
+    }
+
+    private int coneStock() {
+        return inventoryRepository.findByProductIdAndSpecificationId(cone.getId(), null).orElseThrow().getAvailableStock();
+    }
+
+    @Test
+    void checkout_deductsStock_rejectsOversell_andCancelRestores() throws Exception {
+        JsonNode order = checkout(checkoutBody("buyer@example.com", cup.getId(), blueCup.getId(), 2));
+        assertEquals(0, new BigDecimal("860").compareTo(order.get("totalAmount").decimalValue())); // 760 + 100 運費
+        assertEquals(1, specStock());
+        assertFalse(movementLogRepository.findTop100ByProductIdOrderByCreatedAtDesc(cup.getId()).isEmpty());
+
+        long ordersBefore = orderRepository.count();
+        mockMvc.perform(post("/api/storefront/orders/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(checkoutBody("other@example.com", cup.getId(), blueCup.getId(), 2)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("庫存不足")));
+        assertEquals(1, specStock(), "失敗的結帳不可扣庫存");
+        assertEquals(ordersBefore, orderRepository.count(), "失敗的結帳不可留下訂單");
+
+        long orderId = order.get("id").asLong();
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        assertEquals(3, specStock());
+
+        // 重複取消不可重複歸還
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        assertEquals(3, specStock());
+    }
+
+    @Test
+    void checkout_productLevelInventory_deductedAndLookupWorks() throws Exception {
+        JsonNode order = checkout(checkoutBody("Cone.Buyer@example.com", cone.getId(), null, 4));
+        assertEquals(1, coneStock());
+
+        mockMvc.perform(post("/api/storefront/orders/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"productId\":" + cone.getId() + ",\"quantity\":2}]}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/storefront/orders/lookup")
+                        .param("orderNumber", order.get("orderNumber").asText())
+                        .param("email", "cone.buyer@EXAMPLE.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.order.items[0].quantity").value(4))
+                .andExpect(jsonPath("$.data.paymentMethod").value("COD"))
+                .andExpect(jsonPath("$.data.canPayOnline").value(false));
+
+        mockMvc.perform(get("/api/storefront/orders/lookup")
+                        .param("orderNumber", order.get("orderNumber").asText())
+                        .param("email", "attacker@example.com"))
+                .andExpect(status().isBadRequest());
+    }
+}

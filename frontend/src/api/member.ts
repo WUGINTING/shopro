@@ -4,7 +4,9 @@
  */
 
 import axiosInstance from './axios'
-import type { ApiResponse } from './types'
+import type { ApiResponse, PageResponse } from './types'
+
+export type { PageResponse }
 
 export interface Member {
   id?: number
@@ -27,14 +29,6 @@ export interface MemberQueryRequest {
   status?: string
   page?: number
   size?: number
-}
-
-export interface PageResponse<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  currentPage: number
-  pageSize: number
 }
 
 /**

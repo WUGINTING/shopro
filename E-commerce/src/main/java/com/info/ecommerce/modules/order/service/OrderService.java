@@ -46,6 +46,7 @@ public class OrderService {
     private final ProductSpecificationRepository productSpecificationRepository;
     private final MemberService memberService;
     private final AdminNotificationService adminNotificationService;
+    private final OrderStockService orderStockService;
 
     /**
      * 生成訂單編號
@@ -322,6 +323,10 @@ public class OrderService {
 
         order = orderRepository.save(order);
 
+        if (dto.getStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+            orderStockService.release(id, order.getOrderNumber());
+        }
+
         // 記錄歷史
         if (oldStatus != dto.getStatus()) {
             orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
@@ -362,6 +367,11 @@ public class OrderService {
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
+
+        // 未取消的訂單刪除前先歸還庫存（已取消的訂單在取消時已歸還）
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            orderStockService.release(id, order.getOrderNumber());
+        }
 
         // 刪除訂單項目
         orderItemRepository.deleteByOrderId(id);
@@ -430,6 +440,10 @@ public class OrderService {
         }
 
         order = orderRepository.save(order);
+
+        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+            orderStockService.release(id, order.getOrderNumber());
+        }
 
         // 記錄歷史
         orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",

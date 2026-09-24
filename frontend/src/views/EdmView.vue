@@ -359,7 +359,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { edmApi, type EdmCampaign } from '@/api/edm'
 
 const $q = useQuasar()
@@ -420,7 +420,7 @@ const editingCampaign = ref<Partial<EdmCampaign>>({
 })
 
 // 表格列定義
-const columns = [
+const columns: QTableColumn[] = [
   { name: 'name', label: '活動名稱', field: 'name', align: 'left' },
   { name: 'subject', label: '郵件主旨', field: 'subject', align: 'left' },
   { name: 'status', label: '狀態', field: 'status', align: 'center' },

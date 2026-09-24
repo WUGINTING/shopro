@@ -247,7 +247,8 @@ const handleAskQuestion = async () => {
       orderId: order.value.id,
       askerType: 'CUSTOMER',
       askerId: authStore.user?.id,
-      askerName: authStore.user?.name || order.value.customerName || '會員',
+      // User（後端 UserDTO）沒有 name 欄位，直接使用訂單顧客名稱
+      askerName: order.value.customerName || '會員',
       question
     })
     questionForm.value.question = ''

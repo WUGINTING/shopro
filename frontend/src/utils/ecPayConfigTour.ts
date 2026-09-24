@@ -1,8 +1,8 @@
-import Shepherd from 'shepherd.js'
+import { createShepherdTour, type ShepherdTour, type ShepherdStepOptions } from './tour'
 import 'shepherd.js/dist/css/shepherd.css'
 
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過 ECPay 支付配置導覽
 const TOUR_STORAGE_KEY = 'shopro-ecpay-config-tour-completed'
@@ -20,34 +20,15 @@ export const resetEcPayConfigTour = (): void => {
 }
 
 // 初始化導覽
-export const initEcPayConfigTour = (): Shepherd.Tour => {
+export const initEcPayConfigTour = (): ShepherdTour => {
   // 每次都創建新實例，避免重用舊的步驟
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建 ECPay 支付配置導覽步驟
-export const createEcPayConfigTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createEcPayConfigTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',
@@ -219,12 +200,13 @@ export const createEcPayConfigTourSteps = (): Shepherd.Step.StepOptions[] => {
         element: () => {
           // 查找包含「測試模式」或「啟用配置」的切換開關
           const toggles = document.querySelectorAll('.q-toggle')
-          if (toggles.length > 0) {
-            const card = toggles[0].closest('.q-card')
+          const firstToggle = toggles[0]
+          if (firstToggle) {
+            const card = firstToggle.closest('.q-card')
             if (card) {
               return card as HTMLElement
             }
-            return toggles[0] as HTMLElement
+            return firstToggle as HTMLElement
           }
           // 如果找不到，返回第一個卡片
           const firstCard = document.querySelector('.q-card')

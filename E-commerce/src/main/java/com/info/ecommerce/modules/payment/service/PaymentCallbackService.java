@@ -8,6 +8,7 @@ import com.info.ecommerce.modules.order.repository.OrderPaymentRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.crm.service.MemberService;
 import com.info.ecommerce.modules.order.service.OrderHistoryService;
+import com.info.ecommerce.modules.order.service.OrderStockService;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
 import com.info.ecommerce.modules.payment.entity.PaymentGatewayTransaction;
 import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
@@ -40,6 +41,7 @@ public class PaymentCallbackService {
     private final PaymentGatewayTransactionRepository transactionRepository;
     private final MemberService memberService;
     private final AdminNotificationService adminNotificationService;
+    private final OrderStockService orderStockService;
 
     /**
      * 處理支付成功回調
@@ -239,6 +241,7 @@ public class PaymentCallbackService {
             OrderStatus oldStatus = order.getStatus();
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
+            orderStockService.release(order.getId(), order.getOrderNumber());
             
             // 記錄歷史
             orderHistoryService.recordHistory(
