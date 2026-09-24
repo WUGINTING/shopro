@@ -130,14 +130,18 @@ shopro/
 
 ### 後端啟動
 
+資料庫帳密、JWT 金鑰、金流金鑰等一律由環境變數提供（不寫在設定檔中），範本見 [`E-commerce/.env.example`](./E-commerce/.env.example)，完整說明見[部署指南](./docs/deployment-guide.md)。
+
 ```bash
 cd E-commerce
+cp .env.example .env        # 填入 DB_URL / DB_USERNAME / DB_PASSWORD 等
+set -a; source .env; set +a
 ./mvnw spring-boot:run
 ```
 
-後端服務將在 `http://localhost:8080` 運行
+後端服務將在 `http://localhost:8080` 運行。使用 `SPRING_PROFILES_ACTIVE=dev` 時會在空資料庫建立 `admin / admin123` 與示範帳號。
 
-### 前端啟動
+### 後台管理前端啟動
 
 ```bash
 cd frontend
@@ -145,7 +149,27 @@ npm install
 npm run dev
 ```
 
-前端應用將在 `http://localhost:5173` 運行
+後台應用將在 `http://localhost:5173` 運行
+
+### 前台商城（遇日小舖）啟動
+
+```bash
+cd frontend-official
+npm install
+npx quasar dev
+```
+
+前台商城將在 `http://localhost:5174/shop` 運行（`/api` 代理到後端）。顧客免登入即可結帳（綠界線上付款或貨到付款），並以「訂單編號 + Email」查詢訂單。
+
+### 測試與 CI
+
+```bash
+cd E-commerce && mvn test                 # 後端單元與整合測試（H2，不需資料庫）
+cd frontend && npm run build              # 型別檢查 + 建置
+cd frontend-official && npx quasar build  # 前台建置
+```
+
+每次推送由 GitHub Actions（`.github/workflows/ci.yml`）自動執行以上三項。
 
 ### 建置生產版本
 
@@ -157,8 +181,8 @@ cd E-commerce
 
 **前端建置:**
 ```bash
-cd frontend
-npm run build
+cd frontend && npm run build              # 後台 → frontend/dist
+cd frontend-official && npx quasar build  # 前台 → frontend-official/dist/spa
 ```
 
 ## API 文檔
