@@ -1,6 +1,11 @@
 package com.info.ecommerce.modules.order.service;
 
 import com.info.ecommerce.modules.order.dto.OrderDTO;
+import com.info.ecommerce.modules.crm.service.MemberService;
+import com.info.ecommerce.modules.product.entity.Product;
+import com.info.ecommerce.modules.product.repository.ProductRepository;
+import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import com.info.ecommerce.modules.order.dto.OrderItemDTO;
 import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderItem;
@@ -43,6 +48,18 @@ class OrderServiceTest {
 
     @Mock
     private OrderHistoryService orderHistoryService;
+
+    @Mock
+    private ProductRepository productRepository;
+
+    @Mock
+    private ProductSpecificationRepository productSpecificationRepository;
+
+    @Mock
+    private MemberService memberService;
+
+    @Mock
+    private AdminNotificationService adminNotificationService;
 
     @InjectMocks
     private OrderService orderService;
@@ -112,6 +129,10 @@ class OrderServiceTest {
         // 模擬訂單編號不存在
         when(orderRepository.existsByOrderNumber(any())).thenReturn(false);
         
+        // 模擬商品資料（訂單項目名稱/SKU 以商品為準）
+        when(productRepository.findById(any())).thenReturn(Optional.of(
+            Product.builder().id(1L).name("測試商品").sku("SKU001").build()));
+
         // 模擬保存訂單
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         

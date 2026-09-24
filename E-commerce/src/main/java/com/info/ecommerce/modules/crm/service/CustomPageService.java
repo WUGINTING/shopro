@@ -53,7 +53,9 @@ public class CustomPageService {
     }
 
     public CustomPageDTO getCustomPageBySlug(String slug) {
+        // 公開網址只提供已啟用的頁面
         CustomPage customPage = customPageRepository.findBySlug(slug)
+                .filter(page -> !Boolean.FALSE.equals(page.getEnabled()))
                 .orElseThrow(() -> new BusinessException("自訂頁面不存在"));
         return toDTO(customPage);
     }

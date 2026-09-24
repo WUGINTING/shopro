@@ -6,16 +6,21 @@ import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.enums.PaymentStatus;
 import com.info.ecommerce.modules.order.repository.OrderPaymentRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.crm.service.MemberService;
 import com.info.ecommerce.modules.order.service.OrderHistoryService;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
 import com.info.ecommerce.modules.payment.entity.PaymentGatewayTransaction;
 import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
 import com.info.ecommerce.modules.payment.repository.PaymentGatewayTransactionRepository;
+import com.info.ecommerce.modules.system.enums.AdminNotificationType;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +38,8 @@ public class PaymentCallbackService {
     private final OrderPaymentRepository orderPaymentRepository;
     private final OrderHistoryService orderHistoryService;
     private final PaymentGatewayTransactionRepository transactionRepository;
+    private final MemberService memberService;
+    private final AdminNotificationService adminNotificationService;
 
     /**
      * 處理支付成功回調
@@ -46,45 +53,39 @@ public class PaymentCallbackService {
             String orderNumber = response.getOrderNumber();
             log.info("Handling payment success for order: {}, transaction: {}", orderNumber, response.getTransactionId());
             
-            // 查找訂單（先嘗試精確匹配，如果失敗則嘗試前綴匹配）
-            Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
-            
-            // 如果精確匹配失敗，可能是因為訂單編號被截取了，嘗試使用前綴匹配
-            if (orderOpt.isEmpty() && orderNumber != null && orderNumber.length() >= 10) {
-                log.warn("Exact match failed for order number: {}, trying prefix match...", orderNumber);
-                // 嘗試匹配以該訂單編號開頭的訂單（用於處理被截取的訂單編號）
-                List<Order> ordersByPrefix = orderRepository.findAll().stream()
-                        .filter(order -> order.getOrderNumber() != null && order.getOrderNumber().startsWith(orderNumber))
-                        .limit(1)
-                        .toList();
-                if (!ordersByPrefix.isEmpty()) {
-                    orderOpt = Optional.of(ordersByPrefix.get(0));
-                    log.info("Found order by prefix match: {} -> {}", orderNumber, orderOpt.get().getOrderNumber());
-                }
-            }
-            
+            Optional<Order> orderOpt = findOrderForCallback(orderNumber);
             if (orderOpt.isEmpty()) {
                 log.error("Order not found for payment success: {}", orderNumber);
-                // 記錄一些訂單編號示例用於調試（但不記錄太多以避免性能問題）
-                try {
-                    List<String> sampleOrderNumbers = orderRepository.findAll().stream()
-                            .limit(5)
-                            .map(Order::getOrderNumber)
-                            .toList();
-                    log.error("Sample order numbers in database: {}", sampleOrderNumbers);
-                } catch (Exception e) {
-                    log.error("Failed to fetch sample order numbers", e);
-                }
+                return false;
+            }
+
+            Order order = orderOpt.get();
+            log.info("Order found: {}, current status: {}", orderNumber, order.getStatus());
+
+            // 重複通知（綠界會重送直到收到 1|OK）：已付款則直接確認，不重複寫入
+            if (order.getStatus() == OrderStatus.PAID) {
+                log.info("Order {} is already PAID, acknowledging duplicate callback", order.getOrderNumber());
+                return true;
+            }
+
+            // 核對付款金額，避免金額不符的交易被當成已付款
+            if (!amountMatches(order, response.getAmount())) {
+                log.error("Payment amount mismatch for order {}: paid {}, expected {}",
+                        order.getOrderNumber(), response.getAmount(), order.getTotalAmount());
+                orderHistoryService.recordHistory(order.getId(), "PAYMENT_AMOUNT_MISMATCH",
+                        String.format("付款金額不符 - 實付 %s，應付 %s，交易ID: %s",
+                                response.getAmount(), order.getTotalAmount(), response.getTransactionId()),
+                        order.getStatus().name(), order.getStatus().name(), null, null);
+                adminNotificationService.createNotification(AdminNotificationType.PAYMENT_COMPLETED, order.getId(), null,
+                        "付款金額異常", "訂單 #" + order.getOrderNumber() + " 付款金額 NT$" + response.getAmount()
+                                + " 與訂單金額 NT$" + order.getTotalAmount() + " 不符，請人工確認");
                 return false;
             }
             
-            Order order = orderOpt.get();
-            log.info("Order found: {}, current status: {}", orderNumber, order.getStatus());
-            
-            // 檢查訂單狀態（只允許待付款或已付款狀態的訂單進行支付成功處理）
+            // 檢查訂單狀態（只允許待付款狀態的訂單進行支付成功處理）
             // 注意：數據庫約束允許：PENDING_PAYMENT, PAID, PROCESSING, COMPLETED, CANCELLED, REFUNDED
             // 支付成功後更新為 PAID（已付款）狀態
-            if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.PAID) {
+            if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
                 log.warn("Order {} is not in PENDING_PAYMENT or PROCESSING status, current status: {}", 
                         orderNumber, order.getStatus());
                 // 如果已經是完成、取消或退款狀態，不需要處理
@@ -129,6 +130,15 @@ public class PaymentCallbackService {
                     null
             );
             
+            // 累計會員消費並通知後台
+            try {
+                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+            } catch (Exception e) {
+                log.error("Failed to update member total spent for order {}", order.getOrderNumber(), e);
+            }
+            adminNotificationService.createNotification(AdminNotificationType.PAYMENT_COMPLETED, order.getId(), null,
+                    "收款完成", "訂單 #" + order.getOrderNumber() + " 已完成線上付款，金額：NT$" + order.getTotalAmount());
+
             log.info("Payment successfully processed for order: {}, transaction: {}", 
                     orderNumber, response.getTransactionId());
             
@@ -152,7 +162,7 @@ public class PaymentCallbackService {
             String orderNumber = response.getOrderNumber();
             
             // 查找訂單
-            Optional<Order> orderOpt = orderRepository.findByOrderNumber(orderNumber);
+            Optional<Order> orderOpt = findOrderForCallback(orderNumber);
             if (orderOpt.isEmpty()) {
                 log.error("Order not found for payment failure: {}", orderNumber);
                 return false;
@@ -249,6 +259,42 @@ public class PaymentCallbackService {
             log.error("Failed to handle payment cancellation", e);
             return false;
         }
+    }
+
+    /**
+     * 依回調的訂單編號找訂單。
+     * 新交易會透過 CustomField1 回傳完整訂單編號；舊交易的 MerchantTradeNo 可能被截斷，
+     * 此時僅在前綴唯一對應一筆訂單時才採用，避免同一分鐘內的訂單互相誤判。
+     */
+    private Optional<Order> findOrderForCallback(String orderNumber) {
+        if (orderNumber == null || orderNumber.isBlank()) {
+            return Optional.empty();
+        }
+        Optional<Order> exact = orderRepository.findByOrderNumber(orderNumber);
+        if (exact.isPresent() || orderNumber.length() < 10) {
+            return exact;
+        }
+        List<Order> candidates = orderRepository.findByOrderNumberStartingWith(orderNumber);
+        if (candidates.size() == 1) {
+            log.info("Found order by unique prefix match: {} -> {}", orderNumber, candidates.get(0).getOrderNumber());
+            return Optional.of(candidates.get(0));
+        }
+        if (candidates.size() > 1) {
+            log.error("Ambiguous order number prefix {} matches {} orders; manual reconciliation required",
+                    orderNumber, candidates.size());
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * 綠界 TotalAmount 以整數送出，比對時以訂單金額的整數部分為準
+     */
+    private static boolean amountMatches(Order order, BigDecimal paidAmount) {
+        if (paidAmount == null || order.getTotalAmount() == null) {
+            return true;
+        }
+        BigDecimal expected = order.getTotalAmount().setScale(0, RoundingMode.DOWN);
+        return paidAmount.setScale(0, RoundingMode.DOWN).compareTo(expected) == 0;
     }
 
     /**

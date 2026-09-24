@@ -1,5 +1,8 @@
 package com.info.ecommerce.modules.order.controller;
 
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
+import com.info.ecommerce.modules.order.dto.OrderDTO;
+import com.info.ecommerce.modules.order.service.OrderService;
 import com.info.ecommerce.common.ApiResponse;
 import com.info.ecommerce.modules.order.dto.OrderQADTO;
 import com.info.ecommerce.modules.order.service.OrderQAService;
@@ -25,10 +28,30 @@ import java.util.List;
 public class OrderQAController {
 
     private final OrderQAService orderQAService;
+    private final OrderService orderService;
+    private final CurrentUserService currentUserService;
+
+    /** 會員只能對自己的訂單提問或查看問答 */
+    private void assertCanAccessOrder(Long orderId) {
+        if (currentUserService.isStaff()) {
+            return;
+        }
+        OrderDTO order = orderService.getOrder(orderId);
+        currentUserService.assertCanAccessOrder(order.getCustomerId(), order.getCustomerEmail());
+    }
 
     @PostMapping
     @Operation(summary = "新增問題", description = "顧客或店家對訂單提問")
     public ApiResponse<OrderQADTO> askQuestion(@Valid @RequestBody OrderQADTO dto) {
+        assertCanAccessOrder(dto.getOrderId());
+        if (!currentUserService.isStaff()) {
+            // 會員提問一律以本人身分記錄
+            dto.setAskerType("CUSTOMER");
+            currentUserService.currentMember().ifPresent(member -> {
+                dto.setAskerId(member.getId());
+                dto.setAskerName(member.getName());
+            });
+        }
         return ApiResponse.success("問題已提交", orderQAService.askQuestion(dto));
     }
 
@@ -47,6 +70,7 @@ public class OrderQAController {
     @Operation(summary = "取得訂單的所有問答")
     public ApiResponse<List<OrderQADTO>> getQAByOrderId(
             @Parameter(description = "訂單 ID") @PathVariable Long orderId) {
+        assertCanAccessOrder(orderId);
         return ApiResponse.success(orderQAService.getQAByOrderId(orderId));
     }
 

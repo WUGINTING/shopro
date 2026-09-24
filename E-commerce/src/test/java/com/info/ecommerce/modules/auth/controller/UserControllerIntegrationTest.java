@@ -158,6 +158,7 @@ class UserControllerIntegrationTest {
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userDTO)))
-                .andExpect(status().isForbidden());
+                // 未登入回 401（已登入但權限不足才是 403）
+                .andExpect(status().isUnauthorized());
     }
 }

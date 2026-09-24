@@ -1,5 +1,11 @@
 # 權限系統全部關閉 - 修改日誌
 
+> **2026-09 更新：後端權限已恢復。** `SecurityConfig` 改為明確的公開白名單（前台唯讀 API、訪客結帳、登入註冊、金流回呼），
+> 會員只能存取自己的訂單，含金鑰的系統/金流設定僅限 ADMIN，其餘 API 僅限後台員工（ADMIN / MANAGER / STAFF）。
+> 公開註冊一律建立 CUSTOMER 帳號。詳見 `E-commerce/src/main/java/com/info/ecommerce/modules/auth/config/SecurityConfig.java`。
+> 以下為當時關閉權限的歷史紀錄。
+
+
 ## 日期：2026-02-25
 ## 状態：已完成 ✅
 

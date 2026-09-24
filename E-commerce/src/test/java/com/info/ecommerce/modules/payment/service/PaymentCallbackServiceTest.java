@@ -6,7 +6,10 @@ import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.enums.PaymentStatus;
 import com.info.ecommerce.modules.order.repository.OrderPaymentRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
+import com.info.ecommerce.modules.crm.service.MemberService;
 import com.info.ecommerce.modules.order.service.OrderHistoryService;
+import com.info.ecommerce.modules.payment.repository.PaymentGatewayTransactionRepository;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
 import com.info.ecommerce.modules.payment.enums.PaymentGateway;
 import com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus;
@@ -18,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,6 +42,15 @@ class PaymentCallbackServiceTest {
 
     @Mock
     private OrderHistoryService orderHistoryService;
+
+    @Mock
+    private PaymentGatewayTransactionRepository transactionRepository;
+
+    @Mock
+    private MemberService memberService;
+
+    @Mock
+    private AdminNotificationService adminNotificationService;
 
     @InjectMocks
     private PaymentCallbackService paymentCallbackService;
@@ -140,7 +153,8 @@ class PaymentCallbackServiceTest {
         boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
 
         // Assert
-        assertFalse(result);
+        // 重複通知應回覆成功（讓綠界停止重送），但不重複寫入
+        assertTrue(result);
         verify(orderRepository).findByOrderNumber("TEST20240101001");
         verify(orderRepository, never()).save(any());
         verify(orderPaymentRepository, never()).save(any());
@@ -292,5 +306,49 @@ class PaymentCallbackServiceTest {
         verify(orderRepository).save(argThat(order ->
                 order.getStatus() == OrderStatus.CANCELLED
         ));
+    }
+
+    @Test
+    void testHandlePaymentSuccess_AmountMismatch_DoesNotMarkPaid() {
+        when(orderRepository.findByOrderNumber("TEST20240101001")).thenReturn(Optional.of(testOrder));
+        successResponse.setAmount(new BigDecimal("1"));
+
+        boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
+
+        assertFalse(result);
+        assertEquals(OrderStatus.PENDING_PAYMENT, testOrder.getStatus());
+        verify(orderRepository, never()).save(any());
+        verify(orderHistoryService).recordHistory(eq(1L), eq("PAYMENT_AMOUNT_MISMATCH"), anyString(),
+                anyString(), anyString(), isNull(), isNull());
+    }
+
+    @Test
+    void testHandlePaymentSuccess_AmbiguousPrefix_DoesNotGuess() {
+        successResponse.setOrderNumber("ORD2026092404361");
+        when(orderRepository.findByOrderNumber("ORD2026092404361")).thenReturn(Optional.empty());
+        when(orderRepository.findByOrderNumberStartingWith("ORD2026092404361")).thenReturn(List.of(
+                Order.builder().id(1L).orderNumber("ORD2026092404361506").status(OrderStatus.PENDING_PAYMENT).build(),
+                Order.builder().id(2L).orderNumber("ORD2026092404361999").status(OrderStatus.PENDING_PAYMENT).build()));
+
+        boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
+
+        assertFalse(result);
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void testHandlePaymentSuccess_UniquePrefix_MarksPaidAndUpdatesMember() {
+        successResponse.setOrderNumber("TEST2024010100");
+        when(orderRepository.findByOrderNumber("TEST2024010100")).thenReturn(Optional.empty());
+        when(orderRepository.findByOrderNumberStartingWith("TEST2024010100")).thenReturn(List.of(testOrder));
+        when(orderPaymentRepository.findByOrderIdAndGatewayTransactionId(anyLong(), anyString()))
+                .thenReturn(Optional.empty());
+        when(orderPaymentRepository.save(any(OrderPayment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        boolean result = paymentCallbackService.handlePaymentSuccess(successResponse);
+
+        assertTrue(result);
+        assertEquals(OrderStatus.PAID, testOrder.getStatus());
+        verify(memberService).addTotalSpent(1L, new BigDecimal("1000"));
     }
 }

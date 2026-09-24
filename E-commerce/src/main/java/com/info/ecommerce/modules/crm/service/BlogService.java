@@ -55,7 +55,9 @@ public class BlogService {
 
     @Transactional
     public BlogPostDTO getBlogPostBySlug(String slug) {
+        // 公開網址只提供已發布文章，草稿與已封存文章視為不存在
         BlogPost blogPost = blogPostRepository.findBySlug(slug)
+                .filter(post -> post.getStatus() == BlogStatus.PUBLISHED)
                 .orElseThrow(() -> new BusinessException("部落格文章不存在"));
         
         // 增加瀏覽次數

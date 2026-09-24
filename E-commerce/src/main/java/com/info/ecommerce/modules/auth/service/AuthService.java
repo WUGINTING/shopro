@@ -31,6 +31,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final MemberRepository memberRepository;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -49,7 +50,8 @@ public class AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                // 公開註冊不可自選角色，避免任何人註冊成 ADMIN
+                .role(Role.CUSTOMER)
                 .enabled(true)
                 .build();
 
@@ -197,6 +199,10 @@ public class AuthService {
                 // Create corresponding CRM member record
                 createCrmMember(googleUser, user);
             } else {
+                // 員工帳號只能用帳號密碼登入，避免以 Google 身分接管後台帳號
+                if (user.getRole() != Role.CUSTOMER) {
+                    throw new BusinessException("員工帳號請使用帳號密碼登入");
+                }
                 // Check if user account is enabled
                 if (!user.getEnabled()) {
                     throw new BusinessException("此帳號已被停用，無法登入");
@@ -217,48 +223,27 @@ public class AuthService {
                     .email(user.getEmail())
                     .role(user.getRole())
                     .build();
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             throw new BusinessException("Google 登入失敗: " + e.getMessage());
         }
     }
 
     /**
-     * Verify Google ID Token and extract user information
-     * Note: This is a simplified implementation. In production, you should use
-     * Google's official library or properly verify the token signature.
+     * 透過 Google 驗證 ID Token（簽章、有效期、aud、iss、email_verified）
      */
     private GoogleUserInfo verifyGoogleToken(String idToken) {
-        try {
-            // Decode JWT token (without verification for now)
-            // In production, you should verify the token signature using Google's public keys
-            String[] parts = idToken.split("\\.");
-            if (parts.length != 3) {
-                return null;
-            }
-
-            // Decode payload
-            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> claims = (java.util.Map<String, Object>) mapper.readValue(payload, java.util.Map.class);
-
-            // Extract user info
-            String email = (String) claims.get("email");
-            String name = (String) claims.get("name");
-            String picture = (String) claims.get("picture");
-
-            if (email == null) {
-                return null;
-            }
-
-            return GoogleUserInfo.builder()
-                    .email(email)
-                    .name(name != null ? name : email.split("@")[0])
-                    .picture(picture)
-                    .build();
-        } catch (Exception e) {
-            throw new BusinessException("無法解析 Google Token: " + e.getMessage());
+        if (!googleTokenVerifier.isEnabled()) {
+            throw new BusinessException("Google 登入尚未啟用");
         }
+        return googleTokenVerifier.verify(idToken)
+                .map(user -> GoogleUserInfo.builder()
+                        .email(user.getEmail())
+                        .name(user.getName())
+                        .picture(user.getPicture())
+                        .build())
+                .orElse(null);
     }
 
     /**

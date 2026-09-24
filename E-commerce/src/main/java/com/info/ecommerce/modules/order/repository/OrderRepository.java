@@ -18,6 +18,8 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     
     Optional<Order> findByOrderNumber(String orderNumber);
+
+    List<Order> findByOrderNumberStartingWith(String orderNumberPrefix);
     
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
     

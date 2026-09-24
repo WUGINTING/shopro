@@ -197,6 +197,8 @@ public class EcPayService implements PaymentGatewayService {
         params.put("ReturnURL", ecPayConfig.getNotifyUrl());
         params.put("ChoosePayment", "ALL"); // 顯示所有付款方式
         params.put("EncryptType", "1"); // SHA256
+        // 完整訂單編號放在 CustomField1（會原樣回傳），MerchantTradeNo 可能因 20 字元限制被截斷
+        params.put("CustomField1", originalOrderNumber);
         
         // 客戶資料（選填）
         if (request.getCustomerEmail() != null && !request.getCustomerEmail().isEmpty()) {
@@ -342,7 +344,11 @@ public class EcPayService implements PaymentGatewayService {
             // 加上4位時間戳後綴，總共23位，但我們限制了20位，所以會截取
             // 實際可能是：ORD + 12位時間戳 + 4位隨機數的前13位 + 4位後綴 = 20位
             String originalOrderNumber = merchantTradeNo;
-            if (merchantTradeNo != null && merchantTradeNo.length() > 4) {
+            String customOrderNumber = params.get("CustomField1");
+            if (customOrderNumber != null && !customOrderNumber.isBlank()) {
+                originalOrderNumber = customOrderNumber.trim();
+                log.info("Using order number from CustomField1: {}", originalOrderNumber);
+            } else if (merchantTradeNo != null && merchantTradeNo.length() > 4) {
                 // 移除最後4位（時間戳後綴）
                 originalOrderNumber = merchantTradeNo.substring(0, merchantTradeNo.length() - 4);
                 log.info("Extracted original order number: {} from MerchantTradeNo: {}", originalOrderNumber, merchantTradeNo);

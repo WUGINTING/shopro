@@ -58,8 +58,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (!userDetails.isEnabled()) {
                     log.warn("Attempted access with disabled account: {}", username);
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.getWriter().write("{\"error\":\"帳號已被停用\"}");
-                    response.setContentType("application/json");
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"帳號已被停用\",\"data\":null}");
                     return;
                 }
 
@@ -74,9 +74,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // 「全過」模式下的核心：即便報錯（如資料庫查無此人、Token過期），也不要報 500，直接讓它過
-            // 在 all-pass 模式下，JWT 過期是預期的行為，使用 DEBUG 級別減少日誌噪音
-            log.debug("JWT Auth failed, but continuing for 'all-pass' mode: {}", e.getMessage());
+            // Token 無效或過期時視為未登入：公開 API 仍可使用，受保護的 API 由 SecurityConfig 回傳 401
+            log.debug("JWT authentication failed, continuing as anonymous: {}", e.getMessage());
         }
 
         // 務必確保這行在 try-catch 外面或是最後一定會執行

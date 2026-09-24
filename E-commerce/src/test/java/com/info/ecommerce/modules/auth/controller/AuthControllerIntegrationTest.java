@@ -87,4 +87,18 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.token").exists())
                 .andExpect(jsonPath("$.data.username").value("testuser"));
     }
+
+    @Test
+    void testGoogleLogin_ForgedUnsignedToken_Rejected() throws Exception {
+        // 未經 Google 簽章的 token 不可登入（過去只解碼 payload，可冒用任何 Email）
+        String payload = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"email\":\"admin@example.com\",\"name\":\"x\"}".getBytes());
+        String forged = "eyJhbGciOiJub25lIn0." + payload + ".forged";
+
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"" + forged + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data.token").doesNotExist());
+    }
 }

@@ -39,30 +39,28 @@ cp .env.example .env
 # 編輯 .env 檔案
 ```
 
-**.env 範例：**
+所有機敏設定（資料庫密碼、JWT 金鑰、金流金鑰）都只從環境變數讀取，**不得寫入 `application.properties` 或提交到 git**。
+完整清單見 [`E-commerce/.env.example`](../E-commerce/.env.example)。Spring Boot 不會自動讀取 `.env`，請先匯出：
 
-```properties
-SPRING_PROFILES_ACTIVE=dev
-
-# 資料庫
-DB_URL=jdbc:sqlserver://localhost:1433;DatabaseName=ecommerce;encrypt=true;trustServerCertificate=true
-DB_USERNAME=sa
-DB_PASSWORD=your_password
-
-# JWT
-JWT_SECRET=your-256-bit-secret-key-here
-JWT_EXPIRATION=86400000
-
-# 應用程式 URL
-APP_BASE_URL=http://localhost:8080
-APP_FRONTEND_URL=http://localhost:5173
-
-# 支付設定 (測試環境)
-ECPAY_MERCHANT_ID=2000132
-ECPAY_HASH_KEY=5294y06JbISpM5x9
-ECPAY_HASH_IV=v77hoKGq4kWxNNIS
-ECPAY_SANDBOX=true
+```bash
+set -a; source .env; set +a
 ```
+
+| 變數 | 必填 | 說明 |
+|------|------|------|
+| `SPRING_PROFILES_ACTIVE` | 建議 | `dev`（admin/admin123 + 示範帳號）或 `prod`（缺少必要變數時啟動失敗） |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 是 | SQL Server 連線 |
+| `JWT_SECRET` | prod 必填 | base64、至少 32 bytes（`openssl rand -base64 32`）；未設定時使用暫時金鑰，重啟後需重新登入 |
+| `ADMIN_INITIAL_PASSWORD` | 建議 | 使用者資料表為空時建立的管理員密碼；未設定會產生隨機密碼並只在啟動日誌顯示一次 |
+| `DEMO_USERS` | 否 | `true` 時建立 manager/staff/customer 示範帳號（僅限開發） |
+| `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
+| `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
+| `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
+| `ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | prod 必填 | 綠界金鑰（未設定時使用綠界公開測試商店） |
+| `ECPAY_NOTIFY_URL` | prod 必填 | 綠界伺服器付款通知網址，必須能從網際網路連線：`https://<api 網域>/api/payment-gateway/callback/ecpay` |
+| `ECPAY_RETURN_URL` | prod 必填 | 後台商城付款後的「返回商店」網址 |
+| `LINEPAY_CHANNEL_ID` / `LINEPAY_CHANNEL_SECRET` | 選用 | LINE Pay |
+| `GOOGLE_CLIENT_ID` | 選用 | Google 登入的 OAuth Client ID（與後台 `VITE_GOOGLE_CLIENT_ID` 相同）；未設定時停用 Google 登入。後端會向 Google 驗證 token 簽章與 aud |
 
 ### 3. 啟動後端
 
@@ -111,26 +109,30 @@ cd E-commerce
 
 #### 2. 設定環境變數
 
-建立 `/etc/shopro/application.env`：
+建立 `/etc/shopro/application.env`（權限設為 600，僅服務帳號可讀）：
 
 ```properties
 SPRING_PROFILES_ACTIVE=prod
 
-DB_URL=jdbc:sqlserver://db-server:1433;DatabaseName=ecommerce;encrypt=true
+DB_URL=jdbc:sqlserver://db-server:1433;DatabaseName=e-commerce;encrypt=true
 DB_USERNAME=shopro_user
 DB_PASSWORD=<secure_password>
 
-JWT_SECRET=<256-bit-secure-secret>
-JWT_EXPIRATION=86400000
+JWT_SECRET=<openssl rand -base64 32>
+ADMIN_INITIAL_PASSWORD=<首次啟動的管理員密碼，登入後請立即修改>
 
-APP_BASE_URL=https://api.yourdomain.com
-APP_FRONTEND_URL=https://yourdomain.com
+CORS_ALLOWED_ORIGINS=https://admin.yourdomain.com,https://shop.yourdomain.com
+STOREFRONT_URL=https://shop.yourdomain.com
+FILE_UPLOAD_DIR=/var/lib/shopro/uploads/images
 
 ECPAY_MERCHANT_ID=<production_merchant_id>
 ECPAY_HASH_KEY=<production_hash_key>
 ECPAY_HASH_IV=<production_hash_iv>
-ECPAY_SANDBOX=false
+ECPAY_RETURN_URL=https://admin.yourdomain.com/payment/result
+ECPAY_NOTIFY_URL=https://api.yourdomain.com/api/payment-gateway/callback/ecpay
 ```
+
+`prod` profile 預設關閉 Swagger（需要時設 `API_DOCS_ENABLED=true`），並以 `ddl-auto=validate` 啟動；首次部署或升級需要變更資料表時，可暫時設 `JPA_DDL_AUTO=update`。
 
 #### 3. 建立 systemd 服務
 

@@ -1,6 +1,8 @@
 package com.info.ecommerce.modules.product.service;
 
 import com.info.ecommerce.common.exception.BusinessException;
+import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import com.info.ecommerce.modules.product.entity.InventoryAlert;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
 import com.info.ecommerce.modules.product.entity.StockNotification;
@@ -40,6 +42,12 @@ class InventoryManagementServiceTest {
 
     @Mock
     private StockNotificationRepository notificationRepository;
+
+    @Mock
+    private InventoryMovementLogRepository movementLogRepository;
+
+    @Mock
+    private AdminNotificationService adminNotificationService;
 
     @InjectMocks
     private InventoryManagementService inventoryManagementService;
@@ -331,16 +339,27 @@ class InventoryManagementServiceTest {
     }
 
     @Test
-    void should_ThrowBusinessException_When_UpdateNonExistentInventory() {
-        // given
+    void should_CreateInventory_When_UpdateNonExistentInventory() {
+        // given：尚無庫存記錄時，調整庫存會建立新記錄
         when(inventoryRepository.findByProductIdAndSpecificationId(1L, 1L))
                 .thenReturn(Optional.empty());
 
-        // when & then
-        assertThatThrownBy(() -> inventoryManagementService.updateInventory(1L, 1L, 1L, 50))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("庫存記錄不存在");
+        // when
+        inventoryManagementService.updateInventory(1L, 1L, 1L, 50);
+
+        // then
         verify(inventoryRepository, times(1)).findByProductIdAndSpecificationId(1L, 1L);
+        verify(inventoryRepository).save(argThat(inventory ->
+                inventory.getProductId().equals(1L)
+                        && inventory.getSpecificationId().equals(1L)
+                        && inventory.getAvailableStock() == 50));
+        verify(movementLogRepository).save(any());
+    }
+
+    @Test
+    void should_ThrowBusinessException_When_UpdateInventoryWithoutQuantity() {
+        assertThatThrownBy(() -> inventoryManagementService.updateInventory(1L, 1L, 1L, null))
+                .isInstanceOf(BusinessException.class);
         verify(inventoryRepository, never()).save(any(ProductInventory.class));
     }
 

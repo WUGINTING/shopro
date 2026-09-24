@@ -1,6 +1,11 @@
 package com.info.ecommerce.modules.payment.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.common.exception.BusinessException;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
+import com.info.ecommerce.modules.order.entity.Order;
+import com.info.ecommerce.modules.order.enums.OrderStatus;
+import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.payment.dto.PaymentConfirmDTO;
 import com.info.ecommerce.modules.payment.dto.PaymentRequestDTO;
 import com.info.ecommerce.modules.payment.dto.PaymentResponseDTO;
@@ -34,13 +39,35 @@ public class PaymentGatewayController {
     private final EcPayService ecPayService;
     private final PaymentCallbackService paymentCallbackService;
     private final com.info.ecommerce.modules.payment.service.PaymentCallbackLogService paymentCallbackLogService;
+    private final OrderRepository orderRepository;
+    private final CurrentUserService currentUserService;
+
+    /**
+     * 找出要付款的訂單並檢查權限與狀態；付款金額一律以訂單金額為準，不採用前端傳入的金額
+     */
+    private Order resolvePayableOrder(Long orderId, String orderNumber) {
+        Order order = (orderId != null
+                ? orderRepository.findById(orderId)
+                : java.util.Optional.ofNullable(orderNumber).flatMap(orderRepository::findByOrderNumber))
+                .orElseThrow(() -> new BusinessException("訂單不存在"));
+        currentUserService.assertCanAccessOrder(order.getCustomerId(), order.getCustomerEmail());
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BusinessException("訂單狀態為「" + order.getStatus().getDescription() + "」，無法付款");
+        }
+        return order;
+    }
 
     @PostMapping("/create")
     @Operation(summary = "創建支付請求", description = "透過指定的支付閘道創建支付請求，返回支付 URL")
     public ApiResponse<PaymentResponseDTO> createPayment(
             @Parameter(description = "支付閘道類型") @RequestParam PaymentGateway gateway,
             @Valid @RequestBody PaymentRequestDTO request) {
-        
+
+        Order order = resolvePayableOrder(request.getOrderId(), request.getOrderNumber());
+        request.setOrderId(order.getId());
+        request.setOrderNumber(order.getOrderNumber());
+        request.setAmount(order.getTotalAmount());
+
         log.info("Creating payment with gateway: {} for order: {}", gateway, request.getOrderNumber());
         
         try {
@@ -63,6 +90,9 @@ public class PaymentGatewayController {
     public ApiResponse<PaymentResponseDTO> confirmPayment(
             @Parameter(description = "支付閘道類型") @RequestParam PaymentGateway gateway,
             @Valid @RequestBody PaymentConfirmDTO confirm) {
+
+        Order order = resolvePayableOrder(null, confirm.getOrderNumber());
+        confirm.setAmount(order.getTotalAmount());
         
         log.info("Confirming payment with gateway: {} for transaction: {}", gateway, confirm.getTransactionId());
         
@@ -241,6 +271,7 @@ public class PaymentGatewayController {
             PaymentConfirmDTO confirm = PaymentConfirmDTO.builder()
                     .transactionId(transactionId)
                     .orderNumber(orderId)
+                    .amount(orderRepository.findByOrderNumber(orderId).map(Order::getTotalAmount).orElse(null))
                     .build();
             
             PaymentGatewayService service = paymentGatewayFactory.getPaymentGatewayService(PaymentGateway.LINE_PAY);
@@ -265,10 +296,9 @@ public class PaymentGatewayController {
     public ApiResponse<String> linepayCancelCallback(@RequestParam String orderId) {
         
         log.info("Received LINE PAY cancel callback for orderId: {}", orderId);
-        
-        // 處理支付取消
-        paymentCallbackService.handlePaymentCancellation(orderId);
-        
-        return ApiResponse.success("支付已取消", orderId);
+
+        // 此網址為瀏覽器導回、未經簽章，任何人都能呼叫，因此不變更訂單狀態：
+        // 訂單維持「待付款」，顧客可重新付款，逾期未付由後台取消
+        return ApiResponse.success("已取消付款，訂單仍保留為待付款", orderId);
     }
 }

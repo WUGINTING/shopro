@@ -31,6 +31,8 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    @NotNull(message = "Role is required")
+    /**
+     * 已忽略：公開註冊一律建立 CUSTOMER 帳號，員工帳號請由管理員透過 /api/users 建立
+     */
     private Role role;
 }
