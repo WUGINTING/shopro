@@ -49,18 +49,7 @@ public class OrderStockService {
         if (orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RESERVED)) {
             return;
         }
-        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
-        for (OrderItem item : items) {
-            int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
-            if (quantity <= 0) {
-                continue;
-            }
-            if (item.getSpecificationId() != null) {
-                reserveSpecification(item, quantity, orderNumber);
-            } else {
-                reserveProductLevel(item, quantity, orderNumber);
-            }
-        }
+        reserveItems(orderItemRepository.findByOrderId(orderId), orderNumber);
         orderHistoryService.recordHistory(orderId, ACTION_RESERVED, "已扣除訂單商品庫存", null, null, null, "系統");
     }
 
@@ -73,7 +62,46 @@ public class OrderStockService {
                 || orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RELEASED)) {
             return;
         }
-        for (OrderItem item : orderItemRepository.findByOrderId(orderId)) {
+        returnItems(orderItemRepository.findByOrderId(orderId), "訂單 " + orderNumber + " 取消，歸還庫存");
+        orderHistoryService.recordHistory(orderId, ACTION_RELEASED, "訂單取消，已歸還商品庫存", null, null, null, "系統");
+    }
+
+    /**
+     * 訂單品項被修改時調整庫存：歸還舊品項、扣除新品項（庫存不足時丟出例外，呼叫端交易整筆回滾）。
+     * 只對目前仍佔用庫存的訂單（已扣且未歸還）生效。
+     */
+    @Transactional
+    public void replaceItems(Long orderId, String orderNumber, List<OrderItem> oldItems, List<OrderItem> newItems) {
+        if (!holdsStock(orderId)) {
+            return;
+        }
+        returnItems(oldItems, "訂單 " + orderNumber + " 修改品項，歸還原品項庫存");
+        reserveItems(newItems, orderNumber);
+        orderHistoryService.recordHistory(orderId, "STOCK_ADJUSTED", "訂單品項修改，已重新計算庫存", null, null, null, "系統");
+    }
+
+    /** 訂單目前是否佔用庫存（已扣且尚未歸還） */
+    public boolean holdsStock(Long orderId) {
+        return orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RESERVED)
+                && !orderHistoryRepository.existsByOrderIdAndActionType(orderId, ACTION_RELEASED);
+    }
+
+    private void reserveItems(List<OrderItem> items, String orderNumber) {
+        for (OrderItem item : items) {
+            int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
+            if (quantity <= 0) {
+                continue;
+            }
+            if (item.getSpecificationId() != null) {
+                reserveSpecification(item, quantity, orderNumber);
+            } else {
+                reserveProductLevel(item, quantity, orderNumber);
+            }
+        }
+    }
+
+    private void returnItems(List<OrderItem> items, String remark) {
+        for (OrderItem item : items) {
             int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
             if (quantity <= 0) {
                 continue;
@@ -81,13 +109,12 @@ public class OrderStockService {
             if (item.getSpecificationId() != null) {
                 if (productSpecificationRepository.incrementStock(item.getSpecificationId(), quantity) > 0) {
                     productInventoryRepository.adjustSpecificationStock(item.getProductId(), item.getSpecificationId(), quantity);
-                    logMovement(item, quantity, specificationStock(item), "訂單 " + orderNumber + " 取消，歸還庫存");
+                    logMovement(item, quantity, specificationStock(item), remark);
                 }
             } else if (productInventoryRepository.incrementProductLevelStock(item.getProductId(), quantity) > 0) {
-                logMovement(item, quantity, productLevelStock(item), "訂單 " + orderNumber + " 取消，歸還庫存");
+                logMovement(item, quantity, productLevelStock(item), remark);
             }
         }
-        orderHistoryService.recordHistory(orderId, ACTION_RELEASED, "訂單取消，已歸還商品庫存", null, null, null, "系統");
     }
 
     private void reserveSpecification(OrderItem item, int quantity, String orderNumber) {

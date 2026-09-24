@@ -160,4 +160,38 @@ class StorefrontCheckoutIntegrationTest {
                         .param("email", "attacker@example.com"))
                 .andExpect(status().isBadRequest());
     }
+
+    private String orderUpdateBody(JsonNode order, int quantity) throws Exception {
+        com.fasterxml.jackson.databind.node.ObjectNode body = order.deepCopy();
+        com.fasterxml.jackson.databind.node.ArrayNode items = objectMapper.createArrayNode();
+        items.addObject()
+                .put("productId", cup.getId())
+                .put("specificationId", blueCup.getId())
+                .put("unitPrice", 380)
+                .put("quantity", quantity);
+        body.set("items", items);
+        return objectMapper.writeValueAsString(body);
+    }
+
+    @Test
+    void adminEditingItems_adjustsReservedStock() throws Exception {
+        JsonNode order = checkout(checkoutBody("edit@example.com", cup.getId(), blueCup.getId(), 2));
+        assertEquals(1, specStock());
+        long orderId = order.get("id").asLong();
+
+        mockMvc.perform(put("/api/orders/" + orderId).header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content(orderUpdateBody(order, 1)))
+                .andExpect(status().isOk());
+        assertEquals(2, specStock(), "改為 1 件後應歸還 1 件");
+
+        mockMvc.perform(put("/api/orders/" + orderId).header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content(orderUpdateBody(order, 5)))
+                .andExpect(status().isBadRequest());
+        assertEquals(2, specStock(), "庫存不足的修改需整筆回滾");
+
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        assertEquals(3, specStock(), "取消後依目前品項（1 件）歸還");
+    }
 }

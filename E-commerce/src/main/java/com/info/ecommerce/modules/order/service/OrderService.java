@@ -311,11 +311,15 @@ public class OrderService {
 
         // 更新訂單項目（如果有提供）
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            List<OrderItem> oldItems = orderItemRepository.findByOrderId(id);
             orderItemRepository.deleteByOrderId(id);
             List<OrderItem> items = dto.getItems().stream()
                 .map(itemDto -> convertItemToEntity(itemDto, id))
                 .collect(Collectors.toList());
             orderItemRepository.saveAll(items);
+
+            // 前台訂單已扣庫存：品項變更時同步調整
+            orderStockService.replaceItems(id, order.getOrderNumber(), oldItems, items);
 
             // 重新計算金額
             calculateOrderAmounts(order, items);
