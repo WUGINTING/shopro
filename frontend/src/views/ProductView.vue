@@ -1758,9 +1758,19 @@ const handleEdit = async (product: Product | ProductRow) => {
     await loadDescriptionBlocks(product.id)
   }
 
-  // 依商品目前的圖片順序載入（第一張為主圖）；移除 / 排序 / 設主圖在儲存時以完整清單取代
-  if (product.id && product.images && product.images.length > 0) {
-    selectedAlbumImages.value = product.images
+  // 依商品目前的圖片順序載入（第一張為主圖）；移除 / 排序 / 設主圖在儲存時以完整清單取代。
+  // 從後端重新讀取，避免列表資料過時（例如剛上傳或其他人新增的圖片）在儲存時被刪掉
+  let images = product.images
+  if (product.id) {
+    try {
+      const fresh = await productApi.getProduct(product.id)
+      if (fresh.data) images = fresh.data.images
+    } catch {
+      // 讀取失敗時使用列表資料
+    }
+  }
+  if (product.id && images && images.length > 0) {
+    selectedAlbumImages.value = images
       .map((img) => (typeof img === 'string' ? img : img && typeof img === 'object' && 'imageUrl' in img ? img.imageUrl : ''))
       .filter((url): url is string => !!url)
       .map((imageUrl) => ({ albumId: 0, imageUrl, fileName: imageUrl.split('/').pop() || imageUrl }))
@@ -2395,7 +2405,8 @@ const addSelectedImagesToProduct = async () => {
 
     // Add only new images to avoid duplicates
     tempSelectedImages.value.forEach(img => {
-      if (!selectedAlbumImages.value.some(existing => existing.id === img.id)) {
+      // 以網址判斷：重新開啟商品時已有的圖片沒有相冊 ID
+      if (!selectedAlbumImages.value.some(existing => existing.imageUrl === img.imageUrl)) {
         selectedAlbumImages.value.push(img)
       }
     })

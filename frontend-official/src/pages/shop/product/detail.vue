@@ -495,6 +495,8 @@ const handleAddToCart = () => {
     image: currentImage.value || PRODUCT_PLACEHOLDER,
     price: displayPrice.value,
     selectedPrice: displayPrice.value,
+    // 商品售價：切換到沒有自訂價格的規格時使用
+    basePrice: product.value.price,
     originalPrice: product.value.originalPrice,
     sku: selectedSpec.value?.sku || product.value.sku,
     selectedSku: selectedSpec.value?.sku || product.value.sku,

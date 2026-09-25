@@ -112,7 +112,9 @@ public class ProductService {
         if (dto.getImages() != null) {
             List<String> imageUrls = new ArrayList<>();
             for (var imageDTO : dto.getImages()) {
-                if (imageDTO.getImageUrl() != null && !imageDTO.getImageUrl().isEmpty()) {
+                // 同一張圖片只保留一次（保留第一次出現的位置）
+                if (imageDTO.getImageUrl() != null && !imageDTO.getImageUrl().isEmpty()
+                        && !imageUrls.contains(imageDTO.getImageUrl())) {
                     imageUrls.add(imageDTO.getImageUrl());
                 }
             }

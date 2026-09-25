@@ -56,6 +56,7 @@ public class OrderService {
     private final AdminNotificationService adminNotificationService;
     private final OrderStockService orderStockService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.info.ecommerce.modules.order.repository.OrderShipmentRepository orderShipmentRepository;
 
     /**
      * 生成訂單編號
@@ -472,8 +473,11 @@ public class OrderService {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
 
-        // 未取消的訂單刪除前先歸還庫存（已取消的訂單在取消時已歸還）
-        if (order.getStatus() != OrderStatus.CANCELLED) {
+        // 尚未出貨的訂單（待付款，或已付款但還沒建立物流）刪除前歸還庫存與優惠券；
+        // 已出貨 / 已完成的商品已實際賣出，已取消 / 已退款的訂單在當時已處理，都不再歸還
+        boolean unfulfilled = order.getStatus() == OrderStatus.PENDING_PAYMENT
+            || (order.getStatus() == OrderStatus.PAID && orderShipmentRepository.findByOrderId(id).isEmpty());
+        if (unfulfilled) {
             orderStockService.release(id, order.getOrderNumber());
         }
 
@@ -486,6 +490,8 @@ public class OrderService {
         // 記錄歷史
         orderHistoryService.recordHistory(id, "DELETE", "訂單已刪除",
             order.getStatus().name(), null, null, null);
+        // 會員累積消費不再計入已刪除的訂單
+        memberService.syncTotalSpent(order.getCustomerId());
     }
 
     /**

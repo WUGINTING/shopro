@@ -184,6 +184,16 @@ public class MemberService {
     /**
      * 累積消費達門檻自動升級到符合的最高等級。只升不降：退款或後台手動調高的等級不會被自動調低
      */
+    /** 等級高低：兩者都有等級順序時以順序比較，否則以消費門檻比較 */
+    private static boolean ranksHigher(com.info.ecommerce.modules.crm.entity.MemberLevel candidate,
+                                       com.info.ecommerce.modules.crm.entity.MemberLevel current,
+                                       java.util.Comparator<com.info.ecommerce.modules.crm.entity.MemberLevel> byThreshold) {
+        if (candidate.getLevelOrder() != null && current.getLevelOrder() != null) {
+            return candidate.getLevelOrder() > current.getLevelOrder();
+        }
+        return byThreshold.compare(candidate, current) > 0;
+    }
+
     private void upgradeLevel(Member member, List<com.info.ecommerce.modules.crm.entity.MemberLevel> enabledLevels) {
         BigDecimal spent = member.getTotalSpent() != null ? member.getTotalSpent() : BigDecimal.ZERO;
         java.util.Comparator<com.info.ecommerce.modules.crm.entity.MemberLevel> byThreshold = java.util.Comparator.comparing(
@@ -192,8 +202,11 @@ public class MemberService {
                 .filter(level -> (level.getMinSpendAmount() != null ? level.getMinSpendAmount() : BigDecimal.ZERO).compareTo(spent) <= 0)
                 .max(byThreshold)
                 .ifPresent(earned -> {
-                    var current = enabledLevels.stream().filter(level -> level.getId().equals(member.getLevelId())).findFirst();
-                    if (current.isEmpty() || byThreshold.compare(earned, current.get()) > 0) {
+                    // 目前等級（含已停用或後台手動指定的等級）以等級順序比較，較高者保留，不會被自動調低
+                    var current = member.getLevelId() == null ? java.util.Optional.<com.info.ecommerce.modules.crm.entity.MemberLevel>empty()
+                            : enabledLevels.stream().filter(level -> level.getId().equals(member.getLevelId())).findFirst()
+                                    .or(() -> memberLevelRepository.findById(member.getLevelId()));
+                    if (current.isEmpty() || ranksHigher(earned, current.get(), byThreshold)) {
                         member.setLevelId(earned.getId());
                     }
                 });

@@ -228,7 +228,7 @@ public class InventoryManagementService {
     /**
      * 到貨通知：商品（或指定規格）有庫存時寄信給訂閱者；未設定寄信時保留訂閱，等可寄信後再通知
      */
-    @Transactional
+    // 不包在單一交易內：每筆通知以獨立交易標記後才寄信（寄信可能耗時，不長時間鎖住資料）
     public void processStockNotifications(Long productId) {
         List<StockNotification> notifications =
                 notificationRepository.findByProductIdAndNotifiedFalse(productId);

@@ -724,7 +724,7 @@
                               <q-item-section>
                                 <q-item-label>{{ scope.opt.specName || '無規格名稱' }}</q-item-label>
                                 <q-item-label caption v-if="scope.opt.sku">
-                                  SKU: {{ scope.opt.sku }} | 價格: NT$ {{ (scope.opt.price || 0).toFixed(2) }} | 庫存: {{ scope.opt.stock || 0 }}
+                                  SKU: {{ scope.opt.sku }} | 價格: {{ Number(scope.opt.price) > 0 ? `NT$ ${Number(scope.opt.price).toFixed(2)}` : '同商品售價' }} | 庫存: {{ scope.opt.stock || 0 }}
                                 </q-item-label>
                               </q-item-section>
                             </q-item>
@@ -2887,14 +2887,25 @@ const onProductChange = async (item: any, productId: number) => {
   }
 }
 
+/** 商品售價：特價大於 0 且低於定價時用特價，否則用定價（與後端計價規則一致） */
+const productSellingPrice = (product: Product) => {
+  const sale = Number(product.salePrice)
+  const base = Number(product.basePrice)
+  if (sale > 0 && (!(base > 0) || sale < base)) return sale
+  return base > 0 ? base : 0
+}
+
 const onSpecificationChange = (item: any, specificationId: number | undefined) => {
   if (specificationId && item.productId) {
     const specs = productSpecifications.value.get(item.productId) || []
     const spec = specs.find(s => s.id === specificationId)
     if (spec) {
-      // 從規格中獲取價格
-      if (spec.price != null) {
-        item.unitPrice = spec.price
+      // 規格價格；空白或 0 表示與商品售價相同（與前台結帳一致）
+      if (Number(spec.price) > 0) {
+        item.unitPrice = Number(spec.price)
+      } else {
+        const product = products.value.find(p => p.id === item.productId)
+        if (product) item.unitPrice = productSellingPrice(product)
       }
       // 設置規格信息
       item.productSku = spec.sku

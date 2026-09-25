@@ -65,6 +65,7 @@ export function quickAddToCart(product, { router, $q }) {
       image: product.image,
       price: product.price,
       selectedPrice: product.price,
+      basePrice: product.price,
       originalPrice: product.originalPrice,
       sku: product.sku,
       selectedSku: product.sku,

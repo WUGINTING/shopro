@@ -68,7 +68,7 @@ public class ProductController {
         if (!currentUserService.isStaff()) {
             return ApiResponse.success(productService.listPublicProducts(null, null, null, page, size));
         }
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProducts(pageable));
     }
 
@@ -81,7 +81,7 @@ public class ProductController {
         if (!currentUserService.isStaff()) {
             return ApiResponse.success(productService.listPublicProducts(categoryId, null, null, page, size));
         }
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProductsByCategory(categoryId, pageable));
     }
 
@@ -94,7 +94,7 @@ public class ProductController {
         if (!currentUserService.isStaff()) {
             return ApiResponse.success(productService.listPublicProductsByStatus(status, page, size));
         }
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProductsByStatus(status, pageable));
     }
 
@@ -107,7 +107,7 @@ public class ProductController {
         if (!currentUserService.isStaff()) {
             return ApiResponse.success(productService.listPublicProducts(null, keyword, null, page, size));
         }
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.searchProducts(keyword, pageable));
     }
 

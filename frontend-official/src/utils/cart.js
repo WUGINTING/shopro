@@ -140,7 +140,9 @@ export function updateCartItemSpec(productId, oldSpecId, newSpec) {
     // 更新規格和價格
     cartItems[itemIndex].specification = newSpec;
     // 規格沒有自己的價格時沿用商品價格（實際金額以結帳試算為準）
-    const specPrice = Number(newSpec.price) > 0 ? Number(newSpec.price) : cartItems[itemIndex].price;
+    const specPrice = Number(newSpec.price) > 0
+      ? Number(newSpec.price)
+      : Number(cartItems[itemIndex].basePrice) || cartItems[itemIndex].price;
     cartItems[itemIndex].selectedPrice = specPrice;
     cartItems[itemIndex].selectedSku = newSpec.sku;
     cartItems[itemIndex].price = specPrice;
