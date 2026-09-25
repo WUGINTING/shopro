@@ -367,6 +367,28 @@ public class StorefrontCheckoutService {
     }
 
     /**
+     * 前台可選的配送方式與運費（依後台運費設定）
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> shippingOptions() {
+        List<Map<String, Object>> options = new ArrayList<>();
+        for (String method : List.of(SHIPPING_HOME_DELIVERY, SHIPPING_STORE_PICKUP)) {
+            try {
+                ShippingRule rule = resolveShippingRule(method);
+                Map<String, Object> option = new java.util.LinkedHashMap<>();
+                option.put("method", method);
+                option.put("name", SHIPPING_STORE_PICKUP.equals(method) ? "門市自取" : "宅配到府");
+                option.put("fee", rule.baseFee());
+                option.put("freeShippingThreshold", rule.threshold());
+                options.add(option);
+            } catch (BusinessException disabled) {
+                // 暫停服務的配送方式不列出
+            }
+        }
+        return options;
+    }
+
+    /**
      * 待付款的線上付款訂單重新建立綠界付款（例如付款頁關閉或逾時）
      */
     @Transactional
@@ -466,7 +488,16 @@ public class StorefrontCheckoutService {
                 .build()));
     }
 
+    /**
+     * 配送方式的運費規則：使用後台「運費設定」中啟用的第一筆；
+     * 有設定但全部停用時，此配送方式暫停服務；完全沒有設定時使用預設（宅配 100 元、滿 1000 免運；自取免運）
+     */
     private ShippingRule resolveShippingRule(String shippingMethod) {
+        if (!shippingConfigRepository.findByShippingMethod(shippingMethod).isEmpty()
+                && shippingConfigRepository.findByShippingMethod(shippingMethod).stream().noneMatch(c -> Boolean.TRUE.equals(c.getEnabled()))) {
+            throw new BusinessException(SHIPPING_STORE_PICKUP.equals(shippingMethod)
+                    ? "門市自取目前暫停服務，請改選宅配到府" : "宅配到府目前暫停服務，請改選門市自取");
+        }
         List<ShippingConfig> configs = shippingConfigRepository.findByEnabledOrderBySortOrderAsc(true);
         for (ShippingConfig config : configs) {
             if (shippingMethod.equalsIgnoreCase(config.getShippingMethod())) {
@@ -483,9 +514,12 @@ public class StorefrontCheckoutService {
         return new ShippingRule(DEFAULT_HOME_DELIVERY_FEE, DEFAULT_FREE_SHIPPING_THRESHOLD);
     }
 
+    /** 售價：特價大於 0 且低於定價時用特價，否則用定價（與前台顯示規則一致） */
     private static BigDecimal productPrice(Product product) {
-        if (product.getSalePrice() != null && product.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
-            return product.getSalePrice();
+        BigDecimal sale = product.getSalePrice();
+        BigDecimal base = product.getBasePrice();
+        if (sale != null && sale.signum() > 0 && (base == null || base.signum() <= 0 || sale.compareTo(base) < 0)) {
+            return sale;
         }
         if (product.getBasePrice() != null) {
             return product.getBasePrice();

@@ -16,6 +16,7 @@ import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.auth.entity.Role;
 import com.info.ecommerce.modules.system.enums.PaymentMethod;
 import com.info.ecommerce.modules.system.enums.ShippingMethod;
+import com.info.ecommerce.modules.crm.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +40,7 @@ public class DashboardService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final MemberRepository memberRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderItemRepository orderItemRepository;
 
     /**
      * Get dashboard summary statistics
@@ -57,11 +59,9 @@ public class DashboardService {
         Long totalProductsLastMonth = productRepository.countByCreatedAtBefore(startOfMonth);
         Double productChange = calculatePercentageChange(totalProductsLastMonth, totalProducts);
 
-        // Pending orders count
-        Long pendingOrders = orderRepository.countByStatus(OrderStatus.PROCESSING);
-        Long pendingOrdersLastMonth = orderRepository.countByStatusAndCreatedAtBefore(
-            OrderStatus.PROCESSING, startOfMonth);
-        Double pendingOrdersChange = calculatePercentageChange(pendingOrdersLastMonth, pendingOrders);
+        // 待出貨訂單：已付款、尚未出貨（目前數量，不與上月比較）
+        Long pendingOrders = orderRepository.countByStatus(OrderStatus.PAID);
+        Double pendingOrdersChange = null;
 
         // Total customers count
         Long totalCustomers = memberRepository.count();
@@ -124,33 +124,38 @@ public class DashboardService {
     }
 
     /**
-     * Get top selling products
-     * TODO: Implement proper sales calculation by joining with OrderItem entity
-     * Currently returns recently added products as a placeholder
+     * 熱銷商品：近 30 天已付款 / 處理中 / 已完成訂單的銷售數量排行
      */
     public List<TopProductDTO> getTopProducts(int limit) {
-        Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<Object[]> rows = orderItemRepository.findTopSellingProducts(
+                MemberService.SPENDING_STATUSES, LocalDateTime.now().minusDays(30), PageRequest.of(0, Math.max(limit, 1)));
 
-        return productRepository.findAll(pageable).getContent().stream()
-                .map(product -> TopProductDTO.builder()
-                        .id(product.getId())
-                        .name(product.getName())
-                        .salesCount(0L) // TODO: Calculate actual sales from order_items table
-                        .price(product.getBasePrice())
-                        .imageUrl(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ?
-                            product.getImageUrls().get(0) : null)
-                        .build())
+        return rows.stream()
+                .map(row -> productRepository.findById((Long) row[0])
+                        .map(product -> TopProductDTO.builder()
+                                .id(product.getId())
+                                .name(product.getName())
+                                .salesCount(((Number) row[1]).longValue())
+                                .price(product.getSalePrice() != null && product.getSalePrice().signum() > 0
+                                        && (product.getBasePrice() == null || product.getSalePrice().compareTo(product.getBasePrice()) < 0)
+                                        ? product.getSalePrice() : product.getBasePrice())
+                                .imageUrl(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ?
+                                    product.getImageUrls().get(0) : null)
+                                .build())
+                        .orElse(null))
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Calculate monthly sales
+     * 當月銷售額：已付款 / 處理中 / 已完成的訂單（不含待付款、取消與退款）
      */
     private BigDecimal calculateMonthlySales(LocalDateTime start, LocalDateTime end) {
         List<Order> orders = orderRepository.findByCreatedAtBetween(start, end);
         return orders.stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> MemberService.SPENDING_STATUSES.contains(order.getStatus()))
                 .map(Order::getTotalAmount)
+                .filter(java.util.Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -203,7 +208,6 @@ public class DashboardService {
 
     private List<DashboardShortcutDTO> buildShortcuts(DashboardStatsDTO stats) {
         Long pendingPaymentCount = orderRepository.countByStatus(OrderStatus.PENDING_PAYMENT);
-        Long processingCount = orderRepository.countByStatus(OrderStatus.PROCESSING);
 
         return List.of(
                 DashboardShortcutDTO.builder()
@@ -211,7 +215,7 @@ public class DashboardService {
                         .label("Orders")
                         .route("/admin/orders")
                         .description("Manage order lifecycle and status updates")
-                        .badgeCount(processingCount)
+                        .badgeCount(stats.getPendingOrders())
                         .build(),
                 DashboardShortcutDTO.builder()
                         .key("products")

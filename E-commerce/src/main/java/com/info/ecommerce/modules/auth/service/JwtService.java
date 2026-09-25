@@ -24,6 +24,13 @@ public class JwtService {
     @Value("${jwt.secret:}")
     private String secretKey;
 
+    private boolean temporarySecret;
+
+    /** 是否使用啟動時產生的暫時金鑰（未設定 JWT_SECRET） */
+    public boolean isTemporarySecret() {
+        return temporarySecret;
+    }
+
     /**
      * 啟動時檢查 JWT 金鑰：未設定時產生暫時金鑰（重啟後既有 token 失效），金鑰過短則拒絕啟動
      */
@@ -33,6 +40,7 @@ public class JwtService {
             byte[] random = new byte[32];
             new java.security.SecureRandom().nextBytes(random);
             secretKey = java.util.Base64.getEncoder().encodeToString(random);
+            temporarySecret = true;
             org.slf4j.LoggerFactory.getLogger(JwtService.class).warn(
                     "JWT_SECRET is not set; using a temporary random key. Tokens will be invalid after restart. "
                     + "Set JWT_SECRET (base64, at least 32 bytes, e.g. `openssl rand -base64 32`).");

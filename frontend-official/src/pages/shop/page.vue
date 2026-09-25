@@ -93,6 +93,10 @@ import { getCustomPageBySlug } from 'src/api/customPage.js';
 import { getStoreContent } from 'src/api/store.js';
 import { sanitizeHtml } from 'src/utils/sanitize.js';
 import { DEFAULT_SHOP_PAGES } from 'src/config/shopPageDefaults.js';
+import { loadShippingOptions, describeOption } from 'src/utils/shipping.js';
+
+const escapeHtml = text =>
+  String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
 const route = useRoute();
 const router = useRouter();
@@ -164,6 +168,17 @@ const applyFallback = currentSlug => {
   const fallback = DEFAULT_SHOP_PAGES[currentSlug];
   if (fallback) {
     page.value = { ...fallback, slug: currentSlug };
+    // 預設內容中的運費說明依後台運費設定更新
+    if (fallback.content.includes('data-shipping-rules')) {
+      loadShippingOptions().then(options => {
+        if (options.length === 0 || page.value?.slug !== currentSlug) return;
+        const items = options.map(option => `<li>${escapeHtml(describeOption(option))}。</li>`).join('');
+        page.value = {
+          ...page.value,
+          content: fallback.content.replace(/<ul data-shipping-rules>[\s\S]*?<\/ul>/, `<ul>${items}</ul>`),
+        };
+      });
+    }
   } else {
     notFound.value = true;
   }

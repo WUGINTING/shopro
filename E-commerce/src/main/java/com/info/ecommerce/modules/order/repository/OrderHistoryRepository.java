@@ -24,4 +24,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     List<OrderHistory> findByOrderIdAndActionTypeInOrderByCreatedAtDesc(Long orderId, java.util.Collection<String> actionTypes);
 
     List<OrderHistory> findByOrderIdAndActionType(Long orderId, String actionType);
+
+    List<com.info.ecommerce.modules.order.entity.OrderHistory> findByOrderIdInAndActionType(java.util.Collection<Long> orderIds, String actionType);
 }

@@ -16,9 +16,10 @@
         <div class="col-12 col-md-6 col-lg-3">
           <q-card>
             <q-card-section>
-              <div class="text-subtitle2 text-grey-7">總營收</div>
-              <div class="text-h4 text-positive">
-                {{ statistics?.totalSales?.toFixed(2) ?? '0.00' }}
+              <div class="text-subtitle2 text-grey-7">銷售額</div>
+              <div class="text-h4 text-positive">NT$ {{ money(statistics?.totalSales) }}</div>
+              <div v-if="Number(statistics?.refundAmount || 0) > 0" class="text-caption text-negative">
+                期間退款 NT$ {{ money(statistics?.refundAmount) }}
               </div>
             </q-card-section>
           </q-card>
@@ -27,7 +28,7 @@
         <div class="col-12 col-md-6 col-lg-3">
           <q-card>
             <q-card-section>
-              <div class="text-subtitle2 text-grey-7">總訂單數</div>
+              <div class="text-subtitle2 text-grey-7">成交訂單數</div>
               <div class="text-h4 text-info">{{ statistics?.totalOrders ?? 0 }}</div>
             </q-card-section>
           </q-card>
@@ -36,8 +37,9 @@
         <div class="col-12 col-md-6 col-lg-3">
           <q-card>
             <q-card-section>
-              <div class="text-subtitle2 text-grey-7">總顧客數</div>
+              <div class="text-subtitle2 text-grey-7">下單顧客數</div>
               <div class="text-h4 text-warning">{{ statistics?.totalCustomers ?? 0 }}</div>
+              <div class="text-caption text-grey-7">新會員 {{ statistics?.newCustomers ?? 0 }} 位</div>
             </q-card-section>
           </q-card>
         </div>
@@ -45,10 +47,8 @@
         <div class="col-12 col-md-6 col-lg-3">
           <q-card>
             <q-card-section>
-              <div class="text-subtitle2 text-grey-7">平均訂單額</div>
-              <div class="text-h4 text-negative">
-                {{ statistics?.averageOrderValue?.toFixed(2) ?? '0.00' }}
-              </div>
+              <div class="text-subtitle2 text-grey-7">平均客單價</div>
+              <div class="text-h4 text-negative">NT$ {{ money(statistics?.averageOrderValue) }}</div>
             </q-card-section>
           </q-card>
         </div>
@@ -59,9 +59,9 @@
         <div class="col-12 col-lg-8">
           <q-card>
             <q-card-section>
-              <div class="text-subtitle1 q-mb-md">銷售趨勢</div>
-              <div class="trend-placeholder">
-                <div class="text-grey-7">待串接圖表套件</div>
+              <div class="text-subtitle1 q-mb-md">每日銷售趨勢</div>
+              <div class="trend-chart">
+                <canvas ref="trendCanvas" aria-label="每日銷售額與訂單數"></canvas>
               </div>
             </q-card-section>
           </q-card>
@@ -152,28 +152,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useQuasar, type QTableColumn } from 'quasar'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import type { QTableColumn } from 'quasar'
+import Chart from 'chart.js/auto'
 import statisticsApi, { type StatisticsData } from '@/api/statistics'
 
-const $q = useQuasar()
 
 const statistics = ref<StatisticsData | null>(null)
 const startDate = ref('')
 const endDate = ref('')
 const loading = ref(false)
+const trendCanvas = ref<HTMLCanvasElement | null>(null)
+let trendChart: Chart | null = null
+
+const money = (value?: number | null) => Number(value || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 })
+
+const renderTrend = async () => {
+  await nextTick()
+  if (!trendCanvas.value || !statistics.value) return
+  trendChart?.destroy()
+  const trend = statistics.value.salesTrend || []
+  trendChart = new Chart(trendCanvas.value, {
+    type: 'bar',
+    data: {
+      labels: trend.map((day) => day.date.slice(5)),
+      datasets: [
+        { type: 'bar', label: '銷售額（NT$）', data: trend.map((day) => Number(day.sales)), backgroundColor: '#8f4f2d', yAxisID: 'y' },
+        { type: 'line', label: '訂單數', data: trend.map((day) => day.orders), borderColor: '#1976d2', backgroundColor: '#1976d2', yAxisID: 'y1', tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, position: 'left' },
+        y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { precision: 0 } }
+      },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  })
+}
+
+onBeforeUnmount(() => trendChart?.destroy())
 
 const productColumns: QTableColumn[] = [
   { name: 'rank', label: '排名', align: 'center', field: 'rank' },
   { name: 'name', label: '商品名稱', align: 'left', field: 'name' },
   { name: 'sales', label: '銷售數量', align: 'center', field: 'sales', sortable: true },
-  { name: 'revenue', label: '營收', align: 'right', field: 'revenue', sortable: true }
+  { name: 'revenue', label: '營收', align: 'right', field: 'revenue', sortable: true, format: (value: number) => `NT$ ${money(value)}` }
 ]
 
 const categoryColumns: QTableColumn[] = [
   { name: 'rank', label: '排名', align: 'center', field: 'rank' },
   { name: 'name', label: '分類名稱', align: 'left', field: 'name' },
-  { name: 'sales', label: '銷售數量', align: 'center', field: 'sales', sortable: true }
+  { name: 'sales', label: '銷售數量', align: 'center', field: 'sales', sortable: true },
+  { name: 'revenue', label: '營收', align: 'right', field: 'revenue', sortable: true, format: (value: number) => `NT$ ${money(value)}` }
 ]
 
 const loadStatistics = async () => {
@@ -182,9 +216,9 @@ const loadStatistics = async () => {
     const dateRange = startDate.value && endDate.value ? { startDate: startDate.value, endDate: endDate.value } : undefined
     const response = await statisticsApi.getOverallStatistics(dateRange)
     statistics.value = response.data
-  } catch (error) {
-    console.error('統計資料載入失敗', error)
-    $q.notify({ type: 'negative', message: '統計資料載入失敗，請稍後再試', position: 'top' })
+    renderTrend()
+  } catch {
+    // 錯誤訊息由系統通知顯示
   } finally {
     loading.value = false
   }
@@ -205,12 +239,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.trend-placeholder {
+.trend-chart {
+  position: relative;
   height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f5f5;
-  border-radius: 4px;
 }
 </style>

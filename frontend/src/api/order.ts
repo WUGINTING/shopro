@@ -259,6 +259,13 @@ export const orderApi = {
     )
   },
 
+  /** 目前開放的配送方式與運費 */
+  storefrontShippingOptions: () => {
+    return axios.get<any, ApiResponse<Array<{ method: string; name: string; fee: number; freeShippingThreshold?: number | null }>>>(
+      '/storefront/orders/shipping-options'
+    )
+  },
+
   /** 顧客自行取消訂單（待付款且尚未出貨） */
   storefrontCancel: (data: { orderNumber: string; email: string }) => {
     return axios.post<any, ApiResponse<StorefrontOrderLookup>>('/storefront/orders/cancel', data)

@@ -26,4 +26,9 @@ public interface OrderPaymentRepository extends JpaRepository<OrderPayment, Long
     /** 指定時間後登記的退款金額（以最後一次退款時間計） */
     @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(p.refundAmount), 0) FROM OrderPayment p WHERE p.refundTime >= :since")
     java.math.BigDecimal sumRefundsSince(@org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since);
+
+    /** 期間內登記的退款金額 */
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(p.refundAmount), 0) FROM OrderPayment p WHERE p.refundTime BETWEEN :from AND :to")
+    java.math.BigDecimal sumRefundsBetween(@org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
+                                           @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
 }

@@ -25,6 +25,7 @@
           <q-card-section>
             <div class="text-subtitle1 text-weight-bold q-mb-sm">配送說明</div>
             <ul class="sf-bullet-list">
+              <li v-for="option in shippingOptions" :key="option.method">{{ describe(option) }}</li>
               <li>宅配配送：一般約 2-3 個工作天（依地區與物流狀況調整）</li>
               <li>門市自取：商品備妥後會通知取貨</li>
               <li>實際出貨與到貨時間以訂單狀態更新為準</li>
@@ -37,10 +38,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { orderApi } from '@/api/order'
 import { trackEvent } from '@/utils/tracking'
 
-onMounted(() => {
+type ShippingOption = { method: string; name: string; fee: number; freeShippingThreshold?: number | null }
+const shippingOptions = ref<ShippingOption[]>([])
+const money = (value?: number | null) => `NT$${Number(value || 0).toLocaleString()}`
+const describe = (option: ShippingOption) => {
+  if (Number(option.fee) <= 0) return `${option.name}：免運費`
+  return option.freeShippingThreshold
+    ? `${option.name}：運費 ${money(option.fee)}，商品金額滿 ${money(option.freeShippingThreshold)} 免運`
+    : `${option.name}：運費 ${money(option.fee)}`
+}
+
+onMounted(async () => {
   trackEvent('view_policy', { policy_type: 'payment_shipping' })
+  try {
+    const response = await orderApi.storefrontShippingOptions()
+    shippingOptions.value = response.data || []
+  } catch {
+    shippingOptions.value = []
+  }
 })
 </script>

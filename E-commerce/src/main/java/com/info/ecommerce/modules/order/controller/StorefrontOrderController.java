@@ -45,6 +45,12 @@ public class StorefrontOrderController {
         return ApiResponse.success(storefrontCheckoutService.lookupOrder(orderNumber, email));
     }
 
+    @GetMapping("/shipping-options")
+    @Operation(summary = "配送方式與運費", description = "目前開放的配送方式、運費與免運門檻")
+    public ApiResponse<java.util.List<java.util.Map<String, Object>>> shippingOptions() {
+        return ApiResponse.success(storefrontCheckoutService.shippingOptions());
+    }
+
     @PostMapping("/cancel")
     @Operation(summary = "取消訂單", description = "待付款且尚未出貨的訂單可由顧客自行取消（以訂單編號 + 下單 Email 驗證）")
     public ApiResponse<StorefrontOrderLookupDTO> cancel(@Valid @RequestBody StorefrontPayRequest request) {

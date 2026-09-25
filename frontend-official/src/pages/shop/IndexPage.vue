@@ -31,8 +31,8 @@
           <router-link to="/shop/page/faq" class="trust-item">
             <q-icon name="local_shipping" size="28px" />
             <div>
-              <strong>滿 NT$1,000 免運</strong>
-              <span>宅配到府或門市自取</span>
+              <strong>{{ shippingTitle }}</strong>
+              <span>{{ shippingText }}</span>
             </div>
           </router-link>
           <router-link to="/shop/page/terms" class="trust-item">
@@ -130,6 +130,7 @@ import PopupAd from 'components/shop/PopupAd.vue';
 import ProductCard from 'components/shop/ProductCard.vue';
 import { getStorefrontProducts, getEnabledCategories } from 'src/api/product.js';
 import { mapProduct, quickAddToCart } from 'src/utils/product.js';
+import { loadShippingOptions, shippingHeadline, shippingSubline } from 'src/utils/shipping.js';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -177,9 +178,19 @@ const fetchCategories = async () => {
   }
 };
 
+// 運費標語依後台運費設定
+const shippingTitle = ref('滿 NT$1,000 免運');
+const shippingText = ref('宅配到府或門市自取');
+
 onMounted(() => {
   fetchNewProducts();
   fetchCategories();
+  loadShippingOptions().then(options => {
+    if (options.length > 0) {
+      shippingTitle.value = shippingHeadline(options);
+      shippingText.value = shippingSubline(options);
+    }
+  });
 });
 </script>
 

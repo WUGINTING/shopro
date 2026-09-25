@@ -121,7 +121,7 @@ export const DEFAULT_SHOP_PAGES = {
 <p>請至 <a href="/shop/order/lookup">訂單查詢</a> 頁面，輸入訂單編號與下單時填寫的電子郵件，即可查看訂單狀態與明細。</p>
 
 <h3>運費如何計算？</h3>
-<ul>
+<ul data-shipping-rules>
   <li>宅配：運費 NT$100，單筆訂單商品金額滿 NT$1,000 免運費。</li>
   <li>門市自取：免運費。</li>
 </ul>
