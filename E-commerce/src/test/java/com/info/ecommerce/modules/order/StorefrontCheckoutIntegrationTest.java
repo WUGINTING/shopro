@@ -266,4 +266,39 @@ class StorefrontCheckoutIntegrationTest {
         assertTrue(movementLogRepository.findTop100ByProductIdOrderByCreatedAtDesc(cup.getId()).stream()
                 .anyMatch(log -> "SPEC_EDIT".equals(log.getSource()) && log.getAfterStock() == 10 && log.getBeforeStock() == 1));
     }
+
+    @Test
+    void orderDiscount_changesTotal_onlyWhilePendingPayment() throws Exception {
+        long orderId = checkout(checkoutBody("discount@example.com", cup.getId(), blueCup.getId(), 1)).get("id").asLong(); // 380 + 100
+
+        MvcResult added = mockMvc.perform(post("/api/orders/discounts")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":%d,\"discountType\":\"MANUAL\",\"discountAmount\":50}".formatted(orderId)))
+                .andExpect(status().isOk()).andReturn();
+        long discountId = objectMapper.readTree(added.getResponse().getContentAsString()).get("data").get("id").asLong();
+        var order = orderRepository.findById(orderId).orElseThrow();
+        assertEquals(0, new BigDecimal("50").compareTo(order.getDiscountAmount()));
+        assertEquals(0, new BigDecimal("430").compareTo(order.getTotalAmount()));
+
+        // 百分比折扣：依商品小計 380 * 10% = 38
+        mockMvc.perform(post("/api/orders/discounts")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":%d,\"discountType\":\"PERCENT\",\"discountAmount\":0,\"discountPercentage\":10}".formatted(orderId)))
+                .andExpect(status().isOk());
+        assertEquals(0, new BigDecimal("392").compareTo(orderRepository.findById(orderId).orElseThrow().getTotalAmount()));
+
+        mockMvc.perform(delete("/api/orders/discounts/" + discountId).header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        assertEquals(0, new BigDecimal("442").compareTo(orderRepository.findById(orderId).orElseThrow().getTotalAmount()));
+
+        changeStatus(orderId, "PAID");
+        mockMvc.perform(post("/api/orders/discounts")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":%d,\"discountType\":\"MANUAL\",\"discountAmount\":10}".formatted(orderId)))
+                .andExpect(status().isBadRequest());
+        assertEquals(0, new BigDecimal("442").compareTo(orderRepository.findById(orderId).orElseThrow().getTotalAmount()));
+    }
 }

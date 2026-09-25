@@ -9,6 +9,7 @@ import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderItem;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.CustomerBlacklistRepository;
+import com.info.ecommerce.modules.order.repository.OrderDiscountRepository;
 import com.info.ecommerce.modules.order.repository.OrderItemRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.product.entity.Product;
@@ -44,6 +45,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final OrderDiscountRepository orderDiscountRepository;
     private final CustomerBlacklistRepository customerBlacklistRepository;
     private final OrderHistoryService orderHistoryService;
     private final ProductRepository productRepository;
@@ -103,6 +105,29 @@ public class OrderService {
         if (customerBlacklistRepository.existsByCustomerIdAndIsActive(customerId, true)) {
             throw new BusinessException("此客戶已被加入黑名單，無法建立訂單");
         }
+    }
+
+    private static boolean sameAmount(BigDecimal a, BigDecimal b) {
+        BigDecimal left = a == null ? BigDecimal.ZERO : a;
+        BigDecimal right = b == null ? BigDecimal.ZERO : b;
+        return left.compareTo(right) == 0;
+    }
+
+    /** 品項是否有實質變更（商品、規格、數量、單價） */
+    private static boolean itemsDiffer(List<OrderItem> current, List<OrderItemDTO> requested) {
+        if (current.size() != requested.size()) {
+            return true;
+        }
+        java.util.function.Function<Object[], String> key = parts -> java.util.Arrays.toString(parts);
+        List<String> currentKeys = current.stream()
+            .map(item -> key.apply(new Object[]{item.getProductId(), item.getSpecificationId(), item.getQuantity(),
+                item.getUnitPrice() == null ? null : item.getUnitPrice().stripTrailingZeros().toPlainString()}))
+            .sorted().collect(Collectors.toList());
+        List<String> requestedKeys = requested.stream()
+            .map(item -> key.apply(new Object[]{item.getProductId(), item.getSpecificationId(), item.getQuantity(),
+                item.getUnitPrice() == null ? null : item.getUnitPrice().stripTrailingZeros().toPlainString()}))
+            .sorted().collect(Collectors.toList());
+        return !currentKeys.equals(requestedKeys);
     }
 
     /**
@@ -332,16 +357,29 @@ public class OrderService {
         order.setStoreId(dto.getStoreId());
         order.setShippingAddress(dto.getShippingAddress());
         order.setNotes(dto.getNotes());
-        order.setDiscountAmount(dto.getDiscountAmount());
+
+        // 金額相關（品項、折扣、運費）只能在待付款時調整，避免已收款訂單的金額與實收不符
+        List<OrderItem> currentItems = orderItemRepository.findByOrderId(id);
+        boolean itemsChanged = dto.getItems() != null && !dto.getItems().isEmpty() && itemsDiffer(currentItems, dto.getItems());
+        boolean hasDiscountRecords = !orderDiscountRepository.findByOrderId(id).isEmpty();
+        BigDecimal newDiscount = hasDiscountRecords ? order.getDiscountAmount() : dto.getDiscountAmount();
+        boolean amountsChanged = itemsChanged
+            || !sameAmount(newDiscount, order.getDiscountAmount())
+            || !sameAmount(dto.getShippingFee(), order.getShippingFee());
+        if (amountsChanged && oldStatus != OrderStatus.PENDING_PAYMENT) {
+            throw new BusinessException("只有待付款的訂單可以修改品項、折扣或運費；已付款訂單請改用退款或取消後重新建立");
+        }
+        // 有「訂單折扣」紀錄時，折扣金額由折扣紀錄決定
+        order.setDiscountAmount(newDiscount);
         order.setShippingFee(dto.getShippingFee());
 
         if (dto.getStatus() == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
             order.setCompletedAt(LocalDateTime.now());
         }
 
-        // 更新訂單項目（如果有提供）
-        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
-            List<OrderItem> oldItems = orderItemRepository.findByOrderId(id);
+        // 更新訂單項目（有變更時）
+        if (itemsChanged) {
+            List<OrderItem> oldItems = currentItems;
             orderItemRepository.deleteByOrderId(id);
             List<OrderItem> items = dto.getItems().stream()
                 .map(itemDto -> convertItemToEntity(itemDto, id))
@@ -353,6 +391,8 @@ public class OrderService {
 
             // 重新計算金額
             calculateOrderAmounts(order, items);
+        } else if (amountsChanged) {
+            calculateOrderAmounts(order, currentItems);
         }
 
         order = orderRepository.save(order);
