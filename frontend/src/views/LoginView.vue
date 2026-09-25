@@ -4,41 +4,41 @@
       <q-page class="login-page q-pa-md q-pa-lg-lg">
         <div class="login-shell">
           <section class="login-showcase q-pa-lg q-pa-xl-md">
-            <div class="showcase-badge">Shopro Admin Console</div>
-            <h1 class="showcase-title">Manage orders, products, and operations from one place</h1>
+            <div class="showcase-badge">Shopro 後台管理</div>
+            <h1 class="showcase-title">訂單、商品與營運，一個後台全部管理</h1>
             <p class="showcase-subtitle">
-              Secure role-based access for admin, manager, staff, and customer accounts.
+              依角色（管理員、經理、員工）控管可使用的功能。
             </p>
 
             <div class="showcase-grid q-mt-lg">
               <q-card flat bordered class="showcase-stat">
                 <q-card-section>
-                  <div class="showcase-stat__label">Roles</div>
-                  <div class="showcase-stat__value">4</div>
-                  <div class="showcase-stat__hint">Admin / Manager / Staff / Customer</div>
+                  <div class="showcase-stat__label">角色</div>
+                  <div class="showcase-stat__value">3</div>
+                  <div class="showcase-stat__hint">管理員 / 經理 / 員工</div>
                 </q-card-section>
               </q-card>
               <q-card flat bordered class="showcase-stat">
                 <q-card-section>
-                  <div class="showcase-stat__label">Use Cases</div>
-                  <div class="showcase-stat__value">Ops</div>
-                  <div class="showcase-stat__hint">Orders, catalog, CRM and payment operations</div>
+                  <div class="showcase-stat__label">功能</div>
+                  <div class="showcase-stat__value">營運</div>
+                  <div class="showcase-stat__hint">訂單、商品、會員與金流</div>
                 </q-card-section>
               </q-card>
             </div>
 
             <div class="showcase-features q-mt-lg">
-              <div class="showcase-feature"><q-icon name="verified_user" /> Role-based route protection</div>
-              <div class="showcase-feature"><q-icon name="bolt" /> Fast admin dashboard overview API</div>
-              <div class="showcase-feature"><q-icon name="payments" /> ECPay payment flow support</div>
+              <div class="showcase-feature"><q-icon name="verified_user" /> 角色權限控管</div>
+              <div class="showcase-feature"><q-icon name="bolt" /> 即時營運儀表板</div>
+              <div class="showcase-feature"><q-icon name="payments" /> 綠界金流整合</div>
             </div>
           </section>
 
           <section class="login-panel q-pa-lg">
             <div class="row items-center justify-between q-mb-md">
               <div>
-                <div class="text-h5 text-weight-bold">Sign in</div>
-                <div class="text-body2 text-grey-7">Enter your account credentials to continue.</div>
+                <div class="text-h5 text-weight-bold">員工登入</div>
+                <div class="text-body2 text-grey-7">請輸入後台帳號與密碼。</div>
               </div>
               <q-avatar color="primary" text-color="white" icon="lock" />
             </div>
@@ -46,10 +46,10 @@
             <q-form @submit.prevent="handleLogin" class="q-gutter-md">
               <q-input
                 v-model="loginForm.username"
-                label="Username"
+                label="帳號"
                 outlined
                 autocomplete="username"
-                :rules="[(val) => !!val || 'Please enter username']"
+                :rules="[(val) => !!val || '請輸入帳號']"
               >
                 <template #prepend>
                   <q-icon name="person" />
@@ -59,10 +59,10 @@
               <q-input
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
-                label="Password"
+                label="密碼"
                 outlined
                 autocomplete="current-password"
-                :rules="[(val) => !!val || 'Please enter password']"
+                :rules="[(val) => !!val || '請輸入密碼']"
                 @keyup.enter="handleLogin"
               >
                 <template #prepend>
@@ -74,7 +74,7 @@
                     round
                     dense
                     :icon="showPassword ? 'visibility_off' : 'visibility'"
-                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                    :aria-label="showPassword ? '隱藏密碼' : '顯示密碼'"
                     @click="showPassword = !showPassword"
                   />
                 </template>
@@ -87,15 +87,16 @@
                 no-caps
                 class="full-width login-submit"
                 :loading="loading"
-                label="Login to dashboard"
+                label="登入後台"
               />
             </q-form>
 
             <q-separator class="q-my-lg" />
 
+            <template v-if="showTestAccounts">
             <div class="row items-center justify-between q-mb-sm">
-              <div class="text-subtitle2 text-weight-medium">Quick fill test accounts</div>
-              <q-btn flat dense no-caps label="Clear" @click="clearForm" />
+              <div class="text-subtitle2 text-weight-medium">開發環境測試帳號</div>
+              <q-btn flat dense no-caps label="清除" @click="clearForm" />
             </div>
 
             <div class="test-account-grid q-mb-md">
@@ -113,13 +114,14 @@
                 </div>
               </q-btn>
             </div>
+            </template>
 
             <q-banner rounded class="login-help-banner">
               <template #avatar>
                 <q-icon name="info" color="primary" />
               </template>
               <div class="text-body2">
-                Customer accounts are redirected to the storefront after login; staff roles go to the admin dashboard.
+                顧客請由<router-link :to="{ name: 'storeLogin' }">商城會員登入</router-link>；忘記密碼可<router-link :to="{ name: 'forgotPassword' }">重設密碼</router-link>。
               </div>
             </q-banner>
           </section>
@@ -131,7 +133,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
@@ -143,6 +145,7 @@ interface TestAccount {
 }
 
 const router = useRouter()
+const route = useRoute()
 const $q = useQuasar()
 const authStore = useAuthStore()
 
@@ -153,6 +156,9 @@ const loginForm = ref({
 
 const loading = ref(false)
 const showPassword = ref(false)
+
+// 測試帳號只在開發環境顯示（正式環境不會建立這些帳號）
+const showTestAccounts = import.meta.env.DEV
 
 const testAccounts: TestAccount[] = [
   { label: 'Admin', username: 'admin', password: 'admin123' },
@@ -172,10 +178,12 @@ const clearForm = () => {
 }
 
 const redirectAfterLogin = () => {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : ''
   if (authStore.user?.role === 'CUSTOMER') {
-    router.push('/')
+    router.push(safeRedirect && !safeRedirect.startsWith('/admin') ? safeRedirect : '/')
   } else {
-    router.push('/admin')
+    router.push(safeRedirect || '/admin')
   }
 }
 
@@ -197,7 +205,7 @@ const handleLogin = async () => {
 
       $q.notify({
         type: 'positive',
-        message: 'Login successful',
+        message: '登入成功',
         position: 'top'
       })
 
@@ -206,7 +214,7 @@ const handleLogin = async () => {
   } catch (error: any) {
     $q.notify({
       type: 'negative',
-      message: error?.response?.data?.message || 'Login failed. Please check your username and password.',
+      message: error?.response?.data?.message || '登入失敗，請確認帳號與密碼。',
       position: 'top'
     })
   } finally {

@@ -19,16 +19,16 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 100, message = "Username must be between 3 and 100 characters")
+    @NotBlank(message = "請輸入帳號")
+    @Size(min = 3, max = 100, message = "帳號長度需為 3 到 100 個字元")
     private String username;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @NotBlank(message = "請輸入 Email")
+    @Email(message = "Email 格式不正確")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @NotBlank(message = "請輸入密碼")
+    @Size(min = 8, max = 100, message = "密碼長度需為 8 到 100 個字元")
     private String password;
 
     /**

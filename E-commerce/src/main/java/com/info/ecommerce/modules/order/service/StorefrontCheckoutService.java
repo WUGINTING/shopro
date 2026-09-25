@@ -342,6 +342,11 @@ public class StorefrontCheckoutService {
      */
     @Transactional
     public StorefrontCheckoutResultDTO payAgain(String orderNumber, String email) {
+        return payAgain(orderNumber, email, false);
+    }
+
+    @Transactional
+    public StorefrontCheckoutResultDTO payAgain(String orderNumber, String email, boolean adminStore) {
         Order order = findOwnedOrder(orderNumber, email);
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new BusinessException("訂單狀態為「" + order.getStatus().getDescription() + "」，無需付款");
@@ -354,7 +359,7 @@ public class StorefrontCheckoutService {
                 .order(orderDTO)
                 .paymentMethod(PAYMENT_ECPAY)
                 .build();
-        createOnlinePayment(orderDTO, result, false);
+        createOnlinePayment(orderDTO, result, adminStore);
         return result;
     }
 

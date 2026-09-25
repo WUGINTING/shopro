@@ -327,6 +327,10 @@ const handleUpdateProfile = async () => {
 
     const response = await authApi.updateProfile(updateData)
     if (response.success) {
+      // 變更帳號時後端會回傳新的登入 token（舊 token 以舊帳號識別，會失效）
+      if (response.data?.token) {
+        authStore.setAuth(response.data.token, response.data)
+      }
       $q.notify({
         type: 'positive',
         message: '個人資料更新成功'

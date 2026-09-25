@@ -45,4 +45,8 @@ public class UserDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    /** 變更帳號後的新登入 token（登入 token 以帳號識別，舊 token 會失效）；其他情況為 null */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String token;
 }

@@ -43,6 +43,17 @@ public class EmailVerificationService {
     @Value("${app.mail.store-name:遇日小舖}")
     private String storeName;
 
+    /** 註冊後自動寄送：寄信失敗或未設定寄信時只記錄，不影響註冊 */
+    public void sendVerificationQuietly(User user) {
+        try {
+            if (mailSenderProvider.getIfAvailable() != null) {
+                sendVerification(user);
+            }
+        } catch (Exception e) {
+            log.warn("Could not send verification email after registration for user {}: {}", user.getId(), e.getMessage());
+        }
+    }
+
     /**
      * 寄送驗證信給目前登入的使用者
      */

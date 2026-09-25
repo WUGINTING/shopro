@@ -27,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final com.info.ecommerce.modules.auth.service.EmailVerificationService emailVerificationService;
     private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
+    private final com.info.ecommerce.modules.auth.service.PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     @Operation(summary = "註冊新用戶", description = "創建新用戶帳戶並返回JWT令牌")
@@ -71,6 +72,20 @@ public class AuthController {
         emailVerificationService.sendVerification(currentUserService.currentUser()
                 .orElseThrow(() -> new com.info.ecommerce.common.exception.BusinessException("請先登入")));
         return ApiResponse.success("驗證信已寄出，請至信箱點擊連結完成驗證", null);
+    }
+
+    @PostMapping("/password-reset")
+    @Operation(summary = "申請重設密碼", description = "寄送重設密碼連結到 Email（不透露 Email 是否已註冊）")
+    public ApiResponse<Void> requestPasswordReset(@RequestBody java.util.Map<String, String> body) {
+        passwordResetService.requestReset(body.get("email"));
+        return ApiResponse.success("若此 Email 已註冊，重設密碼連結會在幾分鐘內寄達，請於 1 小時內使用", null);
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @Operation(summary = "重設密碼", description = "以重設信中的 token 設定新密碼")
+    public ApiResponse<Void> confirmPasswordReset(@RequestBody java.util.Map<String, String> body) {
+        passwordResetService.reset(body.getOrDefault("token", ""), body.get("newPassword"));
+        return ApiResponse.success("密碼已重設，請使用新密碼登入", null);
     }
 
     @PostMapping("/email-verification/confirm")

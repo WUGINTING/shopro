@@ -44,6 +44,10 @@ export interface Product {
   salesMode?: 'NORMAL' | 'PRE_ORDER' | 'TICKET' | 'SUBSCRIPTION' | 'STORE_ONLY'
   /** 分類 ID */
   categoryId?: number | null
+  /** 每筆訂單最少購買數量 */
+  minPurchaseQuantity?: number | null
+  /** 每筆訂單最多購買數量 */
+  maxPurchaseQuantity?: number | null
   /** 商品圖片 */
   images?: Array<{ imageUrl: string; albumImageId?: number }> | string[]
   /** 商品規格 */
@@ -404,6 +408,18 @@ export const productDescriptionBlockApi = {
  * 分類 API 服務
  * @namespace categoryApi
  */
+/**
+ * 顧客商城商品 API（只回傳上架 / 缺貨商品，不含成本等內部資料）
+ */
+export const storefrontProductApi = {
+  list: (params: { categoryId?: number | null; keyword?: string; sort?: 'newest' | 'price_asc' | 'price_desc' | 'name'; page?: number; size?: number }) => {
+    return axios.get<any, ApiResponse<{ content: Product[]; totalElements: number; totalPages: number; number: number }>>('/storefront/products', { params })
+  },
+  get: (id: number) => {
+    return axios.get<any, ApiResponse<Product>>(`/storefront/products/${id}`)
+  }
+}
+
 export const categoryApi = {
   /**
    * 取得所有分類

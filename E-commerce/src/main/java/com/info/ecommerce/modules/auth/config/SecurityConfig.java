@@ -103,7 +103,8 @@ public class SecurityConfig {
 
                         // 1. 公開
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/google",
-                                "/api/auth/email-verification/confirm").permitAll()
+                                "/api/auth/email-verification/confirm",
+                                "/api/auth/password-reset", "/api/auth/password-reset/confirm").permitAll()
                         .requestMatchers("/api/storefront/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payment-gateway/callback/ecpay").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()

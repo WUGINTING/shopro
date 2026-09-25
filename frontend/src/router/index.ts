@@ -32,6 +32,9 @@ const router = createRouter({
           component: () => import('@/views/store/CheckoutView.vue'),
           meta: { requiresAuth: true, roles: ['CUSTOMER'] }
         },
+        { path: 'forgot-password', name: 'forgotPassword', component: () => import('@/views/store/ForgotPasswordView.vue') },
+        { path: 'reset-password', name: 'resetPassword', component: () => import('@/views/store/ResetPasswordView.vue') },
+        { path: 'signin', name: 'storeLogin', component: () => import('@/views/store/StoreAuthView.vue') },
         { path: 'verify-email', name: 'verifyEmail', component: () => import('@/views/store/VerifyEmailView.vue') },
         { path: 'order/success', name: 'orderSuccess', component: () => import('@/views/store/OrderSuccessView.vue') },
         { path: 'brand', name: 'brand', component: () => import('@/views/store/BrandView.vue') },
@@ -49,7 +52,8 @@ const router = createRouter({
         { path: 'orders', name: 'accountOrders', component: () => import('@/views/store/AccountOrdersView.vue') },
         { path: 'orders/:id', name: 'accountOrderDetail', component: () => import('@/views/store/AccountOrderDetailView.vue') },
         { path: 'benefits', name: 'accountBenefits', component: () => import('@/views/store/AccountBenefitsView.vue') },
-        { path: 'addresses', name: 'accountAddresses', component: () => import('@/views/store/AccountAddressesView.vue') }
+        { path: 'addresses', name: 'accountAddresses', component: () => import('@/views/store/AccountAddressesView.vue') },
+        { path: 'profile', name: 'accountProfile', component: () => import('@/views/store/AccountProfileView.vue') }
       ]
     },
     {
@@ -337,7 +341,13 @@ router.beforeEach((to, from, next) => {
   }
 
   if (requiresAuth && !isAuthenticated) {
-    next({ name: 'login' })
+    // 顧客頁面導向顧客登入頁，登入後回到原本的頁面
+    const customerRoles = to.meta.roles as string[] | undefined
+    if (customerRoles?.includes('CUSTOMER')) {
+      next({ name: 'storeLogin', query: { redirect: to.fullPath } })
+    } else {
+      next({ name: 'login', query: { redirect: to.fullPath } })
+    }
     return
   }
 

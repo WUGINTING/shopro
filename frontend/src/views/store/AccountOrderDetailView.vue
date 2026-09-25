@@ -37,10 +37,37 @@
           </div>
           <div class="col-12 col-md-4">
             <div class="summary-card">
+              <div class="summary-row text-grey-7">
+                <span>商品小計</span>
+                <span>NT$ {{ formatMoney(order.subtotalAmount) }}</span>
+              </div>
+              <div v-if="Number(order.discountAmount || 0) > 0" class="summary-row text-negative">
+                <span>折扣</span>
+                <span>-NT$ {{ formatMoney(order.discountAmount) }}</span>
+              </div>
+              <div class="summary-row text-grey-7">
+                <span>運費</span>
+                <span>{{ Number(order.shippingFee || 0) > 0 ? `NT$ ${formatMoney(order.shippingFee)}` : '免運' }}</span>
+              </div>
               <div class="summary-row">
                 <span>訂單金額</span>
                 <strong>NT$ {{ formatMoney(order.totalAmount) }}</strong>
               </div>
+              <div v-if="paymentMethod" class="summary-row text-grey-7">
+                <span>付款方式</span>
+                <span>{{ paymentMethod === 'COD' ? '貨到付款' : '線上付款（綠界）' }}</span>
+              </div>
+              <q-btn
+                v-if="canPayOnline && order.status === 'PENDING_PAYMENT'"
+                color="primary"
+                unelevated
+                no-caps
+                class="full-width q-mt-sm"
+                icon="payments"
+                label="前往付款"
+                :loading="paying"
+                @click="payNow"
+              />
               <div class="summary-row text-grey-7">
                 <span>訂單狀態</span>
                 <span>{{ getOrderStatusLabel(order.status) }}</span>
@@ -165,6 +192,7 @@ import { useAuthStore } from '@/stores/auth'
 import { orderApi, type Order } from '@/api/order'
 import orderQAApi, { type OrderQA } from '@/api/orderQA'
 import { trackEvent } from '@/utils/tracking'
+import { redirectToEcPay } from '@/utils/ecpay'
 import { getOrderStatusColor, getOrderStatusLabel, getOrderStatusTextColor } from '@/utils/orderStatus'
 
 const route = useRoute()
@@ -195,6 +223,41 @@ const formatDate = (date?: string) => {
 
 const formatMoney = (value?: number) => Number(value || 0).toLocaleString('zh-TW')
 
+// 付款方式與是否可重新付款（以訂單編號 + 下單 Email 查詢）
+const paymentMethod = ref<string | null>(null)
+const canPayOnline = ref(false)
+const paying = ref(false)
+
+const loadPaymentInfo = async () => {
+  const orderNumber = order.value?.orderNumber
+  const email = order.value?.customerEmail || authStore.user?.email
+  if (!orderNumber || !email) return
+  try {
+    const response = await orderApi.storefrontLookup(orderNumber, email)
+    paymentMethod.value = response.data?.paymentMethod ?? null
+    canPayOnline.value = Boolean(response.data?.canPayOnline)
+  } catch {
+    // 非商城訂單或查詢失敗時不顯示付款資訊
+  }
+}
+
+const payNow = async () => {
+  const orderNumber = order.value?.orderNumber
+  const email = order.value?.customerEmail || authStore.user?.email
+  if (!orderNumber || !email) return
+  paying.value = true
+  try {
+    const response = await orderApi.storefrontPay({ orderNumber, email, channel: 'ADMIN_STORE' })
+    if (response.data?.paymentUrl) {
+      redirectToEcPay(response.data.paymentUrl)
+      return
+    }
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+  paying.value = false
+}
+
 onMounted(async () => {
   trackEvent('view_order_detail', { order_id: id.value })
 
@@ -208,7 +271,7 @@ onMounted(async () => {
   try {
     const response = await orderApi.getOrder(id.value)
     order.value = response.data
-    await loadOrderQAs()
+    await Promise.all([loadOrderQAs(), loadPaymentInfo()])
   } catch {
     loadError.value = true
     $q.notify({ type: 'negative', message: '載入訂單詳情失敗，請稍後再試。' })

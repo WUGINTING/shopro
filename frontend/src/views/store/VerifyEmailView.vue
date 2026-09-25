@@ -36,7 +36,7 @@ const state = ref<'loading' | 'success' | 'error'>('loading')
 const errorMessage = ref('驗證連結無效或已過期，請重新寄送驗證信。')
 
 const next = () => {
-  router.push(authStore.isAuthenticated ? '/account/orders' : '/login')
+  router.push(authStore.isAuthenticated ? '/account/orders' : { name: 'storeLogin', query: { redirect: '/account/orders' } })
 }
 
 onMounted(async () => {

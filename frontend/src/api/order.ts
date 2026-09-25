@@ -235,6 +235,19 @@ export const orderApi = {
     return axios.post<any, ApiResponse<StorefrontQuote>>('/storefront/orders/quote', data)
   },
 
+  /** 以訂單編號 + 下單 Email 查詢訂單（含是否可線上付款） */
+  storefrontLookup: (orderNumber: string, email: string) => {
+    return axios.get<any, ApiResponse<{ order: Order; paymentMethod?: 'ECPAY' | 'COD' | null; canPayOnline: boolean }>>(
+      '/storefront/orders/lookup',
+      { params: { orderNumber, email } }
+    )
+  },
+
+  /** 待付款的線上付款訂單重新取得付款網址 */
+  storefrontPay: (data: { orderNumber: string; email: string; channel?: 'STOREFRONT' | 'ADMIN_STORE' }) => {
+    return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/pay', data)
+  },
+
   storefrontCheckout: (data: StorefrontCheckoutRequest) => {
     return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/checkout', data)
   },

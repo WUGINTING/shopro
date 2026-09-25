@@ -51,6 +51,8 @@ export interface User {
   role: 'ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER'
   /** Email 是否已驗證（會員需驗證後才能查看以該 Email 下的訂單） */
   emailVerified?: boolean
+  /** 變更帳號後回傳的新登入 token */
+  token?: string
   /** ?�否?�用 */
   enabled?: boolean
   /** ?�建?��? */
@@ -184,6 +186,16 @@ export const authApi = {
   /** 寄送 Email 驗證信到目前帳號的 Email */
   sendEmailVerification: () => {
     return axios.post<any, ApiResponse<void>>('/auth/email-verification')
+  },
+
+  /** 申請重設密碼（寄送重設連結） */
+  requestPasswordReset: (email: string) => {
+    return axios.post<any, ApiResponse<void>>('/auth/password-reset', { email })
+  },
+
+  /** 以重設信中的 token 設定新密碼 */
+  confirmPasswordReset: (token: string, newPassword: string) => {
+    return axios.post<any, ApiResponse<void>>('/auth/password-reset/confirm', { token, newPassword })
   },
 
   /** 以驗證信中的 token 完成 Email 驗證 */

@@ -48,6 +48,7 @@ public class StorefrontOrderController {
     @PostMapping("/pay")
     @Operation(summary = "重新付款", description = "待付款的線上付款訂單重新取得綠界付款網址（以訂單編號 + 下單 Email 驗證）")
     public ApiResponse<StorefrontCheckoutResultDTO> pay(@Valid @RequestBody StorefrontPayRequest request) {
-        return ApiResponse.success(storefrontCheckoutService.payAgain(request.getOrderNumber(), request.getEmail()));
+        return ApiResponse.success(storefrontCheckoutService.payAgain(request.getOrderNumber(), request.getEmail(),
+                "ADMIN_STORE".equalsIgnoreCase(request.getChannel())));
     }
 }

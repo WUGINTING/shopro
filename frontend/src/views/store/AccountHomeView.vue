@@ -38,7 +38,8 @@ const router = useRouter()
 const cards = [
   { title: '我的訂單', description: '查看訂單狀態、金額與建立時間。', path: '/account/orders', icon: 'receipt_long' },
   { title: '會員優惠', description: '查看目前等級、點數與回購相關資訊。', path: '/account/benefits', icon: 'workspace_premium' },
-  { title: '常用地址', description: '儲存常用收件資料，縮短下次結帳時間。', path: '/account/addresses', icon: 'location_on' }
+  { title: '常用地址', description: '儲存常用收件資料，縮短下次結帳時間。', path: '/account/addresses', icon: 'location_on' },
+  { title: '帳戶設定', description: '修改帳號、Email 與密碼。', path: '/account/profile', icon: 'manage_accounts' }
 ]
 
 const go = (path: string) => router.push(path)

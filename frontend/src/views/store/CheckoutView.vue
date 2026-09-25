@@ -225,6 +225,7 @@ import { orderApi, type StorefrontQuote, type StorefrontQuoteDiscount } from '@/
 import { clearCart, getCartItems, removeFromCart, type CartItem } from '@/utils/storeCart'
 import { getCheckoutDraft, saveCheckoutDraft } from '@/utils/storePreferences'
 import { trackEvent } from '@/utils/tracking'
+import { redirectToEcPay } from '@/utils/ecpay'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -364,25 +365,6 @@ watch(
   { deep: true }
 )
 
-const redirectToEcPay = (paymentUrl: string) => {
-  const url = new URL(paymentUrl)
-  const formEl = document.createElement('form')
-  formEl.method = 'POST'
-  formEl.action = `${url.origin}${url.pathname}`
-  formEl.style.display = 'none'
-
-  url.searchParams.forEach((value, key) => {
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = key
-    input.value = value
-    formEl.appendChild(input)
-  })
-
-  document.body.appendChild(formEl)
-  formEl.submit()
-}
-
 const submitCheckout = async () => {
   const valid = await checkoutFormRef.value?.validate()
   if (!valid || items.value.length === 0 || !quote.value || quoteError.value) return
@@ -436,7 +418,7 @@ const submitCheckout = async () => {
 
     if (result.paymentMethod === 'ECPAY') {
       if (!result.paymentUrl) {
-        $q.notify({ type: 'warning', message: result.paymentError || '訂單已建立，但線上付款建立失敗，請聯繫客服。' })
+        $q.notify({ type: 'warning', message: result.paymentError || '訂單已建立，但付款頁面暫時無法開啟，請在訂單頁點「前往付款」重試。' })
       } else {
         redirectToEcPay(result.paymentUrl)
         return

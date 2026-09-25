@@ -124,7 +124,7 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
 import { getCartItems, removeFromCart, updateCartQuantity, type CartItem } from '@/utils/storeCart'
-import { productApi, productSpecificationApi } from '@/api/product'
+import { orderApi } from '@/api/order'
 import { trackEvent } from '@/utils/tracking'
 
 const router = useRouter()
@@ -163,7 +163,7 @@ const goCheckout = async () => {
       type: 'warning',
       message: '請先登入會員後再進行結帳。'
     })
-    router.push('/login')
+    router.push({ name: 'storeLogin', query: { redirect: '/cart' } })
     return
   }
 
@@ -175,66 +175,25 @@ const goCheckout = async () => {
     return
   }
 
-  // 檢查庫存
+  // 以後端試算檢查庫存、購買數量限制與商品狀態（與結帳相同規則）
   checkingStock.value = true
   stockErrors.value = new Map()
 
   try {
-    const errors: string[] = []
-
-    for (const item of items.value) {
-      try {
-        const response = await productApi.getProduct(item.productId)
-        const product = response.data
-
-        if (!product) {
-          errors.push(`「${item.name}」商品已不存在`)
-          stockErrors.value.set(itemKey(item), '商品已不存在')
-          continue
-        }
-
-        // 如果有規格，檢查規格庫存
-        if (item.specificationId && product.specifications?.length) {
-          const spec = product.specifications.find(s => s.id === item.specificationId)
-          if (!spec) {
-            errors.push(`「${item.name}」的規格已不存在`)
-            stockErrors.value.set(itemKey(item), '規格已不存在')
-          } else if (spec.stock !== undefined && spec.stock !== null && item.quantity > spec.stock) {
-            if (spec.stock === 0) {
-              errors.push(`「${item.name} (${item.specName})」已售完`)
-              stockErrors.value.set(itemKey(item), '已售完')
-            } else {
-              errors.push(`「${item.name} (${item.specName})」庫存不足，僅剩 ${spec.stock} 件`)
-              stockErrors.value.set(itemKey(item), `庫存僅剩 ${spec.stock} 件`)
-            }
-          }
-        } else {
-          // 檢查商品整體庫存
-          const stock = product.stock ?? 0
-          if (item.quantity > stock) {
-            if (stock === 0) {
-              errors.push(`「${item.name}」已售完`)
-              stockErrors.value.set(itemKey(item), '已售完')
-            } else {
-              errors.push(`「${item.name}」庫存不足，僅剩 ${stock} 件`)
-              stockErrors.value.set(itemKey(item), `庫存僅剩 ${stock} 件`)
-            }
-          }
-        }
-      } catch (err) {
-        errors.push(`「${item.name}」無法確認庫存`)
-        stockErrors.value.set(itemKey(item), '無法確認庫存')
-      }
-    }
-
-    if (errors.length > 0) {
-      $q.notify({
-        type: 'negative',
-        message: '部分商品庫存不足，請調整數量後再結帳',
-        caption: errors.join('；'),
-        position: 'top',
-        timeout: 5000,
-        multiLine: true
+    try {
+      await orderApi.storefrontQuote({
+        items: items.value.map((item) => ({
+          productId: item.productId,
+          specificationId: item.specificationId ?? null,
+          quantity: item.quantity
+        })),
+        shippingMethod: 'HOME_DELIVERY'
+      })
+    } catch (err: any) {
+      // 錯誤訊息（例如「商品「xxx」庫存不足，目前剩餘 2 件」）已由系統通知顯示
+      const message = err?.response?.data?.message
+      items.value.forEach((item) => {
+        if (message && message.includes(item.name)) stockErrors.value.set(itemKey(item), message)
       })
       return
     }

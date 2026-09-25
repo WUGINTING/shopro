@@ -37,13 +37,34 @@
             <q-badge v-if="cartCount > 0" floating color="negative">{{ cartCount }}</q-badge>
           </q-btn>
           <q-btn
+            v-if="!authStore.isAuthenticated"
             unelevated
             color="primary"
             no-caps
             class="login-cta"
-            :label="authStore.isAuthenticated ? '我的帳戶' : '登入 / 註冊'"
-            :to="authStore.isAuthenticated ? '/account' : '/login'"
+            label="登入 / 註冊"
+            :to="{ name: 'storeLogin', query: { redirect: route.fullPath } }"
           />
+          <q-btn-dropdown v-else unelevated color="primary" no-caps class="login-cta" :label="authStore.user?.username || '我的帳戶'">
+            <q-list>
+              <q-item v-if="authStore.userRole === 'CUSTOMER'" v-close-popup clickable to="/account">
+                <q-item-section>會員中心</q-item-section>
+              </q-item>
+              <q-item v-if="authStore.userRole === 'CUSTOMER'" v-close-popup clickable to="/account/orders">
+                <q-item-section>我的訂單</q-item-section>
+              </q-item>
+              <q-item v-if="authStore.userRole === 'CUSTOMER'" v-close-popup clickable to="/account/profile">
+                <q-item-section>帳戶設定</q-item-section>
+              </q-item>
+              <q-item v-if="authStore.userRole !== 'CUSTOMER'" v-close-popup clickable to="/admin">
+                <q-item-section>進入後台</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-close-popup clickable @click="logout">
+                <q-item-section>登出</q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
         </div>
       </q-toolbar>
 
@@ -97,7 +118,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getCartItems } from '@/utils/storeCart'
 
@@ -107,7 +128,13 @@ interface NavItem {
 }
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
+
+const logout = () => {
+  authStore.logout()
+  router.push('/')
+}
 const cartCount = ref(0)
 
 const navItems: NavItem[] = [

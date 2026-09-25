@@ -38,6 +38,15 @@
               </div>
             </div>
 
+            <q-banner v-if="canPayOnline && orderStatus === 'PENDING_PAYMENT'" rounded class="bg-orange-1 text-orange-10 q-mb-md">
+              <template #avatar>
+                <q-icon name="payments" />
+              </template>
+              這筆訂單尚未完成付款。若付款頁已關閉或逾時，可以重新前往付款。
+              <template #action>
+                <q-btn color="primary" unelevated no-caps label="前往付款" :loading="paying" @click="payNow" />
+              </template>
+            </q-banner>
             <q-banner v-if="!hasTrustedQuery" rounded class="sf-warning-note q-mb-md">
               <template #avatar>
                 <q-icon name="report_problem" />
@@ -66,8 +75,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from '@/api/axios'
-import type { ApiResponse } from '@/api/types'
+import { orderApi } from '@/api/order'
+import { redirectToEcPay } from '@/utils/ecpay'
 import { useAuthStore } from '@/stores/auth'
 import { trackEvent } from '@/utils/tracking'
 import { getOrderStatusColor, getOrderStatusLabel, getOrderStatusTextColor } from '@/utils/orderStatus'
@@ -79,6 +88,8 @@ const authStore = useAuthStore()
 
 // 從綠界返回時網址只有訂單編號，以登入會員的 Email 向後端查詢實際金額與付款狀態
 const liveOrder = ref<{ status?: string; totalAmount?: number } | null>(null)
+const canPayOnline = ref(false)
+const paying = ref(false)
 
 const orderNumber = computed(() => String(route.query.orderNumber || ''))
 const amount = computed(() => Number(liveOrder.value?.totalAmount ?? route.query.amount ?? 0))
@@ -88,15 +99,29 @@ const loadLiveStatus = async () => {
   const email = authStore.user?.email
   if (!orderNumber.value || !email) return
   try {
-    const response = await axios.get<any, ApiResponse<{ order: { status: string; totalAmount: number } }>>(
-      '/storefront/orders/lookup',
-      { params: { orderNumber: orderNumber.value, email } }
-    )
-    liveOrder.value = response.data?.order ?? null
+    const response = await orderApi.storefrontLookup(orderNumber.value, email)
+    liveOrder.value = (response.data?.order as { status?: string; totalAmount?: number }) ?? null
+    canPayOnline.value = Boolean(response.data?.canPayOnline)
   } catch {
     // 查詢失敗時沿用網址資訊
   }
 }
+const payNow = async () => {
+  const email = authStore.user?.email
+  if (!orderNumber.value || !email) return
+  paying.value = true
+  try {
+    const response = await orderApi.storefrontPay({ orderNumber: orderNumber.value, email, channel: 'ADMIN_STORE' })
+    if (response.data?.paymentUrl) {
+      redirectToEcPay(response.data.paymentUrl)
+      return
+    }
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+  paying.value = false
+}
+
 const hasTrustedQuery = computed(() => Boolean(orderNumber.value) && amount.value > 0)
 const amountDisplay = computed(() => amount.value.toLocaleString('zh-TW'))
 

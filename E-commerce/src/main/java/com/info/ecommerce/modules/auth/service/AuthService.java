@@ -32,17 +32,18 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final MemberRepository memberRepository;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Check if username exists
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BusinessException("Username already exists");
+            throw new BusinessException("此帳號已被使用，請換一個帳號");
         }
 
         // Check if email exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Email already exists");
+            throw new BusinessException("此 Email 已註冊，請直接登入或使用忘記密碼");
         }
 
         // Create new user
@@ -58,6 +59,8 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(user);
+        // 寄送 Email 驗證信（未設定寄信時略過，會員可稍後在會員中心重寄）
+        emailVerificationService.sendVerificationQuietly(savedUser);
 
         // Generate JWT token
         String token = jwtService.generateToken(user);
@@ -132,8 +135,10 @@ public class AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException("使用者不存在"));
 
+        boolean usernameChanged = false;
         // Update username if provided and different
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            usernameChanged = true;
             if (userRepository.existsByUsername(request.getUsername())) {
                 throw new BusinessException("使用者名稱已存在：" + request.getUsername());
             }
@@ -150,7 +155,11 @@ public class AuthService {
             user.setEmailVerified(false);
         }
 
-        // Update password if both current and new passwords are provided
+        // 變更密碼必須提供目前密碼
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()
+                && (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank())) {
+            throw new BusinessException("變更密碼請輸入目前密碼；忘記目前密碼可使用「忘記密碼」重設");
+        }
         if (request.getCurrentPassword() != null && request.getNewPassword() != null) {
             // Verify current password
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
@@ -170,6 +179,7 @@ public class AuthService {
                 .emailVerified(updatedUser.isEmailConfirmed())
                 .createdAt(updatedUser.getCreatedAt())
                 .updatedAt(updatedUser.getUpdatedAt())
+                .token(usernameChanged ? jwtService.generateToken(updatedUser) : null)
                 .build();
     }
 

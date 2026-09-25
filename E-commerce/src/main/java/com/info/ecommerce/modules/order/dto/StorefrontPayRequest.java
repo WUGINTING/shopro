@@ -24,4 +24,7 @@ public class StorefrontPayRequest {
     @NotBlank(message = "請輸入電子郵件")
     @Email(message = "電子郵件格式不正確")
     private String email;
+
+    @Schema(description = "STOREFRONT（預設）/ ADMIN_STORE：決定付款完成後導回的頁面")
+    private String channel;
 }
