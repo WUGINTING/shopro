@@ -57,3 +57,13 @@ export function lookupOrder(orderNumber, email) {
 export function payOrder(orderNumber, email) {
   return http.post('/storefront/orders/pay', { orderNumber, email });
 }
+
+/**
+ * 顧客自行取消訂單（待付款且尚未出貨）
+ * @param {string} orderNumber - 訂單編號
+ * @param {string} email - 下單時填寫的電子郵件
+ * @returns {Promise} ApiResponse<StorefrontOrderLookupDTO>
+ */
+export function cancelOrder(orderNumber, email) {
+  return http.post('/storefront/orders/cancel', { orderNumber, email });
+}

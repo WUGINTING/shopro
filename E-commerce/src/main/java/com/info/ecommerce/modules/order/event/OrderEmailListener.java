@@ -1,5 +1,8 @@
 package com.info.ecommerce.modules.order.event;
 
+import com.info.ecommerce.modules.order.enums.ShippingStatus;
+import com.info.ecommerce.modules.order.repository.OrderShipmentRepository;
+
 import com.info.ecommerce.modules.order.dto.OrderDTO;
 import com.info.ecommerce.modules.order.dto.OrderItemDTO;
 import com.info.ecommerce.modules.order.enums.NotificationType;
@@ -29,6 +32,7 @@ public class OrderEmailListener {
 
     private final OrderService orderService;
     private final OrderNotificationService orderNotificationService;
+    private final OrderShipmentRepository orderShipmentRepository;
 
     @Value("${app.mail.order-notifications:true}")
     private boolean enabled;
@@ -62,6 +66,8 @@ public class OrderEmailListener {
             case CREATED -> "【" + storeName + "】訂單成立通知 " + order.getOrderNumber();
             case PAID -> "【" + storeName + "】付款完成通知 " + order.getOrderNumber();
             case CANCELLED -> "【" + storeName + "】訂單取消通知 " + order.getOrderNumber();
+            case SHIPPED -> "【" + storeName + "】出貨通知 " + order.getOrderNumber();
+            case REFUNDED -> "【" + storeName + "】退款通知 " + order.getOrderNumber();
         };
     }
 
@@ -77,6 +83,21 @@ public class OrderEmailListener {
             }
             case PAID -> sb.append("我們已收到您的付款，將盡快為您安排出貨。\n");
             case CANCELLED -> sb.append("您的訂單已取消。如已付款，我們將與您聯繫退款事宜；如有疑問請直接回覆此信或聯繫客服。\n");
+            case SHIPPED -> {
+                sb.append("您的訂單已出貨！\n");
+                orderShipmentRepository.findByOrderId(order.getId()).stream()
+                        .filter(shipment -> shipment.getShippingStatus() == ShippingStatus.SHIPPED)
+                        .reduce((first, second) -> second)
+                        .ifPresent(shipment -> {
+                            if (shipment.getShippingCompany() != null && !shipment.getShippingCompany().isBlank()) {
+                                sb.append("物流公司：").append(shipment.getShippingCompany()).append('\n');
+                            }
+                            if (shipment.getTrackingNumber() != null && !shipment.getTrackingNumber().isBlank()) {
+                                sb.append("物流單號：").append(shipment.getTrackingNumber()).append('\n');
+                            }
+                        });
+            }
+            case REFUNDED -> sb.append("您的訂單已完成退款。信用卡退款依發卡銀行作業，約需 7 至 14 個工作天入帳；如有疑問請直接回覆此信或聯繫客服。\n");
         }
         sb.append("\n訂單編號：").append(order.getOrderNumber()).append('\n');
         if (order.getItems() != null && !order.getItems().isEmpty()) {

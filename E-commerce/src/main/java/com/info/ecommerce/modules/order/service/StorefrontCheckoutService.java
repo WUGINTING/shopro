@@ -5,6 +5,7 @@ import com.info.ecommerce.modules.marketing.repository.CouponRepository;
 import com.info.ecommerce.modules.marketing.service.CheckoutDiscountService;
 import com.info.ecommerce.modules.order.entity.OrderDiscount;
 import com.info.ecommerce.modules.order.repository.OrderDiscountRepository;
+import com.info.ecommerce.modules.order.repository.OrderShipmentRepository;
 
 import com.info.ecommerce.modules.order.event.OrderEmailEvent;
 import org.springframework.context.ApplicationEventPublisher;
@@ -80,6 +81,7 @@ public class StorefrontCheckoutService {
     private final OrderHistoryService orderHistoryService;
     private final OrderHistoryRepository orderHistoryRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final OrderShipmentRepository orderShipmentRepository;
     private final CheckoutDiscountService checkoutDiscountService;
     private final CurrentUserService currentUserService;
     private final OrderDiscountRepository orderDiscountRepository;
@@ -330,11 +332,38 @@ public class StorefrontCheckoutService {
     public StorefrontOrderLookupDTO lookupOrder(String orderNumber, String email) {
         Order order = findOwnedOrder(orderNumber, email);
         String paymentMethod = storefrontPaymentMethod(order.getId());
+        List<StorefrontOrderLookupDTO.Shipment> shipments = orderShipmentRepository.findByOrderId(order.getId()).stream()
+                .map(shipment -> StorefrontOrderLookupDTO.Shipment.builder()
+                        .shippingCompany(shipment.getShippingCompany())
+                        .trackingNumber(shipment.getTrackingNumber())
+                        .status(shipment.getShippingStatus() != null ? shipment.getShippingStatus().name() : null)
+                        .statusLabel(shipment.getShippingStatus() != null ? shipment.getShippingStatus().getDescription() : null)
+                        .shippedAt(shipment.getShippedAt())
+                        .deliveredAt(shipment.getDeliveredAt())
+                        .build())
+                .collect(Collectors.toList());
         return StorefrontOrderLookupDTO.builder()
                 .order(orderService.getOrder(order.getId()))
                 .paymentMethod(paymentMethod)
                 .canPayOnline(PAYMENT_ECPAY.equals(paymentMethod) && order.getStatus() == OrderStatus.PENDING_PAYMENT)
+                .canCancel(order.getStatus() == OrderStatus.PENDING_PAYMENT && shipments.isEmpty())
+                .shipments(shipments)
                 .build();
+    }
+
+    /**
+     * 顧客自行取消訂單：只限待付款且尚未出貨的訂單，取消後歸還庫存與優惠券
+     */
+    @Transactional
+    public StorefrontOrderLookupDTO cancelOrder(String orderNumber, String email) {
+        Order order = findOwnedOrder(orderNumber, email);
+        if (!orderShipmentRepository.findByOrderId(order.getId()).isEmpty()) {
+            throw new BusinessException("訂單已安排出貨，無法取消；如需退貨請聯繫客服");
+        }
+        if (!orderService.cancelIfStillUnpaid(order.getId(), "顧客")) {
+            throw new BusinessException("訂單狀態為「" + order.getStatus().getDescription() + "」，無法自行取消；如需退款請聯繫客服");
+        }
+        return lookupOrder(orderNumber, email);
     }
 
     /**

@@ -32,6 +32,7 @@ public class PaymentManagementService {
 
     private final PaymentGatewayTransactionRepository transactionRepository;
     private final PaymentSettingRepository settingRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderPaymentRepository orderPaymentRepository;
 
     /**
      * 取得支付統計資料
@@ -61,11 +62,9 @@ public class PaymentManagementService {
             ? (todaySuccessCount.doubleValue() / todayTotalCount.doubleValue() * 100) 
             : 0.0;
         
-        // 退款統計（簡化版，實際應該有專門的退款表）
-        Long todayRefundCount = transactionRepository.countByStatusAndCreatedAtAfter(
-            PaymentGatewayStatus.CANCELLED, todayStart);
-        Long monthRefundCount = transactionRepository.countByStatusAndCreatedAtAfter(
-            PaymentGatewayStatus.CANCELLED, monthStart);
+        // 退款統計：以訂單退款登記（付款紀錄的退款金額與時間）計算
+        Long todayRefundCount = orderPaymentRepository.countRefundsSince(todayStart);
+        Long monthRefundCount = orderPaymentRepository.countRefundsSince(monthStart);
         
         // 各閘道佔比
         List<Object[]> gatewayStats = transactionRepository.getGatewayStatistics(monthStart);
@@ -100,9 +99,9 @@ public class PaymentManagementService {
             .monthCount(monthSuccessCount)
             .refundStatistics(PaymentStatisticsDTO.RefundStatistics.builder()
                 .todayRefundCount(todayRefundCount)
-                .todayRefundAmount(BigDecimal.ZERO) // 簡化版
+                .todayRefundAmount(orderPaymentRepository.sumRefundsSince(todayStart))
                 .monthRefundCount(monthRefundCount)
-                .monthRefundAmount(BigDecimal.ZERO) // 簡化版
+                .monthRefundAmount(orderPaymentRepository.sumRefundsSince(monthStart))
                 .build())
             .gatewayShares(gatewayShares)
             .build();

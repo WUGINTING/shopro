@@ -58,6 +58,17 @@
                 <span>{{ paymentMethod === 'COD' ? '貨到付款' : '線上付款（綠界）' }}</span>
               </div>
               <q-btn
+                v-if="canCancel"
+                flat
+                no-caps
+                color="negative"
+                class="full-width q-mt-sm"
+                icon="cancel"
+                label="取消訂單"
+                :loading="cancelling"
+                @click="confirmCancel"
+              />
+              <q-btn
                 v-if="canPayOnline && order.status === 'PENDING_PAYMENT'"
                 color="primary"
                 unelevated
@@ -76,6 +87,21 @@
                 <span>訂單編號</span>
                 <span>{{ order.orderNumber || order.id }}</span>
               </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <q-card v-if="shipments.length > 0" bordered class="sf-card q-mb-md">
+        <q-card-section>
+          <div class="text-subtitle1 text-weight-bold q-mb-md">物流資訊</div>
+          <div v-for="(shipment, index) in shipments" :key="index" class="q-mb-sm">
+            <q-badge :color="shipment.status === 'DELIVERED' ? 'positive' : 'info'" :label="shipment.statusLabel" />
+            <span class="q-ml-sm text-weight-medium">{{ shipment.shippingCompany || '物流' }}</span>
+            <span v-if="shipment.trackingNumber" class="q-ml-sm">物流單號：<strong>{{ shipment.trackingNumber }}</strong></span>
+            <div class="text-caption text-grey-7">
+              <span v-if="shipment.shippedAt">出貨：{{ formatDate(shipment.shippedAt) }}</span>
+              <span v-if="shipment.deliveredAt" class="q-ml-md">送達：{{ formatDate(shipment.deliveredAt) }}</span>
             </div>
           </div>
         </q-card-section>
@@ -189,7 +215,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, type Order } from '@/api/order'
+import { orderApi, type Order, type StorefrontOrderLookup } from '@/api/order'
 import orderQAApi, { type OrderQA } from '@/api/orderQA'
 import { trackEvent } from '@/utils/tracking'
 import { redirectToEcPay } from '@/utils/ecpay'
@@ -227,6 +253,42 @@ const formatMoney = (value?: number) => Number(value || 0).toLocaleString('zh-TW
 const paymentMethod = ref<string | null>(null)
 const canPayOnline = ref(false)
 const paying = ref(false)
+const canCancel = ref(false)
+const cancelling = ref(false)
+const shipments = ref<NonNullable<StorefrontOrderLookup['shipments']>>([])
+
+const applyLookup = (data?: StorefrontOrderLookup) => {
+  if (!data) return
+  paymentMethod.value = data.paymentMethod ?? null
+  canPayOnline.value = Boolean(data.canPayOnline)
+  canCancel.value = Boolean(data.canCancel)
+  shipments.value = data.shipments ?? []
+  if (data.order && order.value) order.value = { ...order.value, status: data.order.status }
+}
+
+const confirmCancel = () => {
+  const orderNumber = order.value?.orderNumber
+  const email = order.value?.customerEmail || authStore.user?.email
+  if (!orderNumber || !email) return
+  $q.dialog({
+    title: '取消訂單',
+    message: '確定要取消這筆訂單嗎？取消後無法恢復，如需購買請重新下單。',
+    cancel: { label: '先不要', flat: true },
+    ok: { label: '確定取消', color: 'negative', unelevated: true },
+    persistent: true
+  }).onOk(async () => {
+    cancelling.value = true
+    try {
+      const response = await orderApi.storefrontCancel({ orderNumber, email })
+      applyLookup(response.data)
+      $q.notify({ type: 'positive', message: '訂單已取消' })
+    } catch {
+      // 錯誤訊息由系統通知顯示
+    } finally {
+      cancelling.value = false
+    }
+  })
+}
 
 const loadPaymentInfo = async () => {
   const orderNumber = order.value?.orderNumber
@@ -234,8 +296,7 @@ const loadPaymentInfo = async () => {
   if (!orderNumber || !email) return
   try {
     const response = await orderApi.storefrontLookup(orderNumber, email)
-    paymentMethod.value = response.data?.paymentMethod ?? null
-    canPayOnline.value = Boolean(response.data?.canPayOnline)
+    applyLookup(response.data)
   } catch {
     // 非商城訂單或查詢失敗時不顯示付款資訊
   }

@@ -453,20 +453,28 @@
             <q-td :props="props" class="order-actions-cell">
               <q-btn-dropdown flat dense color="primary" label="更新狀態" size="sm" class="order-row-btn">
                 <q-list>
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'PROCESSING')">
+                  <q-item
+                    v-for="next in nextStatusOptions(props.row.status)"
+                    :key="next"
+                    clickable
+                    v-close-popup
+                    @click="handleStatusChange(props.row.id, next)"
+                  >
                     <q-item-section>
-                      <q-item-label>處理中</q-item-label>
+                      <q-item-label :class="{ 'text-negative': next === 'CANCELLED' }">{{ statusChangeLabel(next) }}</q-item-label>
                     </q-item-section>
                   </q-item>
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'COMPLETED')">
+                  <template v-if="canRefund(props.row)">
+                    <q-separator />
+                    <q-item clickable v-close-popup @click="openRefund(props.row)">
+                      <q-item-section>
+                        <q-item-label class="text-negative">登記退款…</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                  <q-item v-if="nextStatusOptions(props.row.status).length === 0 && !canRefund(props.row)">
                     <q-item-section>
-                      <q-item-label>已完成</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator />
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'CANCELLED')">
-                    <q-item-section>
-                      <q-item-label class="text-negative">已取消</q-item-label>
+                      <q-item-label caption>此狀態無法再變更</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -487,7 +495,7 @@
               </q-btn>
 
               <q-btn
-                v-if="props.row.status === 'PAID'"
+                v-if="canShip(props.row)"
                 flat
                 dense
                 round
@@ -1371,7 +1379,7 @@
                     <div class="row items-center justify-between q-mb-md">
                       <div class="text-h6">物流記錄</div>
                       <q-btn
-                        v-if="selectedOrder.status === 'PAID'"
+                        v-if="canShip(selectedOrder)"
                         flat
                         dense
                         icon="add"
@@ -1411,16 +1419,37 @@
                             </div>
                           </q-item-label>
                         </q-item-section>
-                        <q-item-section side>
+                        <q-item-section side class="q-gutter-xs">
                           <q-badge :color="getShippingStatusColor(shipment.shippingStatus)">
                             {{ getShippingStatusLabel(shipment.shippingStatus) }}
                           </q-badge>
+                          <q-btn
+                            v-if="shipment.shippingStatus === 'PENDING'"
+                            flat
+                            dense
+                            no-caps
+                            size="sm"
+                            color="primary"
+                            label="標記已出貨"
+                            @click="changeShipmentStatus(shipment, 'SHIPPED')"
+                          />
+                          <q-btn
+                            v-if="shipment.shippingStatus === 'SHIPPED'"
+                            flat
+                            dense
+                            no-caps
+                            size="sm"
+                            color="positive"
+                            label="標記已送達"
+                            @click="changeShipmentStatus(shipment, 'DELIVERED')"
+                          />
+                          <q-btn flat dense no-caps size="sm" color="grey-8" label="修改單號" @click="editTrackingNumber(shipment)" />
                         </q-item-section>
                       </q-item>
                     </q-list>
                     <div v-else class="text-grey-6 text-center q-pa-md">
                       暫無物流記錄
-                      <div v-if="selectedOrder.status === 'PAID'" class="q-mt-sm">
+                      <div v-if="canShip(selectedOrder)" class="q-mt-sm">
                         <q-btn
                           flat
                           dense
@@ -1439,7 +1468,47 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-lg q-pb-lg order-detail-dialog-card__actions">
+            <q-btn
+              v-if="selectedOrder && canRefund(selectedOrder)"
+              flat
+              no-caps
+              color="negative"
+              icon="undo"
+              label="登記退款"
+              @click="openRefund(selectedOrder)"
+            />
             <q-btn flat label="關閉" color="grey-7" v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- 退款登記 -->
+      <q-dialog v-model="showRefundDialog">
+        <q-card style="width: 520px; max-width: 95vw">
+          <q-card-section>
+            <div class="text-h6">登記退款</div>
+            <div class="text-caption text-grey-7">訂單 {{ refundOrder?.orderNumber }}，訂單總額 NT$ {{ Number(refundOrder?.totalAmount || 0).toLocaleString() }}</div>
+          </q-card-section>
+          <q-card-section class="q-gutter-md">
+            <q-banner dense rounded class="bg-orange-1 text-orange-10">
+              系統不會自動向綠界退款：信用卡請先到綠界廠商後台執行退刷，ATM / 超商代碼付款請以匯款退還，完成後再在此登記。
+            </q-banner>
+            <q-input
+              v-model.number="refundForm.amount"
+              type="number"
+              outlined
+              dense
+              label="退款金額（空白為全額）"
+              prefix="NT$"
+              clearable
+              hint="部分退款不會改變訂單狀態；全額退款後訂單改為「已退款」並寄送通知"
+            />
+            <q-input v-model="refundForm.reason" outlined dense label="退款原因 *" maxlength="500" />
+            <q-checkbox v-model="refundForm.restock" label="歸還庫存（商品已退回或尚未出貨）" />
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" v-close-popup />
+            <q-btn color="negative" unelevated label="確認登記退款" :loading="refunding" :disable="!refundForm.reason.trim()" @click="submitRefund" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -2046,6 +2115,96 @@ const formatDateTime = (value?: string | null) => {
   })
 }
 
+// 訂單狀態可變更方向（後端規則）；退款走「登記退款」
+const statusTransitions = ref<Record<string, string[]>>({})
+const loadStatusTransitions = async () => {
+  try {
+    const response = await orderApi.getStatusTransitions()
+    statusTransitions.value = response.data || {}
+  } catch {
+    statusTransitions.value = {}
+  }
+}
+const STATUS_CHANGE_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: '還原為待付款',
+  PAID: '已付款',
+  PROCESSING: '處理中（已出貨）',
+  COMPLETED: '已完成',
+  CANCELLED: '取消訂單'
+}
+const nextStatusOptions = (status?: string) =>
+  ((status && statusTransitions.value[status]) || []).filter((next) => next !== 'REFUNDED') as Order['status'][]
+const statusChangeLabel = (status: string) => STATUS_CHANGE_LABELS[status] || status
+const canRefund = (order: Order) =>
+  ['PAID', 'PROCESSING', 'COMPLETED'].includes(order.status || '') && ['ADMIN', 'MANAGER'].includes(authStore.userRole || '')
+// 已付款可出貨；待付款只有貨到付款或後台建立的訂單可出貨（線上付款需先付款）
+const canShip = (order: Order) =>
+  order.status === 'PAID' ||
+  order.status === 'PROCESSING' ||
+  (order.status === 'PENDING_PAYMENT' && !(order.notes || '').includes('線上付款'))
+
+const showRefundDialog = ref(false)
+const refundOrder = ref<Order | null>(null)
+const refundForm = ref<{ amount: number | null; reason: string; restock: boolean }>({ amount: null, reason: '', restock: true })
+const refunding = ref(false)
+const openRefund = (order: Order) => {
+  refundOrder.value = order
+  refundForm.value = { amount: null, reason: '', restock: order.status === 'PAID' }
+  showRefundDialog.value = true
+}
+const submitRefund = async () => {
+  if (!refundOrder.value?.id) return
+  refunding.value = true
+  try {
+    await orderApi.refundOrder(refundOrder.value.id, {
+      amount: refundForm.value.amount ? Number(refundForm.value.amount) : null,
+      reason: refundForm.value.reason.trim(),
+      restock: refundForm.value.restock
+    })
+    $q.notify({ type: 'positive', message: '退款已登記', position: 'top' })
+    showRefundDialog.value = false
+    showDetailDialog.value = false
+    loadOrders()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  } finally {
+    refunding.value = false
+  }
+}
+
+const changeShipmentStatus = async (shipment: OrderShipment, status: OrderShipment['shippingStatus']) => {
+  if (!shipment.id) return
+  try {
+    await shipmentApi.updateShippingStatus(shipment.id, status)
+    $q.notify({ type: 'positive', message: status === 'DELIVERED' ? '已標記送達' : '已標記出貨，已通知顧客', position: 'top' })
+    if (selectedOrder.value?.id) {
+      await loadShipments(selectedOrder.value.id)
+      const response = await orderApi.getOrder(selectedOrder.value.id)
+      if (response.data) selectedOrder.value = { ...selectedOrder.value, ...response.data }
+    }
+    loadOrders()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+}
+
+const editTrackingNumber = (shipment: OrderShipment) => {
+  if (!shipment.id) return
+  $q.dialog({
+    title: '修改物流單號',
+    prompt: { model: shipment.trackingNumber || '', type: 'text' },
+    cancel: true
+  }).onOk(async (value: string) => {
+    try {
+      await shipmentApi.updateTrackingNumber(shipment.id!, value.trim())
+      if (selectedOrder.value?.id) await loadShipments(selectedOrder.value.id)
+      $q.notify({ type: 'positive', message: '物流單號已更新', position: 'top' })
+    } catch {
+      // 錯誤訊息由系統通知顯示
+    }
+  })
+}
+
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
 
@@ -2053,7 +2212,7 @@ const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (status === 'CANCELLED') {
     $q.dialog({
       title: '警告',
-      message: '確定要取消此訂單嗎？此操作無法復原。',
+      message: '確定要取消此訂單嗎？取消後會歸還庫存與優惠券，並寄送取消通知給顧客。',
       cancel: true,
       persistent: true
     }).onOk(async () => {
@@ -2925,6 +3084,7 @@ const handleStartTour = () => {
 
 onMounted(() => {
   loadOrders()
+  loadStatusTransitions()
   loadCustomers()
   loadProducts()
   loadOrderQAStats()

@@ -14,6 +14,10 @@ public record OrderEmailEvent(Long orderId, Type type) {
         /** 付款完成 */
         PAID,
         /** 訂單取消 */
-        CANCELLED
+        CANCELLED,
+        /** 已出貨（含物流單號） */
+        SHIPPED,
+        /** 已退款 */
+        REFUNDED
     }
 }

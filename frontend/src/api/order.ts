@@ -24,6 +24,22 @@ export interface StorefrontCheckoutRequest {
   items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
 }
 
+/** 以訂單編號 + Email 查詢的結果 */
+export interface StorefrontOrderLookup {
+  order: Order
+  paymentMethod?: 'ECPAY' | 'COD' | null
+  canPayOnline: boolean
+  canCancel: boolean
+  shipments?: Array<{
+    shippingCompany?: string
+    trackingNumber?: string
+    status?: string
+    statusLabel?: string
+    shippedAt?: string
+    deliveredAt?: string
+  }>
+}
+
 /** 結帳試算請求 */
 export interface StorefrontQuoteRequest {
   items: StorefrontCheckoutRequest['items']
@@ -237,10 +253,15 @@ export const orderApi = {
 
   /** 以訂單編號 + 下單 Email 查詢訂單（含是否可線上付款） */
   storefrontLookup: (orderNumber: string, email: string) => {
-    return axios.get<any, ApiResponse<{ order: Order; paymentMethod?: 'ECPAY' | 'COD' | null; canPayOnline: boolean }>>(
+    return axios.get<any, ApiResponse<StorefrontOrderLookup>>(
       '/storefront/orders/lookup',
       { params: { orderNumber, email } }
     )
+  },
+
+  /** 顧客自行取消訂單（待付款且尚未出貨） */
+  storefrontCancel: (data: { orderNumber: string; email: string }) => {
+    return axios.post<any, ApiResponse<StorefrontOrderLookup>>('/storefront/orders/cancel', data)
   },
 
   /** 待付款的線上付款訂單重新取得付款網址 */
@@ -286,6 +307,16 @@ export const orderApi = {
    * const updated = await orderApi.updateOrderStatus(123, 'PROCESSING')
    * console.log(updated.data.status) // 'PROCESSING'
    */
+  /** 各狀態可變更的方向（依後端規則） */
+  getStatusTransitions: () => {
+    return axios.get<any, ApiResponse<Record<string, string[]>>>('/orders/status-transitions')
+  },
+
+  /** 登記退款（全額退款時訂單改為已退款） */
+  refundOrder: (id: number, data: { amount?: number | null; reason: string; restock: boolean }) => {
+    return axios.post<any, ApiResponse<Order>>(`/orders/${id}/refund`, data)
+  },
+
   updateOrderStatus: (id: number, status: Order['status']) => {
     return axios.patch<any, ApiResponse<Order>>(`/orders/${id}/status`, null, {
       params: { status }

@@ -5,7 +5,10 @@ import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.crm.entity.Member;
 import com.info.ecommerce.modules.order.dto.OrderDTO;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
+import com.info.ecommerce.modules.order.dto.OrderRefundRequest;
+import com.info.ecommerce.modules.order.service.OrderRefundService;
 import com.info.ecommerce.modules.order.service.OrderService;
+import com.info.ecommerce.modules.order.service.OrderStatusRules;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +31,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final CurrentUserService currentUserService;
+    private final OrderRefundService orderRefundService;
 
     @PostMapping
     @Operation(summary = "創建訂單", description = "後台手動建立新訂單（顧客下單請使用 /api/storefront/orders/checkout，價格由後端計算）")
@@ -140,5 +144,27 @@ public class OrderController {
             @Parameter(description = "操作者名稱") @RequestParam(required = false) String operatorName) {
         return ApiResponse.success("訂單狀態已更新",
             orderService.updateOrderStatus(id, status, operatorId, operatorName));
+    }
+
+    @PostMapping("/{id}/refund")
+    @Operation(summary = "登記退款", description = "於綠界後台或以匯款完成退款後登記；全額退款時訂單改為已退款並寄送通知")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<OrderDTO> refund(@Parameter(description = "訂單 ID") @PathVariable Long id,
+                                        @Valid @RequestBody OrderRefundRequest request) {
+        var operator = currentUserService.currentUser();
+        return ApiResponse.success("退款已登記", orderRefundService.refund(id, request,
+                operator.map(user -> user.getId()).orElse(null),
+                operator.map(user -> user.getUsername()).orElse(null)));
+    }
+
+    @GetMapping("/status-transitions")
+    @Operation(summary = "訂單狀態可變更方向", description = "各狀態可以改成哪些狀態（後台下拉選單使用）")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ApiResponse<java.util.Map<OrderStatus, java.util.Set<OrderStatus>>> statusTransitions() {
+        java.util.Map<OrderStatus, java.util.Set<OrderStatus>> transitions = new java.util.EnumMap<>(OrderStatus.class);
+        for (OrderStatus status : OrderStatus.values()) {
+            transitions.put(status, OrderStatusRules.nextStatuses(status));
+        }
+        return ApiResponse.success(transitions);
     }
 }

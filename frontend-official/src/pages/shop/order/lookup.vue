@@ -77,6 +77,22 @@
           />
         </div>
 
+        <div v-if="shipments.length > 0" class="order-section">
+          <h2 class="section-title">物流資訊</h2>
+          <div v-for="(shipment, index) in shipments" :key="index" class="shipment-row">
+            <div class="shipment-main">
+              <q-badge :color="shipment.status === 'DELIVERED' ? 'positive' : 'info'" :label="shipment.statusLabel" />
+              <span class="shipment-company">{{ shipment.shippingCompany || '物流' }}</span>
+            </div>
+            <div v-if="shipment.trackingNumber" class="shipment-tracking">
+              物流單號：<strong>{{ shipment.trackingNumber }}</strong>
+              <q-btn flat dense round size="sm" icon="content_copy" aria-label="複製物流單號" @click="copyText(shipment.trackingNumber)" />
+            </div>
+            <div v-if="shipment.shippedAt" class="shipment-time">出貨時間：{{ formatDate(shipment.shippedAt, 'YYYY-MM-DD HH:mm') }}</div>
+            <div v-if="shipment.deliveredAt" class="shipment-time">送達時間：{{ formatDate(shipment.deliveredAt, 'YYYY-MM-DD HH:mm') }}</div>
+          </div>
+        </div>
+
         <div class="order-section">
           <h2 class="section-title">訂購商品</h2>
           <div v-for="item in order.items" :key="item.id" class="order-item">
@@ -122,6 +138,11 @@
             <span>收件地址</span><span>{{ order.shippingAddress }}</span>
           </div>
         </div>
+
+        <div v-if="canCancel" class="cancel-row">
+          <q-btn flat color="negative" icon="cancel" label="取消此訂單" :loading="cancelling" @click="confirmCancel" />
+          <div class="cancel-hint">尚未付款、尚未出貨的訂單可以自行取消。</div>
+        </div>
       </div>
     </div>
   </q-page>
@@ -131,7 +152,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { lookupOrder, payOrder } from 'src/api/order.js';
+import { lookupOrder, payOrder, cancelOrder } from 'src/api/order.js';
 import { formatDate } from 'src/utils/format.js';
 import { ORDER_STATUS_MAP, PICKUP_TYPE_MAP, redirectToPayment } from 'src/utils/checkout.js';
 
@@ -150,6 +171,47 @@ const order = ref(null);
 const paymentMethod = ref(null);
 const canPayOnline = ref(false);
 const paying = ref(false);
+const canCancel = ref(false);
+const cancelling = ref(false);
+const shipments = ref([]);
+
+const applyLookup = data => {
+  order.value = data.order;
+  paymentMethod.value = data.paymentMethod;
+  canPayOnline.value = !!data.canPayOnline;
+  canCancel.value = !!data.canCancel;
+  shipments.value = data.shipments || [];
+};
+
+const copyText = async text => {
+  try {
+    await navigator.clipboard.writeText(text);
+    $q.notify({ type: 'positive', message: '已複製物流單號', position: 'top', timeout: 1200 });
+  } catch (error) {
+    // 無法存取剪貼簿時忽略
+  }
+};
+
+const confirmCancel = () => {
+  $q.dialog({
+    title: '取消訂單',
+    message: '確定要取消這筆訂單嗎？取消後無法恢復，如需購買請重新下單。',
+    cancel: { label: '先不要', flat: true },
+    ok: { label: '確定取消', color: 'negative', unelevated: true },
+    persistent: true,
+  }).onOk(async () => {
+    cancelling.value = true;
+    try {
+      const res = await cancelOrder(order.value.orderNumber, form.value.email.trim());
+      applyLookup(res.data);
+      $q.notify({ type: 'positive', message: '訂單已取消', position: 'top' });
+    } catch (error) {
+      // 錯誤訊息已由 request 攔截器顯示
+    } finally {
+      cancelling.value = false;
+    }
+  });
+};
 
 const statusInfo = computed(
   () => ORDER_STATUS_MAP[order.value?.status] || { label: order.value?.status || '', color: 'grey' }
@@ -172,11 +234,11 @@ const search = async () => {
   errorMessage.value = '';
   order.value = null;
   canPayOnline.value = false;
+  canCancel.value = false;
+  shipments.value = [];
   try {
     const res = await lookupOrder(form.value.orderNumber.trim(), form.value.email.trim());
-    order.value = res.data.order;
-    paymentMethod.value = res.data.paymentMethod;
-    canPayOnline.value = !!res.data.canPayOnline;
+    applyLookup(res.data);
   } catch (error) {
     errorMessage.value = error.displayMessage || '查詢失敗，請稍後再試';
   } finally {
@@ -213,6 +275,39 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 @import '../../../css/variables.scss';
+
+.shipment-row {
+  padding: 10px 0;
+  border-bottom: 1px dashed #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .shipment-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  .shipment-tracking,
+  .shipment-time {
+    margin-top: 4px;
+    font-size: 14px;
+    color: #555;
+  }
+}
+
+.cancel-row {
+  margin-top: 16px;
+  text-align: center;
+
+  .cancel-hint {
+    font-size: 12px;
+    color: #999;
+  }
+}
 
 .order-lookup-page {
   background: $shop-bg-light;

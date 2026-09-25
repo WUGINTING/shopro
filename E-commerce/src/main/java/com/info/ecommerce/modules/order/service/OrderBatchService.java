@@ -45,6 +45,12 @@ public class OrderBatchService {
                     .orElseThrow(() -> new BusinessException("訂單不存在: " + orderId));
                 
                 OrderStatus oldStatus = order.getStatus();
+                // 不允許的狀態變更（例如已付款直接取消）跳過此筆，在交易外判斷避免整批回滾
+                if (!OrderStatusRules.canChange(oldStatus, dto.getTargetStatus())) {
+                    log.info("Batch status update skipped for order {}: {} -> {} not allowed", orderId, oldStatus, dto.getTargetStatus());
+                    failedIds.add(orderId);
+                    continue;
+                }
                 order.setStatus(dto.getTargetStatus());
                 
                 if (dto.getTargetStatus() == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
@@ -85,7 +91,7 @@ public class OrderBatchService {
         }
         
         if (!failedIds.isEmpty()) {
-            throw new BusinessException("部分訂單更新失敗，失敗的訂單 ID: " + failedIds);
+            throw new BusinessException("部分訂單更新失敗（整批未套用，請排除後重試），失敗的訂單 ID: " + failedIds);
         }
         
         return successIds;

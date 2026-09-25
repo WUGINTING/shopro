@@ -95,6 +95,8 @@ public class OrderService {
             eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.PAID));
         } else if (newStatus == OrderStatus.CANCELLED) {
             eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.CANCELLED));
+        } else if (newStatus == OrderStatus.REFUNDED) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.REFUNDED));
         }
     }
 
@@ -352,7 +354,10 @@ public class OrderService {
         order.setCustomerName(dto.getCustomerName());
         order.setCustomerPhone(dto.getCustomerPhone());
         order.setCustomerEmail(dto.getCustomerEmail());
-        order.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) {
+            OrderStatusRules.assertCanChange(oldStatus, dto.getStatus());
+            order.setStatus(dto.getStatus());
+        }
         order.setPickupType(dto.getPickupType());
         order.setStoreId(dto.getStoreId());
         order.setShippingAddress(dto.getShippingAddress());
@@ -501,6 +506,7 @@ public class OrderService {
             .orElseThrow(() -> new BusinessException("訂單不存在"));
 
         OrderStatus oldStatus = order.getStatus();
+        OrderStatusRules.assertCanChange(oldStatus, newStatus);
         order.setStatus(newStatus);
 
         if (newStatus == OrderStatus.COMPLETED && order.getCompletedAt() == null) {

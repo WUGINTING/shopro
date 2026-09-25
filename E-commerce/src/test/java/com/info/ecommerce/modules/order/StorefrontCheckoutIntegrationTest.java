@@ -214,7 +214,7 @@ class StorefrontCheckoutIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
         checkout(checkoutBody("other@example.com", cup.getId(), blueCup.getId(), 3));
         assertEquals(0, specStock());
-        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PENDING_PAYMENT")
                         .header("Authorization", "Bearer " + adminToken)).andExpect(status().isBadRequest());
         assertEquals(0, specStock());
     }
@@ -300,5 +300,105 @@ class StorefrontCheckoutIntegrationTest {
                         .content("{\"orderId\":%d,\"discountType\":\"MANUAL\",\"discountAmount\":10}".formatted(orderId)))
                 .andExpect(status().isBadRequest());
         assertEquals(0, new BigDecimal("442").compareTo(orderRepository.findById(orderId).orElseThrow().getTotalAmount()));
+    }
+
+    private String ecpayCheckoutBody(String email) {
+        return checkoutBody(email, cone.getId(), null, 1).replace("\"paymentMethod\":\"COD\"", "\"paymentMethod\":\"ECPAY\"");
+    }
+
+    private MvcResult ship(long orderId, String status) throws Exception {
+        return mockMvc.perform(post("/api/orders/shipments").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":%d,\"shippingCompany\":\"黑貓宅急便\",\"trackingNumber\":\"TW123\",\"shippingStatus\":\"%s\"}".formatted(orderId, status)))
+                .andReturn();
+    }
+
+    @Test
+    void statusRules_paidOrderCannotBeCancelledDirectly() throws Exception {
+        long orderId = checkout(checkoutBody("rules@example.com", cone.getId(), null, 1)).get("id").asLong();
+        changeStatus(orderId, "PAID");
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("退款")));
+    }
+
+    @Test
+    void codOrder_canShipWhileUnpaid_deliveredCompletes_andCustomerSeesTracking() throws Exception {
+        String email = "cod-ship@example.com";
+        JsonNode order = checkout(checkoutBody(email, cone.getId(), null, 1));
+        long orderId = order.get("id").asLong();
+        String orderNumber = order.get("orderNumber").asText();
+
+        MvcResult created = ship(orderId, "SHIPPED");
+        assertEquals(200, created.getResponse().getStatus(), created.getResponse().getContentAsString());
+        assertEquals("PROCESSING", orderRepository.findById(orderId).orElseThrow().getStatus().name());
+
+        mockMvc.perform(get("/api/storefront/orders/lookup").param("orderNumber", orderNumber).param("email", email))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.shipments[0].trackingNumber").value("TW123"))
+                .andExpect(jsonPath("$.data.shipments[0].statusLabel").value("已出貨"))
+                .andExpect(jsonPath("$.data.canCancel").value(false));
+
+        long shipmentId = objectMapper.readTree(created.getResponse().getContentAsString()).get("data").get("id").asLong();
+        mockMvc.perform(patch("/api/orders/shipments/" + shipmentId + "/status").param("status", "DELIVERED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        assertEquals("COMPLETED", orderRepository.findById(orderId).orElseThrow().getStatus().name());
+    }
+
+    @Test
+    void unpaidOnlineOrder_cannotShip_butCustomerCanCancelIt() throws Exception {
+        String email = "cancel-me@example.com";
+        JsonNode order = checkout(ecpayCheckoutBody(email));
+        long orderId = order.get("id").asLong();
+        String orderNumber = order.get("orderNumber").asText();
+        assertEquals(4, coneStock());
+
+        assertEquals(400, ship(orderId, "SHIPPED").getResponse().getStatus());
+
+        mockMvc.perform(get("/api/storefront/orders/lookup").param("orderNumber", orderNumber).param("email", email))
+                .andExpect(jsonPath("$.data.canCancel").value(true));
+        // Email 不符不可取消
+        mockMvc.perform(post("/api/storefront/orders/cancel").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderNumber\":\"%s\",\"email\":\"someone@example.com\"}".formatted(orderNumber)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/storefront/orders/cancel").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderNumber\":\"%s\",\"email\":\"%s\"}".formatted(orderNumber, email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.order.status").value("CANCELLED"));
+        assertEquals(5, coneStock());
+        mockMvc.perform(post("/api/storefront/orders/cancel").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderNumber\":\"%s\",\"email\":\"%s\"}".formatted(orderNumber, email)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refund_partialThenFull_restocksAndMarksRefunded() throws Exception {
+        long orderId = checkout(checkoutBody("refund@example.com", cone.getId(), null, 2)).get("id").asLong(); // 99*2 + 100
+        assertEquals(3, coneStock());
+
+        // 未付款不可退款
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"test\"}"))
+                .andExpect(status().isBadRequest());
+
+        changeStatus(orderId, "PAID");
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":100,\"reason\":\"運費退還\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"));
+        // 超過可退金額
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":999,\"reason\":\"x\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"顧客取消\",\"restock\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REFUNDED"));
+        assertEquals(5, coneStock());
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest());
     }
 }

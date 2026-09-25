@@ -45,6 +45,12 @@ public class StorefrontOrderController {
         return ApiResponse.success(storefrontCheckoutService.lookupOrder(orderNumber, email));
     }
 
+    @PostMapping("/cancel")
+    @Operation(summary = "取消訂單", description = "待付款且尚未出貨的訂單可由顧客自行取消（以訂單編號 + 下單 Email 驗證）")
+    public ApiResponse<StorefrontOrderLookupDTO> cancel(@Valid @RequestBody StorefrontPayRequest request) {
+        return ApiResponse.success("訂單已取消", storefrontCheckoutService.cancelOrder(request.getOrderNumber(), request.getEmail()));
+    }
+
     @PostMapping("/pay")
     @Operation(summary = "重新付款", description = "待付款的線上付款訂單重新取得綠界付款網址（以訂單編號 + 下單 Email 驗證）")
     public ApiResponse<StorefrontCheckoutResultDTO> pay(@Valid @RequestBody StorefrontPayRequest request) {
