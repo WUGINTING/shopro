@@ -20,6 +20,7 @@ public interface EdmCampaignRepository extends JpaRepository<EdmCampaign, Long> 
     Page<EdmCampaign> findByTargetGroupId(Long targetGroupId, Pageable pageable);
 
     /** 原子性地把活動標成發送中；已在發送、已發送或已取消時回傳 0（避免排程與手動同時寄出兩次） */
+    @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @org.springframework.data.jpa.repository.Query("UPDATE EdmCampaign c SET c.status = com.info.ecommerce.modules.crm.enums.EdmStatus.SENDING "
             + "WHERE c.id = :id AND c.status IN (com.info.ecommerce.modules.crm.enums.EdmStatus.DRAFT, "

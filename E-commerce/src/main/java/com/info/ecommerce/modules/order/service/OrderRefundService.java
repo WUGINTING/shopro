@@ -64,6 +64,10 @@ public class OrderRefundService {
             throw new BusinessException("退款金額需介於 1 到可退金額 NT$" + refundable.stripTrailingZeros().toPlainString() + " 之間");
         }
         boolean fullRefund = amount.compareTo(refundable) == 0;
+        if (request.isRestock() && alreadyRefunded.signum() > 0) {
+            // 先前的部分退款可能已手動補回部分商品，自動歸還整筆庫存會重複入庫
+            throw new BusinessException("此訂單已有部分退款，無法自動歸還整筆訂單的庫存；如有退回商品，請到商品頁手動補貨");
+        }
         if (request.isRestock() && !fullRefund) {
             throw new BusinessException("部分退款無法自動歸還整筆訂單的庫存；如有退回商品，請到商品頁手動補貨");
         }

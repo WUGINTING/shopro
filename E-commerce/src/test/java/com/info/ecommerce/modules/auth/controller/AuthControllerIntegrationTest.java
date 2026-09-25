@@ -139,17 +139,21 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk());
 
         for (int i = 0; i < 10; i++) {
-            String ip = "10.88.0." + (i % 3 + 1);
-            mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr(ip); return request; })
+            mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.1"); return request; })
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"username\":\"bruteuser\",\"password\":\"wrong-" + i + "\"}"))
                     .andExpect(status().is4xxClientError());
         }
-        // 帳號已暫停登入：即使密碼正確也要等待
-        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.9"); return request; })
+        // 同一來源已暫停：即使密碼正確也要等待
+        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.1"); return request; })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("次數過多")));
+        // 攻擊者無法藉此鎖住本人：從其他來源仍可登入
+        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.2"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk());
     }
 }

@@ -161,6 +161,7 @@
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { userApi, type User } from '@/api/user'
+import { useAuthStore } from '@/stores/auth'
 
 const $q = useQuasar()
 
@@ -270,6 +271,16 @@ const handleSubmit = async () => {
     }
 
     if (response.success) {
+      // 修改自己的帳號名稱或密碼後舊 token 失效，改用後端回傳的新 token
+      const authStore = useAuthStore()
+      if (response.data?.token && authStore.user) {
+        authStore.setAuth(response.data.token, {
+          ...authStore.user,
+          username: response.data.username,
+          email: response.data.email,
+          role: response.data.role
+        })
+      }
       $q.notify({ type: 'positive', message: form.value.id ? '使用者更新成功' : '使用者建立成功' })
       showDialog.value = false
       await loadUsers()

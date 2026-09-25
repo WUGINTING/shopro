@@ -374,7 +374,7 @@ class StorefrontCheckoutIntegrationTest {
     }
 
     @Test
-    void refund_partialThenFull_restocksAndMarksRefunded() throws Exception {
+    void refund_partialThenFull_marksRefunded_withoutAutomaticRestock() throws Exception {
         long orderId = checkout(checkoutBody("refund@example.com", cone.getId(), null, 2)).get("id").asLong(); // 99*2 + 100
         assertEquals(3, coneStock());
 
@@ -392,14 +392,30 @@ class StorefrontCheckoutIntegrationTest {
         mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":999,\"reason\":\"x\"}"))
                 .andExpect(status().isBadRequest());
+        // 已有部分退款：剩餘金額退款不能自動歸還整筆庫存（退回的商品需手動補貨）
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"顧客取消\",\"restock\":true}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"顧客取消\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("REFUNDED"));
+        assertEquals(3, coneStock());
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void fullRefund_withRestock_returnsStock() throws Exception {
+        long orderId = checkout(checkoutBody("full-refund@example.com", cone.getId(), null, 2)).get("id").asLong();
+        assertEquals(3, coneStock());
+        changeStatus(orderId, "PAID");
         mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"顧客取消\",\"restock\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REFUNDED"));
         assertEquals(5, coneStock());
-        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -429,11 +445,20 @@ class StorefrontCheckoutIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":50,\"reason\":\"補償\",\"restock\":true}"))
                 .andExpect(status().isBadRequest());
         assertEquals(3, coneStock());
+
+        // 先部分退款，剩餘金額的「全額」退款也不能自動歸還整筆庫存（避免與手動補貨重複入庫）
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":50,\"reason\":\"退回一件\",\"restock\":false}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"其餘退款\",\"restock\":true}"))
+                .andExpect(status().isBadRequest());
+        assertEquals(3, coneStock());
     }
 
     @Test
     void orderLookup_isRateLimitedPerClient() throws Exception {
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 20; i++) {
             mockMvc.perform(get("/api/storefront/orders/lookup").with(request -> { request.setRemoteAddr("10.77.0.1"); return request; })
                             .param("orderNumber", "ORD-NOPE-" + i).param("email", "guess@example.com"))
                     .andExpect(status().isBadRequest());

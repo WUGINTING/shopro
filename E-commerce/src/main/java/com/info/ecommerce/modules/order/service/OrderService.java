@@ -73,9 +73,15 @@ public class OrderService {
     /**
      * 訂單是否曾收款：有成功的付款紀錄（線上付款），或曾被標記為已付款（例如貨到付款收款）
      */
+    /** 會在 new_status 記錄訂單 / 付款狀態 PAID 的歷程動作 */
+    private static final java.util.List<String> PAID_STATUS_ACTIONS = java.util.List.of(
+        "CREATE", "UPDATE", "UPDATE_STATUS", "BATCH_UPDATE_STATUS", "PAYMENT_SUCCESS", "CREATE_PAYMENT", "UPDATE_PAYMENT_STATUS");
+
     @Transactional(readOnly = true)
     public boolean hasBeenPaid(Long orderId) {
-        return orderHistoryRepository.existsByOrderIdAndNewStatus(orderId, OrderStatus.PAID.name())
+        // new_status 欄位在其他動作中也存放優惠券代碼、退款金額等資料，只看狀態變更類的記錄
+        return orderRepository.findById(orderId).map(order -> order.getStatus() == OrderStatus.PAID).orElse(false)
+            || orderHistoryRepository.existsByOrderIdAndNewStatusAndActionTypeIn(orderId, OrderStatus.PAID.name(), PAID_STATUS_ACTIONS)
             || orderPaymentRepository.findByOrderId(orderId).stream()
                 .anyMatch(payment -> payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.PAID
                     || payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.REFUNDING

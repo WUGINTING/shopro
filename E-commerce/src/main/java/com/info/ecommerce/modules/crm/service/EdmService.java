@@ -112,7 +112,10 @@ public class EdmService {
         return toDTO(edmCampaign);
     }
 
-    @Transactional
+    /**
+     * 發送 EDM。刻意不包在單一交易內：先以條件式更新把活動標成「發送中」並立即提交（避免重複發送，
+     * 也不會在寄信期間長時間鎖住活動資料列），逐封寄送並記錄，最後更新結果。
+     */
     public EdmCampaignDTO sendEdmCampaign(Long id) {
         EdmCampaign edmCampaign = edmCampaignRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("EDM 活動不存在"));
@@ -149,7 +152,17 @@ public class EdmService {
             throw new BusinessException("EDM 活動正在發送、已發送或已取消");
         }
         edmCampaign.setStatus(EdmStatus.SENDING);
+        try {
+            return deliver(id, edmCampaign, targetMembers, mailSender);
+        } catch (RuntimeException e) {
+            // 非預期錯誤：不要讓活動永遠停在「發送中」
+            edmCampaign.setStatus(EdmStatus.FAILED);
+            edmCampaignRepository.save(edmCampaign);
+            throw e;
+        }
+    }
 
+    private EdmCampaignDTO deliver(Long id, EdmCampaign edmCampaign, List<Member> targetMembers, JavaMailSender mailSender) {
         int successCount = 0;
         int failureCount = 0;
 

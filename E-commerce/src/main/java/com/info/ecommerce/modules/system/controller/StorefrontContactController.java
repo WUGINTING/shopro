@@ -72,7 +72,7 @@ public class StorefrontContactController {
     @Operation(summary = "送出聯絡表單")
     public ApiResponse<Void> submit(@Valid @RequestBody ContactRequest request, HttpServletRequest http) {
         // 同一來源 10 分鐘內最多 5 則，避免灌水
-        rateLimiter.check("contact", http.getRemoteAddr(), 5, Duration.ofMinutes(10), "留言次數過多，請稍後再試或直接來電");
+        rateLimiter.check("contact", com.info.ecommerce.common.RateLimiter.clientKey(http), 5, Duration.ofMinutes(10), "留言次數過多，請稍後再試或直接來電");
 
         String subject = request.getSubject() == null || request.getSubject().isBlank() ? "一般詢問" : request.getSubject().trim();
         String contact = request.getEmail().trim() + (request.getPhone() == null || request.getPhone().isBlank() ? "" : " / " + request.getPhone().trim());

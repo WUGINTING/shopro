@@ -224,6 +224,13 @@ export const orderApi = {
    * const response = await orderApi.getOrder(123)
    * console.log(response.data.orderNumber) // 訂單編號
    */
+  /** 訂單的付款記錄（含已登記的退款金額） */
+  getOrderPayments: (orderId: number) => {
+    return axios.get<any, ApiResponse<Array<{ id: number; paymentStatus: string; paymentAmount?: number; refundAmount?: number | null }>>>(
+      `/orders/payments/order/${orderId}`
+    )
+  },
+
   getOrder: (id: number) => {
     return axios.get<any, ApiResponse<Order>>(`/orders/${id}`)
   },

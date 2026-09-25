@@ -1552,7 +1552,10 @@
         <q-card style="width: 520px; max-width: 95vw">
           <q-card-section>
             <div class="text-h6">登記退款</div>
-            <div class="text-caption text-grey-7">訂單 {{ refundOrder?.orderNumber }}，訂單總額 NT$ {{ Number(refundOrder?.totalAmount || 0).toLocaleString() }}</div>
+            <div class="text-caption text-grey-7">
+              訂單 {{ refundOrder?.orderNumber }}，訂單總額 NT$ {{ Number(refundOrder?.totalAmount || 0).toLocaleString() }}
+              <template v-if="alreadyRefunded > 0">，已退 NT$ {{ alreadyRefunded.toLocaleString() }}，尚可退 NT$ {{ refundableAmount.toLocaleString() }}</template>
+            </div>
           </q-card-section>
           <q-card-section class="q-gutter-md">
             <q-banner dense rounded class="bg-orange-1 text-orange-10">
@@ -1563,7 +1566,7 @@
               type="number"
               outlined
               dense
-              label="退款金額（空白為全額）"
+              label="退款金額（空白為剩餘全額）"
               prefix="NT$"
               clearable
               hint="部分退款不會改變訂單狀態；全額退款後訂單改為「已退款」並寄送通知"
@@ -1571,10 +1574,12 @@
             <q-input v-model="refundForm.reason" outlined dense label="退款原因 *" maxlength="500" />
             <q-checkbox
               v-model="refundForm.restock"
-              :disable="isPartialRefund"
+              :disable="restockDisabled"
               label="歸還整筆訂單的庫存（全額退款且商品已退回或尚未出貨）"
             />
-            <div v-if="isPartialRefund" class="text-caption text-grey-7">部分退款不會自動歸還庫存；如有退回商品，請到商品頁手動補貨。</div>
+            <div v-if="restockDisabled" class="text-caption text-grey-7">
+              {{ alreadyRefunded > 0 ? '此訂單已有部分退款' : '部分退款' }}不會自動歸還庫存；如有退回商品，請到商品頁手動補貨。
+            </div>
           </q-card-section>
           <q-card-actions align="right">
             <q-btn flat label="取消" v-close-popup />
@@ -2251,15 +2256,27 @@ const showRefundDialog = ref(false)
 const refundOrder = ref<Order | null>(null)
 const refundForm = ref<{ amount: number | null; reason: string; restock: boolean }>({ amount: null, reason: '', restock: true })
 const refunding = ref(false)
+const alreadyRefunded = ref(0)
+const refundableAmount = computed(() => Math.max(Number(refundOrder.value?.totalAmount || 0) - alreadyRefunded.value, 0))
+// 先前已有部分退款時，不能自動歸還整筆庫存（與後端規則一致）
+const restockDisabled = computed(() => isPartialRefund.value || alreadyRefunded.value > 0)
 const isPartialRefund = computed(() => {
   const amount = refundForm.value.amount as unknown
   if (amount === null || amount === '' || amount === undefined) return false
-  return Number(amount) < Number(refundOrder.value?.totalAmount || 0)
+  return Number(amount) < refundableAmount.value
 })
-const openRefund = (order: Order) => {
+const openRefund = async (order: Order) => {
   refundOrder.value = order
+  alreadyRefunded.value = 0
   refundForm.value = { amount: null, reason: '', restock: false }
   showRefundDialog.value = true
+  if (!order.id) return
+  try {
+    const response = await orderApi.getOrderPayments(order.id)
+    alreadyRefunded.value = (response.data || []).reduce((sum, payment) => sum + Number(payment.refundAmount || 0), 0)
+  } catch {
+    // 取不到時以後端檢查為準
+  }
 }
 const submitRefund = async () => {
   if (!refundOrder.value?.id) return
@@ -2269,7 +2286,7 @@ const submitRefund = async () => {
       // 空白為全額；其他數字原樣送出（0 或負數由後端拒絕）
       amount: refundForm.value.amount === null || (refundForm.value.amount as unknown) === '' ? null : Number(refundForm.value.amount),
       reason: refundForm.value.reason.trim(),
-      restock: refundForm.value.restock && !isPartialRefund.value
+      restock: refundForm.value.restock && !restockDisabled.value
     })
     $q.notify({ type: 'positive', message: '退款已登記', position: 'top' })
     showRefundDialog.value = false

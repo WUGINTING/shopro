@@ -45,7 +45,7 @@ public class StorefrontProductController {
     public ApiResponse<Void> subscribeRestock(@Parameter(description = "商品 ID") @PathVariable Long id,
                                               @RequestBody java.util.Map<String, Object> body,
                                               jakarta.servlet.http.HttpServletRequest http) {
-        rateLimiter.check("restock-notification", http.getRemoteAddr(), 10, java.time.Duration.ofMinutes(10),
+        rateLimiter.check("restock-notification", com.info.ecommerce.common.RateLimiter.clientKey(http), 10, java.time.Duration.ofMinutes(10),
                 "登記次數過多，請稍後再試");
         productService.assertPubliclyVisible(id);
         Object spec = body.get("specificationId");

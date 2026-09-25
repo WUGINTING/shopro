@@ -40,21 +40,31 @@ public class AuthController {
     @Operation(summary = "用戶登錄", description = "驗證憑據並返回JWT令牌")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request,
                                            jakarta.servlet.http.HttpServletRequest http) {
-        // 同一帳號 15 分鐘內失敗 10 次、同一來源失敗 30 次後暫停登入，避免暴力猜密碼
+        // 只計算失敗次數（先佔用名額，登入成功再歸還，同時送出的大量猜測也不會超過上限）：
+        // 同一帳號 + 同一來源失敗 10 次、同一來源失敗 50 次、同一帳號（來自各處）失敗 50 次後暫停 15 分鐘。
+        // 帳號層級的上限較寬，單一攻擊者無法輕易鎖住他人帳號；重設密碼成功後會解除。
         String tooMany = "登入失敗次數過多，請 15 分鐘後再試，或使用「忘記密碼」重設";
         java.time.Duration window = java.time.Duration.ofMinutes(15);
-        rateLimiter.assertAllowed("login-user", request.getUsername(), 10, window, tooMany);
-        rateLimiter.assertAllowed("login-ip", http.getRemoteAddr(), 30, window, tooMany);
+        String client = com.info.ecommerce.common.RateLimiter.clientKey(http);
+        String username = request.getUsername();
+        java.util.List<String[]> reserved = new java.util.ArrayList<>();
         try {
-            AuthResponse response = authService.login(request);
-            rateLimiter.reset("login-user", request.getUsername());
-            return ApiResponse.success("登錄成功", response);
-        } catch (org.springframework.security.core.AuthenticationException
-                 | com.info.ecommerce.common.exception.BusinessException e) {
-            rateLimiter.record("login-user", request.getUsername());
-            rateLimiter.record("login-ip", http.getRemoteAddr());
+            reserve(reserved, "login-user-client", username + "|" + client, 10, window, tooMany);
+            reserve(reserved, "login-client", client, 50, window, tooMany);
+            reserve(reserved, "login-user", username, 50, window, tooMany);
+        } catch (com.info.ecommerce.common.exception.BusinessException e) {
+            reserved.forEach(slot -> rateLimiter.release(slot[0], slot[1]));
             throw e;
         }
+        AuthResponse response = authService.login(request);
+        reserved.forEach(slot -> rateLimiter.release(slot[0], slot[1]));
+        return ApiResponse.success("登錄成功", response);
+    }
+
+    private void reserve(java.util.List<String[]> reserved, String bucket, String key, int max,
+                         java.time.Duration window, String message) {
+        rateLimiter.check(bucket, key, max, window, message);
+        reserved.add(new String[]{bucket, key});
     }
 
     @GetMapping("/profile")
@@ -95,8 +105,14 @@ public class AuthController {
     public ApiResponse<Void> requestPasswordReset(@RequestBody java.util.Map<String, String> body,
                                                   jakarta.servlet.http.HttpServletRequest http) {
         String tooMany = "申請次數過多，請稍後再試";
-        rateLimiter.check("password-reset-ip", http.getRemoteAddr(), 10, java.time.Duration.ofMinutes(10), tooMany);
-        rateLimiter.check("password-reset-email", body.get("email"), 3, java.time.Duration.ofMinutes(30), tooMany);
+        String client = com.info.ecommerce.common.RateLimiter.clientKey(http);
+        String email = body.get("email") == null ? null : body.get("email").trim();
+        rateLimiter.check("password-reset-client", client, 10, java.time.Duration.ofMinutes(10), tooMany);
+        if (email != null && !email.isEmpty()) {
+            // 同一來源對同一信箱 30 分鐘 3 次；信箱總量較寬（1 小時 10 次），避免他人耗盡本人的申請次數
+            rateLimiter.check("password-reset-email-client", email + "|" + client, 3, java.time.Duration.ofMinutes(30), tooMany);
+            rateLimiter.check("password-reset-email", email, 10, java.time.Duration.ofHours(1), tooMany);
+        }
         passwordResetService.requestReset(body.get("email"));
         return ApiResponse.success("若此 Email 已註冊，重設密碼連結會在幾分鐘內寄達，請於 1 小時內使用", null);
     }
@@ -104,7 +120,10 @@ public class AuthController {
     @PostMapping("/password-reset/confirm")
     @Operation(summary = "重設密碼", description = "以重設信中的 token 設定新密碼")
     public ApiResponse<Void> confirmPasswordReset(@RequestBody java.util.Map<String, String> body) {
-        passwordResetService.reset(body.getOrDefault("token", ""), body.get("newPassword"));
+        com.info.ecommerce.modules.auth.entity.User user =
+                passwordResetService.reset(body.getOrDefault("token", ""), body.get("newPassword"));
+        // 已證明擁有信箱並換了新密碼：解除帳號層級的登入暫停
+        rateLimiter.reset("login-user", user.getUsername());
         return ApiResponse.success("密碼已重設，請使用新密碼登入", null);
     }
 
