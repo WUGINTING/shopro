@@ -143,6 +143,18 @@ public class AuthService {
 
         boolean usernameChanged = false;
         boolean passwordChanged = false;
+
+        // 變更帳號名稱或 Email 需輸入目前密碼：避免 token 外洩時被改成攻擊者的信箱，再以「忘記密碼」永久接管帳號
+        boolean identityChange = (request.getUsername() != null && !request.getUsername().equals(user.getUsername()))
+                || (request.getEmail() != null && !request.getEmail().equals(user.getEmail()));
+        if (identityChange) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+                throw new BusinessException("變更帳號名稱或 Email 請輸入目前密碼；以 Google 登入且未設定密碼的帳號，請先使用「忘記密碼」設定密碼");
+            }
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new BusinessException("目前密碼不正確");
+            }
+        }
         // Update username if provided and different
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             usernameChanged = true;

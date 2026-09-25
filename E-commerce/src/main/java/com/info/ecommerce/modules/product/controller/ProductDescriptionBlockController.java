@@ -53,6 +53,7 @@ public class ProductDescriptionBlockController {
         return ApiResponse.success(blockService.getAutoBlocks(productId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/manual/{blockNumber}")
     @Operation(summary = "創建或更新手動區塊")
     public ApiResponse<ProductDescriptionBlockDTO> saveManualBlock(
@@ -62,6 +63,7 @@ public class ProductDescriptionBlockController {
         return ApiResponse.success("區塊已保存", blockService.saveManualBlock(productId, blockNumber, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/auto/initialize")
     @Operation(summary = "初始化商品的自動區塊")
     public ApiResponse<List<ProductDescriptionBlockDTO>> initializeAutoBlocks(
@@ -69,6 +71,7 @@ public class ProductDescriptionBlockController {
         return ApiResponse.success("自動區塊已初始化", blockService.initializeAutoBlocks(productId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/auto/{blockNumber}")
     @Operation(summary = "更新自動區塊")
     public ApiResponse<ProductDescriptionBlockDTO> updateAutoBlock(
@@ -78,6 +81,7 @@ public class ProductDescriptionBlockController {
         return ApiResponse.success("區塊已更新", blockService.updateAutoBlock(productId, blockNumber, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/batch")
     @Operation(summary = "批量保存描述區塊")
     public ApiResponse<List<ProductDescriptionBlockDTO>> saveBlocks(
@@ -86,6 +90,7 @@ public class ProductDescriptionBlockController {
         return ApiResponse.success("區塊已保存", blockService.saveBlocks(productId, blocks));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{blockId}")
     @Operation(summary = "刪除描述區塊")
     public ApiResponse<Void> deleteBlock(

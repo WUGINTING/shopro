@@ -38,6 +38,15 @@ public class ProductController {
     public ApiResponse<ProductDTO> updateProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Valid @RequestBody ProductDTO dto) {
+        // 員工可更新商品資料與庫存，但價格（定價 / 特價 / 成本）只能由經理或管理員修改
+        if (!currentUserService.isManagerOrAdmin()) {
+            ProductDTO existing = productService.getProduct(id);
+            if (priceChanged(existing.getBasePrice(), dto.getBasePrice())
+                    || priceChanged(existing.getSalePrice(), dto.getSalePrice())
+                    || priceChanged(existing.getCostPrice(), dto.getCostPrice())) {
+                throw new org.springframework.security.access.AccessDeniedException("商品價格只能由經理或管理員修改");
+            }
+        }
         return ApiResponse.success("商品已更新", productService.updateProduct(id, dto));
     }
 
@@ -134,5 +143,12 @@ public class ProductController {
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Parameter(description = "相冊圖片 ID 列表") @RequestBody java.util.List<Long> albumImageIds) {
         return ApiResponse.success("圖片已添加", productService.addAlbumImagesToProduct(id, albumImageIds));
+    }
+
+    /** 價格是否變更（空白與 0 視為相同） */
+    static boolean priceChanged(java.math.BigDecimal current, java.math.BigDecimal requested) {
+        java.math.BigDecimal before = current == null ? java.math.BigDecimal.ZERO : current;
+        java.math.BigDecimal after = requested == null ? java.math.BigDecimal.ZERO : requested;
+        return before.compareTo(after) != 0;
     }
 }

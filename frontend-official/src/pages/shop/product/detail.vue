@@ -288,6 +288,7 @@
 </template>
 
 <script setup>
+import { escapeHtml } from 'src/utils/sanitize.js';
 import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -311,10 +312,10 @@ const specifications = ref([]);
 const selectedSpec = ref(null);
 const categoryName = ref('');
 
-// 格式化區塊內容（將換行符轉換為 HTML）
+// 格式化區塊內容：後台以純文字填寫，先跳脫 HTML 再將換行轉為段落（不執行任何 HTML）
 const formatBlockContent = (content) => {
   if (!content) return '';
-  return content
+  return escapeHtml(content)
     .replace(/\n\n/g, '</p><p>')
     .replace(/\n/g, '<br>')
     .replace(/^(.+)$/, '<p>$1</p>');

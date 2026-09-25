@@ -37,18 +37,21 @@ public class PopupAdController {
         return ApiResponse.success(popupAdService.getAdById(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "新增廣告")
     public ApiResponse<PopupAdDTO> createAd(@Valid @RequestBody PopupAdDTO dto) {
         return ApiResponse.success("廣告已新增", popupAdService.createAd(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新廣告")
     public ApiResponse<PopupAdDTO> updateAd(@PathVariable Long id, @Valid @RequestBody PopupAdDTO dto) {
         return ApiResponse.success("廣告已更新", popupAdService.updateAd(id, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除廣告")
     public ApiResponse<Void> deleteAd(@PathVariable Long id) {

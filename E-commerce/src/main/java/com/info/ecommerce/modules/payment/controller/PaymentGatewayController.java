@@ -41,6 +41,8 @@ public class PaymentGatewayController {
     private final com.info.ecommerce.modules.payment.service.PaymentCallbackLogService paymentCallbackLogService;
     private final OrderRepository orderRepository;
     private final CurrentUserService currentUserService;
+    private final com.info.ecommerce.modules.payment.repository.PaymentGatewayTransactionRepository transactionRepository;
+    private final com.info.ecommerce.modules.payment.repository.PaymentSettingRepository paymentSettingRepository;
 
     /**
      * 找出要付款的訂單並檢查權限與狀態；付款金額一律以訂單金額為準，不採用前端傳入的金額
@@ -67,6 +69,13 @@ public class PaymentGatewayController {
         request.setOrderId(order.getId());
         request.setOrderNumber(order.getOrderNumber());
         request.setAmount(order.getTotalAmount());
+        // 送到金流的資料一律取自訂單，不採用前端傳入的值（避免插入額外的簽章參數或導向外部網址）
+        request.setCurrency("TWD");
+        request.setProductName("訂單 " + order.getOrderNumber());
+        request.setCustomerName(order.getCustomerName());
+        request.setCustomerEmail(order.getCustomerEmail());
+        request.setCustomerPhone(order.getCustomerPhone());
+        request.setClientBackUrl(null);
 
         log.info("Creating payment with gateway: {} for order: {}", gateway, request.getOrderNumber());
         
@@ -77,7 +86,21 @@ public class PaymentGatewayController {
             if (response.getStatus() == com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.FAILED) {
                 return new ApiResponse<>(false, response.getErrorMessage(), response);
             }
-            
+
+            // LINE PAY：記錄交易編號，確認回呼時只接受由此建立的交易
+            if (gateway == PaymentGateway.LINE_PAY && response.getTransactionId() != null) {
+                transactionRepository.save(com.info.ecommerce.modules.payment.entity.PaymentGatewayTransaction.builder()
+                        .orderId(order.getId())
+                        .orderNumber(order.getOrderNumber())
+                        .gateway(PaymentGateway.LINE_PAY)
+                        .transactionId(response.getTransactionId())
+                        .status(com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.INITIATED)
+                        .amount(order.getTotalAmount())
+                        .currency("TWD")
+                        .paymentUrl(response.getPaymentUrl())
+                        .build());
+            }
+
             return ApiResponse.success("支付請求已建立", response);
         } catch (Exception e) {
             log.error("Failed to create payment", e);
@@ -266,7 +289,19 @@ public class PaymentGatewayController {
             @RequestParam String orderId) {
         
         log.info("Received LINE PAY confirm callback - transactionId: {}, orderId: {}", transactionId, orderId);
-        
+
+        // 此網址任何人都能呼叫：只在 LINE PAY 已啟用，且交易編號與建立付款時記錄的同一筆訂單相符時才向 LINE PAY 確認
+        boolean linePayEnabled = paymentSettingRepository.findByGateway(PaymentGateway.LINE_PAY)
+                .map(setting -> Boolean.TRUE.equals(setting.getEnabled()) && !Boolean.TRUE.equals(setting.getMaintenanceMode()))
+                .orElse(false);
+        boolean knownTransaction = transactionRepository.findByTransactionId(transactionId)
+                .filter(tx -> tx.getGateway() == PaymentGateway.LINE_PAY && orderId.equals(tx.getOrderNumber()))
+                .isPresent();
+        if (!linePayEnabled || !knownTransaction) {
+            log.warn("Rejected LINE PAY confirm callback for unknown transaction {} / order {}", transactionId, orderId);
+            return ApiResponse.error("付款資料不符，請重新付款或聯繫客服");
+        }
+
         try {
             PaymentConfirmDTO confirm = PaymentConfirmDTO.builder()
                     .transactionId(transactionId)
@@ -277,11 +312,9 @@ public class PaymentGatewayController {
             PaymentGatewayService service = paymentGatewayFactory.getPaymentGatewayService(PaymentGateway.LINE_PAY);
             PaymentResponseDTO response = service.confirmPayment(confirm);
             
-            // 處理支付確認結果
+            // 處理支付確認結果（只有 LINE PAY 確認成功才變更訂單；失敗不寫入付款失敗紀錄，顧客可重新付款）
             if (response.getStatus() == com.info.ecommerce.modules.payment.enums.PaymentGatewayStatus.SUCCESS) {
                 paymentCallbackService.handlePaymentSuccess(response);
-            } else {
-                paymentCallbackService.handlePaymentFailure(response);
             }
             
             return ApiResponse.success("支付確認成功", response);

@@ -264,4 +264,22 @@ class RoleBasedAccessControlTest {
                         .contentType(MediaType.APPLICATION_JSON).content("[999999]"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void staff_cannotPublishContent_changePrices_orMarkOrdersPaid() throws Exception {
+        User staff = userRepository.save(User.builder()
+                .username("rbac-staff2").email("rbac-staff2@test.com")
+                .password(passwordEncoder.encode("staff123")).role(Role.STAFF).enabled(true).build());
+        String staffToken = jwtService.generateToken(staff);
+
+        mockMvc.perform(post("/api/crm/blog/999999/publish").header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/marketing/coupons/999999").header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/crm/member-levels/999999").header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/orders/999999/status").param("status", "PAID")
+                        .header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isForbidden());
+    }
 }

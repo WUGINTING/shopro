@@ -23,6 +23,16 @@
                 :hint="profile.email !== authStore.user?.email ? '變更後需要重新驗證 Email' : ''"
                 :rules="[(val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Email 格式不正確']"
               />
+              <q-input
+                v-if="identityChanged"
+                v-model="profileCurrentPassword"
+                outlined
+                type="password"
+                label="目前密碼"
+                hint="變更帳號或 Email 需要輸入目前密碼"
+                autocomplete="current-password"
+                :rules="[(val: string) => !!val || '請輸入目前密碼']"
+              />
               <q-btn type="submit" color="primary" unelevated no-caps label="儲存" :loading="savingProfile" />
             </q-form>
           </q-card-section>
@@ -64,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useQuasar, type QForm } from 'quasar'
 import EmailVerifyBanner from '@/components/store/EmailVerifyBanner.vue'
 import { authApi } from '@/api/auth'
@@ -76,6 +86,12 @@ const profile = ref({ username: authStore.user?.username || '', email: authStore
 const passwords = ref({ current: '', next: '', confirm: '' })
 const passwordFormRef = ref<QForm>()
 const savingProfile = ref(false)
+const profileCurrentPassword = ref('')
+// 變更帳號名稱或 Email 時需要輸入目前密碼
+const identityChanged = computed(() =>
+  profile.value.username.trim() !== (authStore.user?.username ?? '') ||
+  profile.value.email.trim() !== (authStore.user?.email ?? '')
+)
 const savingPassword = ref(false)
 
 const applyUser = (user: NonNullable<typeof authStore.user>) => {
@@ -89,7 +105,12 @@ const applyUser = (user: NonNullable<typeof authStore.user>) => {
 const saveProfile = async () => {
   savingProfile.value = true
   try {
-    const response = await authApi.updateProfile({ username: profile.value.username.trim(), email: profile.value.email.trim() })
+    const response = await authApi.updateProfile({
+      username: profile.value.username.trim(),
+      email: profile.value.email.trim(),
+      ...(identityChanged.value ? { currentPassword: profileCurrentPassword.value } : {})
+    })
+    profileCurrentPassword.value = ''
     if (response.data) {
       applyUser(response.data)
       $q.notify({ type: 'positive', message: response.data.emailVerified === false ? '已儲存，請到新信箱完成 Email 驗證' : '已儲存' })

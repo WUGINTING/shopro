@@ -26,12 +26,14 @@ public class EdmController {
 
     private final EdmService edmService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建 EDM 活動")
     public ApiResponse<EdmCampaignDTO> createEdmCampaign(@Valid @RequestBody EdmCampaignDTO dto) {
         return ApiResponse.success("EDM 活動已創建", edmService.createEdmCampaign(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新 EDM 活動")
     public ApiResponse<EdmCampaignDTO> updateEdmCampaign(
@@ -47,6 +49,7 @@ public class EdmController {
         return ApiResponse.success(edmService.getEdmCampaign(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除 EDM 活動")
     public ApiResponse<Void> deleteEdmCampaign(
@@ -74,6 +77,7 @@ public class EdmController {
         return ApiResponse.success(edmService.listEdmCampaignsByStatus(status, pageable));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/schedule")
     @Operation(summary = "排程 EDM 活動")
     public ApiResponse<EdmCampaignDTO> scheduleEdmCampaign(
@@ -83,6 +87,7 @@ public class EdmController {
         return ApiResponse.success("EDM 活動已排程", edmService.scheduleEdmCampaign(id, scheduledAt));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/send")
     @Operation(summary = "發送 EDM 活動")
     public ApiResponse<EdmCampaignDTO> sendEdmCampaign(
@@ -90,6 +95,7 @@ public class EdmController {
         return ApiResponse.success("EDM 活動已發送", edmService.sendEdmCampaign(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/cancel")
     @Operation(summary = "取消 EDM 活動")
     public ApiResponse<EdmCampaignDTO> cancelEdmCampaign(

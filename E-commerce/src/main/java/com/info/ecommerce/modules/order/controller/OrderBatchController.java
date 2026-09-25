@@ -24,10 +24,15 @@ import java.util.List;
 public class OrderBatchController {
 
     private final OrderBatchService orderBatchService;
+    private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
 
     @PutMapping("/status")
     @Operation(summary = "批量更新訂單狀態", description = "支援批量更新訂單狀態")
     public ApiResponse<List<Long>> batchUpdateStatus(@Valid @RequestBody BatchOrderUpdateDTO dto) {
+        if (dto.getTargetStatus() == com.info.ecommerce.modules.order.enums.OrderStatus.PAID
+                || dto.getTargetStatus() == com.info.ecommerce.modules.order.enums.OrderStatus.REFUNDED) {
+            currentUserService.assertManagerOrAdmin("標記已付款 / 已退款只能由經理或管理員操作");
+        }
         return ApiResponse.success("批量更新成功", orderBatchService.batchUpdateStatus(dto));
     }
 

@@ -26,12 +26,14 @@ public class MarketingCampaignController {
 
     private final MarketingCampaignService campaignService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建營銷活動")
     public ApiResponse<MarketingCampaignDTO> createCampaign(@Valid @RequestBody MarketingCampaignDTO dto) {
         return ApiResponse.success("營銷活動已創建", campaignService.createCampaign(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新營銷活動")
     public ApiResponse<MarketingCampaignDTO> updateCampaign(
@@ -47,6 +49,7 @@ public class MarketingCampaignController {
         return ApiResponse.success(campaignService.getCampaign(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除營銷活動")
     public ApiResponse<Void> deleteCampaign(
@@ -84,6 +87,7 @@ public class MarketingCampaignController {
         return ApiResponse.success(response);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/status")
     @Operation(summary = "更新活動狀態")
     public ApiResponse<MarketingCampaignDTO> updateCampaignStatus(

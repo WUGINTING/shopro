@@ -19,6 +19,7 @@ public class StaffService {
     private static final int MAX_STAFF_COUNT = 50;
 
     private final StaffRepository staffRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     public List<StaffDTO> getAllStaff() {
         return staffRepository.findAll().stream()
@@ -51,10 +52,9 @@ public class StaffService {
         }
 
         Staff staff = new Staff();
-        BeanUtils.copyProperties(dto, staff, "id", "createdAt", "lastLoginAt");
-        
-        // TODO: 密碼加密（等 Security 再處理）
-        // staff.setPassword(passwordEncoder.encode(dto.getPassword()));
+        BeanUtils.copyProperties(dto, staff, "id", "password", "createdAt", "lastLoginAt");
+        // 密碼只存雜湊值
+        staff.setPassword(passwordEncoder.encode(dto.getPassword()));
         
         staff = staffRepository.save(staff);
         return toDTO(staff);
@@ -75,8 +75,7 @@ public class StaffService {
         
         // 如果有填密碼才更新
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
-            // TODO: 密碼加密
-            staff.setPassword(dto.getPassword());
+            staff.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
 
         staff = staffRepository.save(staff);

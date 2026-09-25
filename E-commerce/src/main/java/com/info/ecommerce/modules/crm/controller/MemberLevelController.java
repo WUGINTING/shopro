@@ -23,12 +23,14 @@ public class MemberLevelController {
 
     private final MemberLevelService memberLevelService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建會員等級")
     public ApiResponse<MemberLevelDTO> createMemberLevel(@Valid @RequestBody MemberLevelDTO dto) {
         return ApiResponse.success("會員等級已創建", memberLevelService.createMemberLevel(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新會員等級")
     public ApiResponse<MemberLevelDTO> updateMemberLevel(
@@ -44,6 +46,7 @@ public class MemberLevelController {
         return ApiResponse.success(memberLevelService.getMemberLevel(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除會員等級")
     public ApiResponse<Void> deleteMemberLevel(
@@ -73,6 +76,7 @@ public class MemberLevelController {
         return ApiResponse.success(memberLevelService.listEnabledMemberLevels());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}/toggle-enabled")
     @Operation(summary = "切換會員等級啟用狀態")
     public ApiResponse<MemberLevelDTO> toggleEnabled(

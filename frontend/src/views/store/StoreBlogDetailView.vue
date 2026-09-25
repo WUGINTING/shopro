@@ -41,7 +41,7 @@
 
     <section v-if="post" class="detail-body">
       <div v-if="post.coverImageUrl" class="detail-cover" :style="{ backgroundImage: `url(${post.coverImageUrl})` }"></div>
-      <div class="detail-content" v-html="post.content"></div>
+      <div class="detail-content" v-html="sanitizeHtml(post.content)"></div>
     </section>
 
     <section v-if="post" class="detail-cta q-mt-xl">
@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import { sanitizeHtml } from '@/utils/sanitize'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'

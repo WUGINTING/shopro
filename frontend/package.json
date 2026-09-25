@@ -18,6 +18,7 @@
     "@vueuse/core": "^14.1.0",
     "axios": "^1.13.2",
     "chart.js": "^4.4.1",
+    "dompurify": "^3.4.16",
     "element-plus": "^2.13.0",
     "js-cookie": "^3.0.5",
     "pinia": "^3.0.4",

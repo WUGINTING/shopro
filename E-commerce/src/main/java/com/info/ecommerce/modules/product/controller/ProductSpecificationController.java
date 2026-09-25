@@ -53,6 +53,14 @@ public class ProductSpecificationController {
     public ApiResponse<ProductSpecificationDTO> updateSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id,
             @Valid @RequestBody ProductSpecificationDTO dto) {
+        // 員工可更新規格名稱、庫存等，但價格與成本只能由經理或管理員修改
+        if (!currentUserService.isManagerOrAdmin()) {
+            ProductSpecificationDTO existing = specificationService.getSpecification(id);
+            if (ProductController.priceChanged(existing.getPrice(), dto.getPrice())
+                    || ProductController.priceChanged(existing.getCost(), dto.getCost())) {
+                throw new org.springframework.security.access.AccessDeniedException("規格價格只能由經理或管理員修改");
+            }
+        }
         return ApiResponse.success("規格已更新", specificationService.updateSpecification(id, dto));
     }
 

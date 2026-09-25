@@ -136,6 +136,17 @@
                 ]"
               />
 
+              <q-input
+                v-model="editForm.currentPassword"
+                label="目前密碼 *"
+                hint="變更帳號或 Email 需要輸入目前密碼"
+                outlined
+                type="password"
+                autocomplete="current-password"
+                class="q-mb-md"
+                :rules="[val => !!val || '請輸入目前密碼']"
+              />
+
               <div class="row justify-end q-gutter-sm">
                 <q-btn label="取消" flat color="grey" v-close-popup />
                 <q-btn
@@ -256,7 +267,8 @@ const showConfirmPassword = ref(false)
 
 const editForm = ref({
   username: '',
-  email: ''
+  email: '',
+  currentPassword: ''
 })
 
 const passwordForm = ref({
@@ -299,7 +311,8 @@ const loadProfile = async () => {
       profile.value = response.data
       editForm.value = {
         username: response.data.username,
-        email: response.data.email
+        email: response.data.email,
+        currentPassword: ''
       }
       // Update auth store with latest profile data
       authStore.setAuth(authStore.token!, response.data)
@@ -322,7 +335,8 @@ const handleUpdateProfile = async () => {
   try {
     const updateData: UpdateProfileRequest = {
       username: editForm.value.username,
-      email: editForm.value.email
+      email: editForm.value.email,
+      currentPassword: editForm.value.currentPassword
     }
 
     const response = await authApi.updateProfile(updateData)

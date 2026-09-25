@@ -23,12 +23,14 @@ public class CouponController {
 
     private final CouponService couponService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "建立優惠券")
     public ApiResponse<CouponDTO> create(@Valid @RequestBody CouponDTO dto) {
         return ApiResponse.success("優惠券已建立", couponService.create(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新優惠券")
     public ApiResponse<CouponDTO> update(@PathVariable Long id, @Valid @RequestBody CouponDTO dto) {
@@ -49,6 +51,7 @@ public class CouponController {
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除優惠券（未被使用過才可刪除）")
     public ApiResponse<Void> delete(@PathVariable Long id) {
@@ -56,12 +59,14 @@ public class CouponController {
         return ApiResponse.success("優惠券已刪除", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/enable")
     @Operation(summary = "啟用優惠券")
     public ApiResponse<CouponDTO> enable(@PathVariable Long id) {
         return ApiResponse.success(couponService.setEnabled(id, true));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/disable")
     @Operation(summary = "停用優惠券")
     public ApiResponse<CouponDTO> disable(@PathVariable Long id) {

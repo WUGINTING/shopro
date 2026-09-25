@@ -38,6 +38,18 @@ public class CurrentUserService {
         return userRepository.findByUsername(authentication.getName());
     }
 
+    /** 是否為經理或管理員（可修改價格、標記已付款等影響金額的操作） */
+    public boolean isManagerOrAdmin() {
+        return currentUser().map(user -> user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER).orElse(false);
+    }
+
+    /** 影響金額的操作限經理或管理員 */
+    public void assertManagerOrAdmin(String message) {
+        if (!isManagerOrAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(message);
+        }
+    }
+
     /** 是否為後台員工（ADMIN / MANAGER / STAFF） */
     public boolean isStaff() {
         return currentUser().map(user -> user.getRole() != null && user.getRole() != Role.CUSTOMER).orElse(false);

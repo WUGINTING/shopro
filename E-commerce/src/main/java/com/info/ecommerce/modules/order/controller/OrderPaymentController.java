@@ -25,12 +25,14 @@ public class OrderPaymentController {
 
     private final OrderPaymentService orderPaymentService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建付款記錄")
     public ApiResponse<OrderPaymentDTO> createPayment(@Valid @RequestBody OrderPaymentDTO dto) {
         return ApiResponse.success("付款記錄已建立", orderPaymentService.createPayment(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{paymentId}/status")
     @Operation(summary = "更新付款狀態")
     public ApiResponse<OrderPaymentDTO> updatePaymentStatus(
@@ -47,6 +49,7 @@ public class OrderPaymentController {
         return ApiResponse.success(orderPaymentService.getPaymentsByOrderId(orderId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{paymentId}/refund")
     @Operation(summary = "申請退款")
     public ApiResponse<OrderPaymentDTO> requestRefund(

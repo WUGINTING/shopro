@@ -27,6 +27,14 @@ public class StorefrontOrderController {
     private final StorefrontCheckoutService storefrontCheckoutService;
     private final com.info.ecommerce.common.RateLimiter rateLimiter;
 
+    /** 同一來源 1 小時內最多下單數（防止大量假訂單佔用庫存、耗盡優惠券或濫發通知信） */
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.checkout-per-client:20}")
+    private int checkoutPerClient;
+
+    /** 同一 Email 1 小時內最多下單數（每筆訂單都會寄通知信到此信箱） */
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.checkout-per-email:10}")
+    private int checkoutPerEmail;
+
     /**
      * 以訂單編號 + Email 驗證的端點只計算失敗次數（同一來源 10 分鐘 20 次），避免暴力猜測他人訂單；
      * 成功的查詢（例如付款結果頁輪詢）不計入，共用 IP 的顧客不會互相影響
@@ -42,13 +50,29 @@ public class StorefrontOrderController {
 
     @PostMapping("/quote")
     @Operation(summary = "結帳試算", description = "依後端商品價格與物流設定計算小計、運費與總額，並檢查庫存")
-    public ApiResponse<StorefrontQuoteDTO> quote(@Valid @RequestBody StorefrontCheckoutRequest.QuoteRequest request) {
-        return ApiResponse.success(storefrontCheckoutService.quote(request.getItems(), request.getShippingMethod(), request.getCouponCode()));
+    public ApiResponse<StorefrontQuoteDTO> quote(@Valid @RequestBody StorefrontCheckoutRequest.QuoteRequest request,
+                                                 HttpServletRequest http) {
+        boolean hasCoupon = request.getCouponCode() != null && !request.getCouponCode().isBlank();
+        String client = com.info.ecommerce.common.RateLimiter.clientKey(http);
+        if (hasCoupon) {
+            // 無效的優惠券代碼才計次（同一來源 10 分鐘 20 次），避免逐一猜測未公開的優惠券
+            rateLimiter.check("coupon-failure", client, 20, java.time.Duration.ofMinutes(10), "優惠券嘗試次數過多，請稍後再試");
+        }
+        StorefrontQuoteDTO quote = storefrontCheckoutService.quote(request.getItems(), request.getShippingMethod(), request.getCouponCode());
+        if (hasCoupon && quote.getCouponMessage() == null) {
+            rateLimiter.release("coupon-failure", client);
+        }
+        return ApiResponse.success(quote);
     }
 
     @PostMapping("/checkout")
     @Operation(summary = "訪客結帳", description = "建立訂單；付款方式為 ECPAY 時一併回傳綠界付款網址")
-    public ApiResponse<StorefrontCheckoutResultDTO> checkout(@Valid @RequestBody StorefrontCheckoutRequest request) {
+    public ApiResponse<StorefrontCheckoutResultDTO> checkout(@Valid @RequestBody StorefrontCheckoutRequest request,
+                                                             HttpServletRequest http) {
+        String tooMany = "下單次數過多，請稍後再試；如需大量訂購請聯繫客服";
+        rateLimiter.check("checkout-client", com.info.ecommerce.common.RateLimiter.clientKey(http), checkoutPerClient,
+                java.time.Duration.ofHours(1), tooMany);
+        rateLimiter.check("checkout-email", request.getCustomerEmail(), checkoutPerEmail, java.time.Duration.ofHours(1), tooMany);
         return ApiResponse.success("訂單已建立", storefrontCheckoutService.checkout(request));
     }
 

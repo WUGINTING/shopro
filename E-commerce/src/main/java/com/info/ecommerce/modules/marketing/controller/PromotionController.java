@@ -23,12 +23,14 @@ public class PromotionController {
     private final PromotionService promotionService;
     private final CurrentUserService currentUserService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建促銷活動")
     public ApiResponse<PromotionDTO> createPromotion(@Valid @RequestBody PromotionDTO dto) {
         return ApiResponse.success("促銷活動已創建", promotionService.createPromotion(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新促銷活動")
     public ApiResponse<PromotionDTO> updatePromotion(
@@ -46,6 +48,7 @@ public class PromotionController {
                 : promotionService.getCurrentPromotion(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除促銷活動")
     public ApiResponse<Void> deletePromotion(
@@ -68,6 +71,7 @@ public class PromotionController {
         return ApiResponse.success(promotionService.listPromotions(pageable));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/enable")
     @Operation(summary = "啟用促銷活動")
     public ApiResponse<PromotionDTO> enablePromotion(
@@ -75,6 +79,7 @@ public class PromotionController {
         return ApiResponse.success("促銷活動已啟用", promotionService.enablePromotion(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/disable")
     @Operation(summary = "停用促銷活動")
     public ApiResponse<PromotionDTO> disablePromotion(

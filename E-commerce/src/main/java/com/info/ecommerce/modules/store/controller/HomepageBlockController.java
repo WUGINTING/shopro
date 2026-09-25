@@ -37,12 +37,14 @@ public class HomepageBlockController {
         return ApiResponse.success(homepageBlockService.getBlockById(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "新增區塊")
     public ApiResponse<HomepageBlockDTO> createBlock(@Valid @RequestBody HomepageBlockDTO dto) {
         return ApiResponse.success("區塊已新增", homepageBlockService.createBlock(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新區塊")
     public ApiResponse<HomepageBlockDTO> updateBlock(
@@ -51,6 +53,7 @@ public class HomepageBlockController {
         return ApiResponse.success("區塊已更新", homepageBlockService.updateBlock(id, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除區塊")
     public ApiResponse<Void> deleteBlock(@PathVariable Long id) {

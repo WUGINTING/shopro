@@ -25,12 +25,14 @@ public class BlogController {
 
     private final BlogService blogService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建部落格文章")
     public ApiResponse<BlogPostDTO> createBlogPost(@Valid @RequestBody BlogPostDTO dto) {
         return ApiResponse.success("部落格文章已創建", blogService.createBlogPost(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新部落格文章")
     public ApiResponse<BlogPostDTO> updateBlogPost(
@@ -53,6 +55,7 @@ public class BlogController {
         return ApiResponse.success(blogService.getBlogPostBySlug(slug));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除部落格文章")
     public ApiResponse<Void> deleteBlogPost(
@@ -103,6 +106,7 @@ public class BlogController {
         return ApiResponse.success(blogService.listBlogPostsByTag(tag, pageable));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/publish")
     @Operation(summary = "發布部落格文章")
     public ApiResponse<BlogPostDTO> publishBlogPost(
@@ -110,6 +114,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已發布", blogService.publishBlogPost(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/schedule")
     @Operation(summary = "排程發布部落格文章")
     public ApiResponse<BlogPostDTO> scheduleBlogPost(
@@ -119,6 +124,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已排程", blogService.scheduleBlogPost(id, scheduledAt));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/archive")
     @Operation(summary = "封存部落格文章")
     public ApiResponse<BlogPostDTO> archiveBlogPost(
@@ -126,6 +132,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已封存", blogService.archiveBlogPost(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/schedule-unpublish")
     @Operation(summary = "排程下架部落格文章")
     public ApiResponse<BlogPostDTO> scheduleUnpublishBlogPost(

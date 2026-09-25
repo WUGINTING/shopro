@@ -29,6 +29,7 @@ public class BlogService {
 
         BlogPost blogPost = new BlogPost();
         BeanUtils.copyProperties(dto, blogPost, "id");
+        blogPost.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(blogPost.getContent()));
         blogPost = blogPostRepository.save(blogPost);
         return toDTO(blogPost);
     }
@@ -43,6 +44,7 @@ public class BlogService {
         }
 
         BeanUtils.copyProperties(dto, blogPost, "id", "createdAt", "updatedAt", "viewCount");
+        blogPost.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(blogPost.getContent()));
         blogPost = blogPostRepository.save(blogPost);
         return toDTO(blogPost);
     }

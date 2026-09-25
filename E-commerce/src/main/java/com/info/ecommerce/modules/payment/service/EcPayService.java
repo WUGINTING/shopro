@@ -378,8 +378,12 @@ public class EcPayService implements PaymentGatewayService {
                 builder.amount(new BigDecimal(tradeAmt));
             }
             
-            // 判斷交易狀態
-            if ("1".equals(rtnCode)) {
+            // 判斷交易狀態：綠界廠商後台的「模擬付款」（SimulatePaid=1）沒有實際收款，正式環境不視為付款成功
+            if ("1".equals(params.get("SimulatePaid")) && !ecPayConfig.isSandbox()) {
+                log.warn("Ignored ECPay simulated payment for {}", originalOrderNumber);
+                builder.status(PaymentGatewayStatus.FAILED)
+                        .errorMessage("綠界模擬付款（非實際收款），不變更訂單狀態");
+            } else if ("1".equals(rtnCode)) {
                 builder.status(PaymentGatewayStatus.SUCCESS);
             } else {
                 builder.status(PaymentGatewayStatus.FAILED)

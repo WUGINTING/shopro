@@ -23,6 +23,7 @@ public class OrderDiscountController {
 
     private final OrderDiscountService orderDiscountService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "新增訂單折扣", description = "為訂單添加折扣")
     public ApiResponse<OrderDiscountDTO> addDiscount(@Valid @RequestBody OrderDiscountDTO dto) {
@@ -49,6 +50,7 @@ public class OrderDiscountController {
         return ApiResponse.success(orderDiscountService.findByDiscountCode(discountCode));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{discountId}")
     @Operation(summary = "更新訂單折扣", description = "更新指定折扣記錄的資訊")
     public ApiResponse<OrderDiscountDTO> updateDiscount(
@@ -57,6 +59,7 @@ public class OrderDiscountController {
         return ApiResponse.success("折扣已更新", orderDiscountService.updateDiscount(discountId, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{discountId}")
     @Operation(summary = "刪除訂單折扣")
     public ApiResponse<Void> deleteDiscount(

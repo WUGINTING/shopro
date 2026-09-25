@@ -46,6 +46,9 @@ public class OrderController {
     public ApiResponse<OrderDTO> updateOrder(
             @Parameter(description = "訂單 ID") @PathVariable Long id,
             @Valid @RequestBody OrderDTO dto) {
+        if (dto.getStatus() == OrderStatus.PAID || dto.getStatus() == OrderStatus.REFUNDED) {
+            currentUserService.assertManagerOrAdmin("標記已付款 / 已退款只能由經理或管理員操作");
+        }
         return ApiResponse.success("訂單已更新", orderService.updateOrder(id, dto));
     }
 
@@ -142,6 +145,10 @@ public class OrderController {
             @Parameter(description = "新狀態") @RequestParam OrderStatus status,
             @Parameter(description = "操作者 ID") @RequestParam(required = false) Long operatorId,
             @Parameter(description = "操作者名稱") @RequestParam(required = false) String operatorName) {
+        // 手動標記已付款（未經金流）會觸發付款通知與會員累積消費，限經理或管理員
+        if (status == OrderStatus.PAID || status == OrderStatus.REFUNDED) {
+            currentUserService.assertManagerOrAdmin("標記已付款 / 已退款只能由經理或管理員操作");
+        }
         return ApiResponse.success("訂單狀態已更新",
             orderService.updateOrderStatus(id, status, operatorId, operatorName));
     }

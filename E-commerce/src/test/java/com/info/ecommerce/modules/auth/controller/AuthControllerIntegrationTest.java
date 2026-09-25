@@ -156,4 +156,28 @@ class AuthControllerIntegrationTest {
                         .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void changingEmail_requiresTheCurrentPassword() throws Exception {
+        RegisterRequest registerRequest = RegisterRequest.builder()
+                .username("mailuser").email("mail@example.com").password("password123").role(Role.CUSTOMER).build();
+        String token = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andReturn().getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/profile")
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"mailuser\",\"email\":\"attacker@example.com\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/profile")
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"mailuser\",\"email\":\"attacker@example.com\",\"currentPassword\":\"wrong\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/profile")
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"mailuser\",\"email\":\"new@example.com\",\"currentPassword\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("new@example.com"));
+    }
 }

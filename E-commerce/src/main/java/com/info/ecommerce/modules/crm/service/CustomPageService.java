@@ -28,6 +28,7 @@ public class CustomPageService {
 
         CustomPage customPage = new CustomPage();
         BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
+        customPage.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(customPage.getContent()));
         customPage = customPageRepository.save(customPage);
         return toDTO(customPage);
     }
@@ -43,6 +44,7 @@ public class CustomPageService {
 
         Boolean currentEnabled = customPage.getEnabled();
         BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
+        customPage.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(customPage.getContent()));
         if (customPage.getEnabled() == null) {
             // 未傳入時保留原本的啟用狀態
             customPage.setEnabled(currentEnabled != null ? currentEnabled : Boolean.TRUE);
