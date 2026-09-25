@@ -164,7 +164,10 @@ public class OrderService {
 
         order.setSubtotalAmount(subtotal);
 
-        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        // 折扣不可超過商品小計（例如修改品項後小計變少），避免總額變成負數
+        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount().max(BigDecimal.ZERO) : BigDecimal.ZERO;
+        discount = discount.min(subtotal);
+        order.setDiscountAmount(discount);
         BigDecimal shipping = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
 
         // 總金額 = 小計 - 訂單折扣 + 運費
@@ -432,7 +435,7 @@ public class OrderService {
         publishStatusEmail(id, oldStatus, dto.getStatus());
 
         // 記錄歷史
-        if (oldStatus != dto.getStatus()) {
+        if (dto.getStatus() != null && oldStatus != dto.getStatus()) {
             orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
                 oldStatus.name(), dto.getStatus().name(), null, null);
 

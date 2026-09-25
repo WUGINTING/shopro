@@ -144,6 +144,7 @@ ECPAY_NOTIFY_URL=https://api.yourdomain.com/api/payment-gateway/callback/ecpay
 > 本版的資料表變更：`users.email_verified`、`member.marketing_opt_in` 欄位，以及新資料表 `coupon`。從舊版升級時請以 `JPA_DDL_AUTO=update` 啟動一次，之後再改回 `validate`。
 > - 既有帳號的 `email_verified` 為 NULL，視為已驗證；新註冊的會員需點擊驗證信（或使用 Google 登入）後，才能在「我的訂單」看到以該 Email 下的訂單。
 > - 既有會員的 `marketing_opt_in` 為 NULL，視為**未同意**接收 EDM；只有之後在結帳或會員中心勾選同意的會員會收到電子報。
+> - 後台通知新增類型 `CONTACT_MESSAGE`。SQL Server 既有的 `admin_notifications.type` CHECK 約束不會被 `update` 修改，請執行 `E-commerce/database/migration/2026_09_admin_notification_contact_message.sql`，否則前台聯絡表單會送出失敗。
 
 #### 3. 建立 systemd 服務
 

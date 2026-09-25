@@ -226,4 +226,13 @@ class CheckoutDiscountIntegrationTest {
                 .andExpect(jsonPath("$.data[0].usedCount").isEmpty());
         assertNotNull(secret.getId());
     }
+
+    @Test
+    void freeShippingCoupon_isNotConsumed_whenShippingIsAlreadyFree() throws Exception {
+        coupon("SHIPONCE", "FREE_SHIPPING", null, 1);
+        JsonNode overThreshold = quote(3, "SHIPONCE"); // 1200 已達免運門檻
+        assertAmount("0", overThreshold.get("shippingFee"));
+        assertTrue(overThreshold.get("couponCode").isNull());
+        assertTrue(overThreshold.get("couponMessage").asText().contains("已免運"));
+    }
 }

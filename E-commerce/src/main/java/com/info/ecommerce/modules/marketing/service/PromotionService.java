@@ -19,10 +19,7 @@ public class PromotionService {
 
     @Transactional
     public PromotionDTO createPromotion(PromotionDTO dto) {
-        // 驗證日期
-        if (dto.getEndDate().isBefore(dto.getStartDate())) {
-            throw new BusinessException("結束日期不能早於開始日期");
-        }
+        validate(dto);
 
         Promotion promotion = new Promotion();
         BeanUtils.copyProperties(dto, promotion, "id");
@@ -35,10 +32,7 @@ public class PromotionService {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("促銷活動不存在"));
 
-        // 驗證日期
-        if (dto.getEndDate().isBefore(dto.getStartDate())) {
-            throw new BusinessException("結束日期不能早於開始日期");
-        }
+        validate(dto);
 
         BeanUtils.copyProperties(dto, promotion, "id", "createdAt", "updatedAt");
         promotion = promotionRepository.save(promotion);
@@ -110,5 +104,39 @@ public class PromotionService {
         BeanUtils.copyProperties(promotion, dto);
         return dto;
     }
-}
 
+    /**
+     * 促銷活動會直接影響結帳金額，必須設定合理的折扣：
+     * 折扣 / 全館活動需指定折扣方式，百分比介於 0 到 100（不含 100），固定金額需大於 0
+     */
+    private void validate(PromotionDTO dto) {
+        if (dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new BusinessException("結束日期不能早於開始日期");
+        }
+        String type = dto.getType() == null ? "" : dto.getType().trim();
+        if (!java.util.Set.of("DISCOUNT", "FULL_SHOP", "FREE_SHIPPING", "BUY_GIFT").contains(type)) {
+            throw new BusinessException("活動類型不正確");
+        }
+        dto.setType(type);
+        if (dto.getMinPurchaseAmount() != null && dto.getMinPurchaseAmount().signum() < 0) {
+            throw new BusinessException("最低購買金額不可小於 0");
+        }
+        if (dto.getMaxDiscountAmount() != null && dto.getMaxDiscountAmount().signum() < 0) {
+            throw new BusinessException("最高折抵金額不可小於 0");
+        }
+        if ("DISCOUNT".equals(type) || "FULL_SHOP".equals(type)) {
+            java.math.BigDecimal value = dto.getDiscountValue();
+            if ("PERCENTAGE".equals(dto.getDiscountType())) {
+                if (value == null || value.signum() <= 0 || value.compareTo(java.math.BigDecimal.valueOf(100)) >= 0) {
+                    throw new BusinessException("百分比折扣須介於 0 到 100 之間（例如 10 表示打 9 折）");
+                }
+            } else if ("FIXED".equals(dto.getDiscountType())) {
+                if (value == null || value.signum() <= 0) {
+                    throw new BusinessException("請輸入折抵金額");
+                }
+            } else {
+                throw new BusinessException("折扣活動請選擇折扣方式（百分比或固定金額）");
+            }
+        }
+    }
+}

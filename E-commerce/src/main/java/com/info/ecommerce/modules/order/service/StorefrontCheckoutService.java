@@ -234,12 +234,12 @@ public class StorefrontCheckoutService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         ShippingRule rule = resolveShippingRule(method);
-        CheckoutDiscountService.Result discount = checkoutDiscountService.calculate(
-                subtotal, couponCode, currentUserService.currentMember(), strictCoupon);
-        BigDecimal shippingFee = discount.freeShipping()
-                || (rule.threshold() != null && subtotal.compareTo(rule.threshold()) >= 0)
+        BigDecimal baseShippingFee = rule.threshold() != null && subtotal.compareTo(rule.threshold()) >= 0
                 ? BigDecimal.ZERO
                 : rule.baseFee();
+        CheckoutDiscountService.Result discount = checkoutDiscountService.calculate(
+                subtotal, couponCode, currentUserService.currentMember(), strictCoupon, baseShippingFee);
+        BigDecimal shippingFee = discount.freeShipping() ? BigDecimal.ZERO : baseShippingFee;
 
         StorefrontQuoteDTO quote = StorefrontQuoteDTO.builder()
                 .lines(lines)

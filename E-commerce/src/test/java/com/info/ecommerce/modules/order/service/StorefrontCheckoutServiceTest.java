@@ -119,7 +119,7 @@ class StorefrontCheckoutServiceTest {
     @BeforeEach
     void setUp() {
         // 預設沒有任何折扣
-        when(checkoutDiscountService.calculate(any(), any(), any(), anyBoolean()))
+        when(checkoutDiscountService.calculate(any(), any(), any(), anyBoolean(), any()))
                 .thenReturn(new com.info.ecommerce.modules.marketing.service.CheckoutDiscountService.Result(
                         java.math.BigDecimal.ZERO, false, java.util.List.of(), null, null, null));
         plainProduct = Product.builder()

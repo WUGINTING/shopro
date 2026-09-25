@@ -63,6 +63,15 @@ public class CheckoutDiscountService {
      * @param strictCoupon true 時優惠券無效直接丟出錯誤（正式結帳），false 時只回傳訊息（試算）
      */
     public Result calculate(BigDecimal subtotal, String couponCode, Optional<Member> member, boolean strictCoupon) {
+        return calculate(subtotal, couponCode, member, strictCoupon, BigDecimal.ONE);
+    }
+
+    /**
+     * @param shippingFee 套用免運前的運費（已考慮免運門檻與門市自取）；為 0 時免運優惠沒有作用，免運券不會被使用
+     */
+    public Result calculate(BigDecimal subtotal, String couponCode, Optional<Member> member, boolean strictCoupon,
+                            BigDecimal shippingFee) {
+        boolean shippingCharged = shippingFee != null && shippingFee.signum() > 0;
         LocalDate today = LocalDate.now();
         List<Promotion> promotions = promotionRepository.findCurrent(today, Pageable.unpaged()).getContent();
 
@@ -80,7 +89,7 @@ public class CheckoutDiscountService {
                 if (freeShippingSource == null) {
                     freeShippingSource = new Applied(TYPE_FREE_SHIPPING, promotion.getName(), null, BigDecimal.ZERO);
                 }
-            } else if ("DISCOUNT".equals(type) || "FULL_SHOP".equals(type)) {
+            } else if (("DISCOUNT".equals(type) || "FULL_SHOP".equals(type)) && isValidDiscount(promotion)) {
                 BigDecimal amount = discountOf(subtotal, promotion.getDiscountType(), promotion.getDiscountValue(),
                         promotion.getMaxDiscountAmount());
                 if (amount.signum() > 0) {
@@ -133,7 +142,9 @@ public class CheckoutDiscountService {
         boolean couponUsed = false;
         if (couponCandidate != null) {
             if (TYPE_FREE_SHIPPING.equals(couponCandidate.type())) {
-                if (freeShippingSource == null) {
+                if (!shippingCharged) {
+                    couponMessage = "本訂單已免運，不需使用此優惠券";
+                } else if (freeShippingSource == null) {
                     freeShippingSource = couponCandidate;
                     couponUsed = true;
                 } else {
@@ -145,11 +156,12 @@ public class CheckoutDiscountService {
                 couponMessage = "已自動套用更優惠的方案，此優惠券本次不會使用";
             }
         }
-        if (freeShippingSource != null) {
+        // 免運只在實際有運費時才列為套用的優惠
+        if (freeShippingSource != null && shippingCharged) {
             applied.add(freeShippingSource);
         }
 
-        return new Result(discount, freeShippingSource != null, applied,
+        return new Result(discount, freeShippingSource != null && shippingCharged, applied,
                 couponUsed ? coupon.getId() : null, couponUsed ? coupon.getCode() : null, couponMessage);
     }
 
@@ -182,6 +194,18 @@ public class CheckoutDiscountService {
             return "商品金額需滿 NT$" + coupon.getMinPurchaseAmount().stripTrailingZeros().toPlainString() + " 才能使用此優惠券";
         }
         return null;
+    }
+
+    /** 舊資料可能沒有折扣方式或百分比不合理（例如 100%），這類活動只作為說明，不套用 */
+    private static boolean isValidDiscount(Promotion promotion) {
+        BigDecimal value = promotion.getDiscountValue();
+        if (value == null || value.signum() <= 0) {
+            return false;
+        }
+        if ("PERCENTAGE".equals(promotion.getDiscountType())) {
+            return value.compareTo(BigDecimal.valueOf(100)) < 0;
+        }
+        return "FIXED".equals(promotion.getDiscountType());
     }
 
     private static boolean meetsMinimum(BigDecimal subtotal, BigDecimal minimum) {
