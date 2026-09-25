@@ -143,7 +143,7 @@ public class PaymentCallbackService {
             
             // 累計會員消費並通知後台
             try {
-                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
+                memberService.syncTotalSpent(order.getCustomerId());
             } catch (Exception e) {
                 log.error("Failed to update member total spent for order {}", order.getOrderNumber(), e);
             }

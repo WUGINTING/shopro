@@ -6,6 +6,7 @@ import com.info.ecommerce.modules.auth.entity.Role;
 import com.info.ecommerce.modules.auth.entity.User;
 import com.info.ecommerce.modules.auth.repository.UserRepository;
 import com.info.ecommerce.modules.auth.service.JwtService;
+import com.info.ecommerce.modules.crm.repository.MemberRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
@@ -51,6 +52,7 @@ class StorefrontCheckoutIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtService jwtService;
+    @Autowired private MemberRepository memberRepository;
 
     private Product cup;
     private ProductSpecification blueCup;
@@ -215,5 +217,29 @@ class StorefrontCheckoutIntegrationTest {
         mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", "PAID")
                         .header("Authorization", "Bearer " + adminToken)).andExpect(status().isBadRequest());
         assertEquals(0, specStock());
+    }
+
+    private void changeStatus(long orderId, String status) throws Exception {
+        mockMvc.perform(patch("/api/orders/" + orderId + "/status").param("status", status)
+                        .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
+    }
+
+    private BigDecimal totalSpent(String email) {
+        return memberRepository.findByEmail(email).orElseThrow().getTotalSpent();
+    }
+
+    @Test
+    void memberTotalSpent_countedOnce_andReversedOnRefund() throws Exception {
+        String email = "spender-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
+        long orderId = checkout(checkoutBody(email, cup.getId(), blueCup.getId(), 1)).get("id").asLong();
+        BigDecimal orderTotal = new BigDecimal("480"); // 380 + 100 運費
+
+        changeStatus(orderId, "PAID");
+        assertEquals(0, orderTotal.compareTo(totalSpent(email)));
+        changeStatus(orderId, "PROCESSING");
+        changeStatus(orderId, "COMPLETED");
+        assertEquals(0, orderTotal.compareTo(totalSpent(email)), "出貨再完成不可重複累計");
+        changeStatus(orderId, "REFUNDED");
+        assertEquals(0, BigDecimal.ZERO.compareTo(totalSpent(email)), "退款後應扣回");
     }
 }

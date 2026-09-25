@@ -16,8 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -129,57 +131,33 @@ public class MemberService {
         return toDTO(member);
     }
 
+    /** 計入累計消費的訂單狀態：已付款、處理中（已出貨）、已完成；取消或退款的訂單不計入 */
+    public static final Set<OrderStatus> SPENDING_STATUSES =
+            EnumSet.of(OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.COMPLETED);
+
     /**
-     * 增加客戶總消費金額
-     * 當訂單完成或付款時調用此方法
-     * @param memberId 會員 ID（對應訂單的 customerId）
-     * @param amount 訂單金額
+     * 依訂單資料重新計算會員累計消費。
+     * 訂單狀態每次變動後呼叫，因此重複付款通知、出貨再完成、取消或退款都不會造成重複累計或漏扣。
+     * 會員不存在（例如訪客訂單）時略過。
      */
     @Transactional
-    public void addTotalSpent(Long memberId, BigDecimal amount) {
-        if (memberId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            System.out.println("Warning: addTotalSpent called with invalid parameters - memberId: " + memberId + ", amount: " + amount);
+    public void syncTotalSpent(Long memberId) {
+        if (memberId == null) {
             return;
         }
-        
-        memberRepository.findById(memberId).ifPresentOrElse(
-            member -> {
-                if (member.getTotalSpent() == null) {
-                    member.setTotalSpent(BigDecimal.ZERO);
-                }
-                BigDecimal oldTotal = member.getTotalSpent();
-                member.setTotalSpent(member.getTotalSpent().add(amount));
-                memberRepository.save(member);
-                System.out.println("Successfully updated member " + memberId + " total spent: " + oldTotal + " -> " + member.getTotalSpent());
-            },
-            () -> {
-                System.err.println("Error: Member not found with ID: " + memberId);
-            }
-        );
+        memberRepository.findById(memberId).ifPresent(member -> {
+            member.setTotalSpent(orderRepository.sumTotalAmountByCustomerIdAndStatusIn(memberId, SPENDING_STATUSES));
+            memberRepository.save(member);
+        });
     }
 
     /**
-     * 重新計算客戶的總消費金額（從所有已付款或已完成的訂單中計算）
+     * 重新計算客戶的總消費金額
      */
     @Transactional
     public void recalculateTotalSpent(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException("會員不存在"));
-        
-        // 查詢該客戶所有已付款或已完成的訂單
-        List<Order> paidOrCompletedOrders = orderRepository.findByCustomerId(memberId, Pageable.unpaged())
-                .getContent()
-                .stream()
-                .filter(order -> order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.COMPLETED)
-                .collect(Collectors.toList());
-        
-        // 計算總消費
-        BigDecimal totalSpent = paidOrCompletedOrders.stream()
-                .map(Order::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        member.setTotalSpent(totalSpent);
-        memberRepository.save(member);
+        memberRepository.findById(memberId).orElseThrow(() -> new BusinessException("會員不存在"));
+        syncTotalSpent(memberId);
     }
 
     /**
@@ -187,27 +165,16 @@ public class MemberService {
      */
     @Transactional
     public void recalculateAllMembersTotalSpent() {
-        // 查詢所有已付款或已完成的訂單
-        List<Order> paidOrCompletedOrders = orderRepository.findAll()
+        Map<Long, BigDecimal> customerTotalSpent = orderRepository.findAll()
                 .stream()
-                .filter(order -> order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.COMPLETED)
-                .collect(Collectors.toList());
-        
-        // 按客戶 ID 分組並計算總消費
-        Map<Long, BigDecimal> customerTotalSpent = paidOrCompletedOrders.stream()
+                .filter(order -> order.getCustomerId() != null && SPENDING_STATUSES.contains(order.getStatus()))
                 .collect(Collectors.groupingBy(
                     Order::getCustomerId,
-                    Collectors.reducing(
-                        BigDecimal.ZERO,
-                        Order::getTotalAmount,
-                        BigDecimal::add
-                    )
+                    Collectors.reducing(BigDecimal.ZERO, Order::getTotalAmount, BigDecimal::add)
                 ));
-        
-        // 更新所有會員的總消費
+
         memberRepository.findAll().forEach(member -> {
-            BigDecimal totalSpent = customerTotalSpent.getOrDefault(member.getId(), BigDecimal.ZERO);
-            member.setTotalSpent(totalSpent);
+            member.setTotalSpent(customerTotalSpent.getOrDefault(member.getId(), BigDecimal.ZERO));
             memberRepository.save(member);
         });
     }

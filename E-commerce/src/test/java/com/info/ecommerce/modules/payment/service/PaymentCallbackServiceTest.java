@@ -359,7 +359,7 @@ class PaymentCallbackServiceTest {
 
         assertTrue(result);
         assertEquals(OrderStatus.PAID, testOrder.getStatus());
-        verify(memberService).addTotalSpent(1L, new BigDecimal("1000"));
+        verify(memberService).syncTotalSpent(1L);
     }
 
     @Test

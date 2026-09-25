@@ -76,4 +76,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     );
     
     boolean existsByOrderNumber(String orderNumber);
+
+    /** 會員在指定狀態下的訂單總金額（用於計算累計消費） */
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customerId = :customerId AND o.status IN :statuses")
+    BigDecimal sumTotalAmountByCustomerIdAndStatusIn(@Param("customerId") Long customerId,
+                                                     @Param("statuses") java.util.Collection<OrderStatus> statuses);
 }
