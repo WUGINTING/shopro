@@ -473,10 +473,13 @@ public class OrderService {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
 
-        // 尚未出貨的訂單（待付款，或已付款但還沒建立物流）刪除前歸還庫存與優惠券；
-        // 已出貨 / 已完成的商品已實際賣出，已取消 / 已退款的訂單在當時已處理，都不再歸還
-        boolean unfulfilled = order.getStatus() == OrderStatus.PENDING_PAYMENT
-            || (order.getStatus() == OrderStatus.PAID && orderShipmentRepository.findByOrderId(id).isEmpty());
+        // 尚未出貨的訂單（待付款 / 已付款 / 處理中，且沒有任何已出貨或已送達的物流）刪除前歸還庫存與優惠券；
+        // 已出貨 / 已完成的商品已實際賣出，已取消 / 已退款的訂單在當時已處理，都不再歸還（release 可重複呼叫）
+        boolean shipped = orderShipmentRepository.findByOrderId(id).stream()
+            .anyMatch(shipment -> shipment.getShippingStatus() == com.info.ecommerce.modules.order.enums.ShippingStatus.SHIPPED
+                || shipment.getShippingStatus() == com.info.ecommerce.modules.order.enums.ShippingStatus.DELIVERED);
+        boolean unfulfilled = !shipped && (order.getStatus() == OrderStatus.PENDING_PAYMENT
+            || order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.PROCESSING);
         if (unfulfilled) {
             orderStockService.release(id, order.getOrderNumber());
         }

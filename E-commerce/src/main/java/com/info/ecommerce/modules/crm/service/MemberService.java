@@ -184,13 +184,15 @@ public class MemberService {
     /**
      * 累積消費達門檻自動升級到符合的最高等級。只升不降：退款或後台手動調高的等級不會被自動調低
      */
-    /** 等級高低：兩者都有等級順序時以順序比較，否則以消費門檻比較 */
+    /** 等級高低：以等級順序比較，順序相同或未設定時以消費門檻比較 */
     private static boolean ranksHigher(com.info.ecommerce.modules.crm.entity.MemberLevel candidate,
                                        com.info.ecommerce.modules.crm.entity.MemberLevel current,
                                        java.util.Comparator<com.info.ecommerce.modules.crm.entity.MemberLevel> byThreshold) {
-        if (candidate.getLevelOrder() != null && current.getLevelOrder() != null) {
+        if (candidate.getLevelOrder() != null && current.getLevelOrder() != null
+                && !candidate.getLevelOrder().equals(current.getLevelOrder())) {
             return candidate.getLevelOrder() > current.getLevelOrder();
         }
+        // 等級順序相同（例如都留預設值 1）或未設定時，以消費門檻判斷
         return byThreshold.compare(candidate, current) > 0;
     }
 

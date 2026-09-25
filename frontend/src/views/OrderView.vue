@@ -2881,7 +2881,7 @@ const onProductChange = async (item: any, productId: number) => {
     // 如果沒有規格，使用商品價格
     const specs = productSpecifications.value.get(productId) || []
     if (specs.length === 0) {
-      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      item.unitPrice = productSellingPrice(product)
       calculateItemSubtotal(item)
     }
   }
@@ -2916,7 +2916,7 @@ const onSpecificationChange = (item: any, specificationId: number | undefined) =
     // 如果沒有選擇規格，使用商品價格
     const product = products.value.find(p => p.id === item.productId)
     if (product) {
-      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      item.unitPrice = productSellingPrice(product)
       item.productSku = undefined
       item.productSpec = undefined
       calculateItemSubtotal(item)

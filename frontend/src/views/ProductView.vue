@@ -1732,7 +1732,23 @@ const handleRestock = async () => {
   }
 }
 
+// 編輯對話框的載入序號：關閉後又開啟其他商品時，忽略前一次較晚回來的資料
+let editSeq = 0
+// 圖片清單是否已從後端載入完成；未完成前儲存不送出圖片，避免以空清單或別的商品的圖片覆蓋
+const imagesLoaded = ref(true)
+
+// 關閉對話框（包含改為新增商品）時作廢尚未完成的載入
+watch(showDialog, (open) => {
+  if (!open) {
+    editSeq++
+    imagesLoaded.value = true
+  }
+})
+
 const handleEdit = async (product: Product | ProductRow) => {
+  const seq = ++editSeq
+  imagesLoaded.value = false
+  selectedAlbumImages.value = []
   // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
   // 並將後端狀態值轉換為前端狀態值
   let status: Product['status'] | ProductDisplayStatus = product.status
@@ -1757,6 +1773,7 @@ const handleEdit = async (product: Product | ProductRow) => {
     await loadSpecifications(product.id)
     await loadDescriptionBlocks(product.id)
   }
+  if (seq !== editSeq) return
 
   // 依商品目前的圖片順序載入（第一張為主圖）；移除 / 排序 / 設主圖在儲存時以完整清單取代。
   // 從後端重新讀取，避免列表資料過時（例如剛上傳或其他人新增的圖片）在儲存時被刪掉
@@ -1769,6 +1786,7 @@ const handleEdit = async (product: Product | ProductRow) => {
       // 讀取失敗時使用列表資料
     }
   }
+  if (seq !== editSeq) return
   if (product.id && images && images.length > 0) {
     selectedAlbumImages.value = images
       .map((img) => (typeof img === 'string' ? img : img && typeof img === 'object' && 'imageUrl' in img ? img.imageUrl : ''))
@@ -1777,6 +1795,7 @@ const handleEdit = async (product: Product | ProductRow) => {
   } else {
     selectedAlbumImages.value = []
   }
+  imagesLoaded.value = true
 }
 
 const handlePublishToggle = async (product: ProductRow) => {
@@ -1868,7 +1887,7 @@ const handleSubmit = async () => {
     delete payload.price // 後端沒有 'price' 欄位，刪掉避免報錯
 
     // 編輯時以畫面上的圖片清單（含順序）取代商品圖片，移除 / 排序 / 設主圖才會生效
-    if (form.value.id) {
+    if (form.value.id && imagesLoaded.value) {
       payload.images = selectedAlbumImages.value.map((img) => ({ imageUrl: img.imageUrl }))
     } else {
       delete payload.images
