@@ -42,16 +42,22 @@ public class AuthController {
                                            jakarta.servlet.http.HttpServletRequest http) {
         // 只計算失敗次數（先佔用名額，登入成功再歸還，同時送出的大量猜測也不會超過上限）：
         // 同一帳號 + 同一來源失敗 10 次、同一來源失敗 50 次、同一帳號（來自各處）失敗 50 次後暫停 15 分鐘。
-        // 帳號層級的上限較寬，單一攻擊者無法輕易鎖住他人帳號；重設密碼成功後會解除。
+        // 帳號層級的上限較寬，單一來源無法鎖住他人帳號；重設密碼成功後全部解除。
         String tooMany = "登入失敗次數過多，請 15 分鐘後再試，或使用「忘記密碼」重設";
         java.time.Duration window = java.time.Duration.ofMinutes(15);
         String client = com.info.ecommerce.common.RateLimiter.clientKey(http);
         String username = request.getUsername();
         java.util.List<String[]> reserved = new java.util.ArrayList<>();
+        // 帳號層級的計數只為存在的帳號建立：大量亂填帳號名稱不會灌爆記憶體（不存在的帳號本來就猜不到密碼）
+        boolean knownAccount = authService.accountExists(username);
         try {
-            reserve(reserved, "login-user-client", username + "|" + client, 10, window, tooMany);
+            if (knownAccount) {
+                reserve(reserved, "login-user-client", username + "|" + client, 10, window, tooMany);
+            }
             reserve(reserved, "login-client", client, 50, window, tooMany);
-            reserve(reserved, "login-user", username, 50, window, tooMany);
+            if (knownAccount) {
+                reserve(reserved, com.info.ecommerce.common.RateLimiter.PROTECTED_BUCKET, username, 50, window, tooMany);
+            }
         } catch (com.info.ecommerce.common.exception.BusinessException e) {
             reserved.forEach(slot -> rateLimiter.release(slot[0], slot[1]));
             throw e;
@@ -122,8 +128,9 @@ public class AuthController {
     public ApiResponse<Void> confirmPasswordReset(@RequestBody java.util.Map<String, String> body) {
         com.info.ecommerce.modules.auth.entity.User user =
                 passwordResetService.reset(body.getOrDefault("token", ""), body.get("newPassword"));
-        // 已證明擁有信箱並換了新密碼：解除帳號層級的登入暫停
-        rateLimiter.reset("login-user", user.getUsername());
+        // 已證明擁有信箱並換了新密碼：解除此帳號在所有來源的登入暫停
+        rateLimiter.reset(com.info.ecommerce.common.RateLimiter.PROTECTED_BUCKET, user.getUsername());
+        rateLimiter.resetPrefix("login-user-client", user.getUsername() + "|");
         return ApiResponse.success("密碼已重設，請使用新密碼登入", null);
     }
 

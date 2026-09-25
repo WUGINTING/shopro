@@ -33,4 +33,17 @@ public interface EdmCampaignRepository extends JpaRepository<EdmCampaign, Long> 
     @org.springframework.data.jpa.repository.Query("UPDATE EdmCampaign c SET c.status = com.info.ecommerce.modules.crm.enums.EdmStatus.FAILED "
             + "WHERE c.id = :id AND c.status = com.info.ecommerce.modules.crm.enums.EdmStatus.SCHEDULED")
     int markFailedIfScheduled(@org.springframework.data.repository.query.Param("id") Long id);
+
+    /** 寄送完成後寫入結果；只更新仍在發送中的活動，不覆蓋其他欄位（發送期間的編輯不會被舊資料蓋掉） */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE EdmCampaign c SET c.status = :status, c.sentAt = :sentAt, "
+            + "c.totalSent = :total, c.successCount = :success, c.failureCount = :failure "
+            + "WHERE c.id = :id AND c.status = com.info.ecommerce.modules.crm.enums.EdmStatus.SENDING")
+    int finishSending(@org.springframework.data.repository.query.Param("id") Long id,
+                      @org.springframework.data.repository.query.Param("status") EdmStatus status,
+                      @org.springframework.data.repository.query.Param("sentAt") LocalDateTime sentAt,
+                      @org.springframework.data.repository.query.Param("total") Integer total,
+                      @org.springframework.data.repository.query.Param("success") Integer success,
+                      @org.springframework.data.repository.query.Param("failure") Integer failure);
 }

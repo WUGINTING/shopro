@@ -150,7 +150,7 @@ class AuthControllerIntegrationTest {
                         .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("次數過多")));
-        // 攻擊者無法藉此鎖住本人：從其他來源仍可登入
+        // 單一來源無法藉此鎖住本人：從其他來源仍可登入
         mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.2"); return request; })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))

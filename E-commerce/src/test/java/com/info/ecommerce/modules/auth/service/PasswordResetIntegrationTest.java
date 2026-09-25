@@ -87,4 +87,30 @@ class PasswordResetIntegrationTest {
                 .andExpect(status().isBadRequest());
         org.junit.jupiter.api.Assertions.assertFalse(userRepository.findById(attacker.getId()).orElseThrow().isEmailConfirmed());
     }
+
+    @Test
+    void successfulReset_liftsLoginLockout_onTheSameDevice() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        User user = userRepository.save(User.builder()
+                .username("locked-" + suffix).email("locked-" + suffix + "@example.com")
+                .password(passwordEncoder.encode("OldPassw0rd")).role(Role.CUSTOMER).enabled(true).build());
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.66.0.1"); return request; })
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"" + user.getUsername() + "\",\"password\":\"guess\"}"))
+                    .andExpect(status().is4xxClientError());
+        }
+        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.66.0.1"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + user.getUsername() + "\",\"password\":\"OldPassw0rd\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + passwordResetService.createToken(user) + "\",\"newPassword\":\"NewPassw0rd!\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.66.0.1"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + user.getUsername() + "\",\"password\":\"NewPassw0rd!\"}"))
+                .andExpect(status().isOk());
+    }
 }

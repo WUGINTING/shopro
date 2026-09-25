@@ -76,6 +76,12 @@ public class AuthService {
                 .build();
     }
 
+    /** 帳號是否存在（登入限流只為實際存在的帳號建立帳號層級的計數） */
+    @Transactional(readOnly = true)
+    public boolean accountExists(String username) {
+        return username != null && userRepository.existsByUsername(username);
+    }
+
     public AuthResponse login(LoginRequest request) {
         // Get user from database first to check enabled status
         User user = userRepository.findByUsername(request.getUsername())

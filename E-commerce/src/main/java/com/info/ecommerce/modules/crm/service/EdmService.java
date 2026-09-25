@@ -36,6 +36,7 @@ public class EdmService {
     private final MemberGroupService memberGroupService;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final JwtService jwtService;
+    private final jakarta.persistence.EntityManager entityManager;
 
     static final String UNSUBSCRIBE_PURPOSE = "edm-unsubscribe";
     private static final long UNSUBSCRIBE_TOKEN_TTL_MILLIS = 365L * 24 * 60 * 60 * 1000;
@@ -52,7 +53,8 @@ public class EdmService {
     @Transactional
     public EdmCampaignDTO createEdmCampaign(EdmCampaignDTO dto) {
         EdmCampaign edmCampaign = new EdmCampaign();
-        BeanUtils.copyProperties(dto, edmCampaign, "id");
+        // 狀態與發送結果只能由系統流程變更
+        BeanUtils.copyProperties(dto, edmCampaign, "id", "status", "sentAt", "totalSent", "successCount", "failureCount");
         edmCampaign = edmCampaignRepository.save(edmCampaign);
         return toDTO(edmCampaign);
     }
@@ -62,11 +64,12 @@ public class EdmService {
         EdmCampaign edmCampaign = edmCampaignRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("EDM 活動不存在"));
 
-        if (edmCampaign.getStatus() == EdmStatus.SENT) {
-            throw new BusinessException("已發送的 EDM 活動無法修改");
+        if (edmCampaign.getStatus() == EdmStatus.SENT || edmCampaign.getStatus() == EdmStatus.SENDING) {
+            throw new BusinessException("已發送或發送中的 EDM 活動無法修改");
         }
 
-        BeanUtils.copyProperties(dto, edmCampaign, "id", "createdAt", "updatedAt", "sentAt", "totalSent", "successCount", "failureCount");
+        // 狀態只能透過排程 / 發送 / 取消變更，避免編輯時把發送中的活動改回草稿而重複寄出
+        BeanUtils.copyProperties(dto, edmCampaign, "id", "status", "createdAt", "updatedAt", "sentAt", "totalSent", "successCount", "failureCount");
         edmCampaign = edmCampaignRepository.save(edmCampaign);
         return toDTO(edmCampaign);
     }
@@ -148,6 +151,8 @@ public class EdmService {
             throw new BusinessException("沒有符合條件的收件人：EDM 只會寄給狀態正常且同意接收優惠通知的會員");
         }
 
+        // 收件名單已整理好：卸離已載入的會員，逐封寫入寄送記錄時不必每次檢查上萬筆會員資料
+        entityManager.clear();
         if (edmCampaignRepository.claimForSending(id) == 0) {
             throw new BusinessException("EDM 活動正在發送、已發送或已取消");
         }
@@ -156,8 +161,7 @@ public class EdmService {
             return deliver(id, edmCampaign, targetMembers, mailSender);
         } catch (RuntimeException e) {
             // 非預期錯誤：不要讓活動永遠停在「發送中」
-            edmCampaign.setStatus(EdmStatus.FAILED);
-            edmCampaignRepository.save(edmCampaign);
+            edmCampaignRepository.finishSending(id, EdmStatus.FAILED, null, null, null, null);
             throw e;
         }
     }
@@ -196,13 +200,13 @@ public class EdmService {
             }
         }
 
+        LocalDateTime sentAt = LocalDateTime.now();
+        edmCampaignRepository.finishSending(id, EdmStatus.SENT, sentAt, targetMembers.size(), successCount, failureCount);
         edmCampaign.setStatus(EdmStatus.SENT);
-        edmCampaign.setSentAt(LocalDateTime.now());
+        edmCampaign.setSentAt(sentAt);
         edmCampaign.setTotalSent(targetMembers.size());
         edmCampaign.setSuccessCount(successCount);
         edmCampaign.setFailureCount(failureCount);
-        edmCampaign = edmCampaignRepository.save(edmCampaign);
-
         return toDTO(edmCampaign);
     }
 
@@ -211,8 +215,8 @@ public class EdmService {
         EdmCampaign edmCampaign = edmCampaignRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("EDM 活動不存在"));
 
-        if (edmCampaign.getStatus() == EdmStatus.SENT) {
-            throw new BusinessException("已發送的 EDM 活動無法取消");
+        if (edmCampaign.getStatus() == EdmStatus.SENT || edmCampaign.getStatus() == EdmStatus.SENDING) {
+            throw new BusinessException("已發送或發送中的 EDM 活動無法取消");
         }
 
         edmCampaign.setStatus(EdmStatus.CANCELLED);

@@ -51,6 +51,9 @@ class EdmServiceTest {
     @Mock
     private MemberGroupService memberGroupService;
 
+    @Mock
+    private jakarta.persistence.EntityManager entityManager;
+
     @InjectMocks
     private EdmService edmService;
 
@@ -156,7 +159,7 @@ class EdmServiceTest {
         // when & then
         assertThatThrownBy(() -> edmService.updateEdmCampaign(1L, edmCampaignDTO))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("已發送的 EDM 活動無法修改");
+                .hasMessage("已發送或發送中的 EDM 活動無法修改");
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
     }
@@ -285,7 +288,6 @@ class EdmServiceTest {
     void should_SendEdmCampaign_When_CampaignNotSent() {
         // given
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenReturn(edmCampaign);
         when(memberRepository.findAll()).thenReturn(List.of(member));
         when(edmSendLogRepository.save(any(EdmSendLog.class))).thenReturn(new EdmSendLog());
 
@@ -296,7 +298,8 @@ class EdmServiceTest {
         assertThat(result).isNotNull();
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(edmCampaignRepository, times(1)).claimForSending(1L);
-        verify(edmCampaignRepository, times(1)).save(any(EdmCampaign.class));
+        verify(edmCampaignRepository, times(1)).finishSending(eq(1L), eq(EdmStatus.SENT), any(), eq(1), eq(1), eq(0));
+        verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
         verify(memberRepository, times(1)).findAll();
         verify(edmSendLogRepository, atLeastOnce()).save(any(EdmSendLog.class));
     }
@@ -333,7 +336,6 @@ class EdmServiceTest {
         edmCampaign.setTargetGroupId(1L);
         List<Long> memberIds = List.of(1L);
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenReturn(edmCampaign);
         when(memberGroupService.getGroupMembers(1L)).thenReturn(memberIds);
         when(memberRepository.findAllById(memberIds)).thenReturn(List.of(member));
         when(edmSendLogRepository.save(any(EdmSendLog.class))).thenReturn(new EdmSendLog());
@@ -372,7 +374,7 @@ class EdmServiceTest {
         // when & then
         assertThatThrownBy(() -> edmService.cancelEdmCampaign(1L))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("已發送的 EDM 活動無法取消");
+                .hasMessage("已發送或發送中的 EDM 活動無法取消");
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
     }
@@ -400,7 +402,6 @@ class EdmServiceTest {
                 .status(com.info.ecommerce.modules.crm.enums.MemberStatus.SUSPENDED).build();
         Member duplicate = Member.builder().id(4L).email("TEST@example.com").marketingOptIn(true).build();
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(memberRepository.findAll()).thenReturn(List.of(member, noConsent, suspended, duplicate));
 
         EdmCampaignDTO result = edmService.sendEdmCampaign(1L);
