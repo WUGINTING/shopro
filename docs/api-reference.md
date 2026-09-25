@@ -117,6 +117,22 @@ POST /api/auth/google
 
 後端以 `GOOGLE_CLIENT_ID` 驗證 ID Token；只能登入或建立會員（CUSTOMER）帳號，Google 登入的會員 Email 視為已驗證。
 
+### 忘記密碼
+
+```http
+POST /api/auth/password-reset           # body: { email }  寄送重設連結（1 小時有效；不透露 Email 是否已註冊）
+POST /api/auth/password-reset/confirm   # body: { token, newPassword }  新密碼至少 8 字元；連結只能使用一次
+```
+
+### 會員中心
+
+```http
+GET /api/account/member   # 需登入：會員等級、累積消費、下一等級門檻、點數、預設收件資料
+PUT /api/account/member   # 需登入且 Email 已驗證：{ name, phone, address, postalCode, marketingOptIn }
+```
+
+變更帳號（`PUT /api/auth/profile` 的 `username`）時回應會附上新的 `token`，舊 token 失效。
+
 ### Email 驗證
 
 會員註冊後 `emailVerified` 為 `false`，驗證前「我的訂單」不會列出以該 Email 下的訂單（避免他人註冊你的 Email 來查看訂單）。
@@ -415,6 +431,83 @@ GET /api/storefront/orders/lookup?orderNumber={訂單編號}&email={下單 Email
 ```
 
 Email 不分大小寫；訂單編號與 Email 不相符時回傳 400「查無此訂單」。
+
+回應 `data`：`order`、`paymentMethod`（ECPAY / COD）、`canPayOnline`、`canCancel`（待付款且未出貨）、`shipments`（物流公司、單號、狀態、出貨 / 送達時間）。
+
+### 重新付款 / 取消訂單
+
+```http
+POST /api/storefront/orders/pay      # body: { orderNumber, email, channel? }  待付款的線上付款訂單取得新的付款網址
+POST /api/storefront/orders/cancel   # body: { orderNumber, email }            待付款且未出貨的訂單由顧客自行取消
+```
+
+`channel` 為 `ADMIN_STORE` 時，付款完成導回後台 App 的會員商城。取消後歸還庫存與優惠券次數。
+
+### 配送方式與運費
+
+```http
+GET /api/storefront/orders/shipping-options
+```
+
+回傳目前開放的配送方式 `[{ method, name, fee, freeShippingThreshold }]`，依後台「系統設定 → 運費設定」；全部停用的配送方式不列出，結帳也會拒絕。
+
+### 折扣與優惠券
+
+試算與結帳都可帶 `couponCode`。試算結果包含 `discountAmount`、`discounts`（套用明細：`PROMOTION` / `COUPON` / `MEMBER_LEVEL` / `FREE_SHIPPING`）、`couponCode`（實際套用的代碼）、`couponMessage`（未套用原因）。規則：
+
+- 金額折扣取促銷活動、優惠券、會員等級折扣中**折抵最多的一項**，不累加；免運（免運活動或免運券）可併用
+- 會員等級折扣只套用在已登入且 Email 已驗證的會員
+- 優惠券在下單時扣使用次數（用完時結帳失敗），訂單取消時歸還
+- 結帳帶入無效的優惠券會回傳 400；試算只回傳 `couponMessage`
+
+```http
+GET /api/storefront/coupons          # 前台公開且可使用的優惠券
+GET|POST /api/marketing/coupons      # 後台優惠券管理（員工）；PUT/DELETE /{id}、PATCH /{id}/enable|disable
+```
+
+### 其他前台公開 API
+
+```http
+POST /api/storefront/products/{id}/restock-notification   # body: { email, specificationId? } 到貨通知登記
+POST /api/storefront/contact                               # body: { name, email, phone?, subject?, message } 聯絡表單（同一來源 10 分鐘 5 則）
+POST /api/storefront/unsubscribe                           # body: { token } EDM 退訂（信中連結）
+```
+
+## 訂單管理（員工）
+
+### 訂單狀態規則
+
+```http
+GET /api/orders/status-transitions
+```
+
+- 待付款 → 已付款 / 處理中（貨到付款出貨）/ 已完成 / 已取消
+- 已付款 → 處理中 / 已完成 / 已退款（已付款不可直接取消）
+- 處理中 → 已完成 / 已退款 / 已取消
+- 已完成 → 已退款；已取消 → 待付款（重新扣庫存）；已退款不可變更
+
+### 登記退款（經理以上）
+
+```http
+POST /api/orders/{id}/refund
+```
+
+```json
+{ "amount": 100, "reason": "顧客退貨", "restock": true }
+```
+
+`amount` 省略為全額（訂單總額扣除已退款）。系統只登記退款，不會呼叫綠界退款 API。全額退款後訂單改為「已退款」、扣回會員累計消費、寄送通知。
+
+### 其他
+
+```http
+GET  /api/orders/history/order/{orderId}        # 訂單歷程
+GET  /api/orders/batch/export.csv?startDate=&endDate=&status=   # 匯出 CSV（經理以上）
+POST /api/orders/shipments                       # 建立物流；已出貨時寄出貨通知
+PATCH /api/orders/shipments/{id}/status?status=SHIPPED|DELIVERED  # 全部送達時訂單自動完成
+GET  /api/statistics/overall?startDate=&endDate= # 營運統計（經理以上）
+GET  /api/system/status                          # 上線設定檢查（管理員，不回傳密鑰）
+```
 
 ---
 
