@@ -352,22 +352,52 @@
               />
 
               <div class="row q-col-gutter-md q-mb-md">
-                <div class="col-6">
+                <div class="col-12 col-sm-4">
                   <q-input
                     v-model.number="form.price"
-                    label="價格 *"
+                    label="定價 *"
                     outlined
                     type="number"
                     prefix="$"
                     :rules="[val => val >= 0 || '價格不可小於 0']"
                   />
                 </div>
-                <div class="col-6">
+                <div class="col-12 col-sm-4">
+                  <q-input
+                    v-model.number="form.salePrice"
+                    label="特價（選填）"
+                    outlined
+                    clearable
+                    type="number"
+                    prefix="$"
+                    hint="有填寫且低於定價時，前台以特價銷售"
+                    :rules="[val => val === null || val === undefined || val === '' || (val >= 0 && val < (form.price ?? 0)) || '特價須低於定價']"
+                  />
+                </div>
+                <div class="col-12 col-sm-4">
+                  <q-input
+                    v-model.number="form.costPrice"
+                    label="成本（選填）"
+                    outlined
+                    clearable
+                    type="number"
+                    prefix="$"
+                    hint="僅後台可見，用於毛利計算"
+                  />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12 col-sm-6">
                   <q-input
                     v-model.number="form.stock"
                     label="庫存 *"
                     outlined
                     type="number"
+                    :disable="specifications.length > 0"
+                    :hint="specifications.length > 0
+                      ? '此商品有規格，庫存請在「規格」分頁逐一設定'
+                      : (form.id ? '不修改就不會變動；修改後會直接設定為此數量（期間賣出的數量會被覆寫）' : '')"
                     :rules="[val => val >= 0 || '庫存不可小於 0']"
                   />
                 </div>
@@ -1311,6 +1341,7 @@ watch(specImageFile, (file) => {
 const specifications = ref<ProductSpecification[]>([])
 const specLoading = ref(false)
 const showSpecDialog = ref(false)
+const originalSpecStock = ref<number | undefined>(undefined)
 const specForm = ref<ProductSpecification>({
   productId: undefined,
   specName: '',
@@ -1392,8 +1423,10 @@ const updateSpecificationField = async (
   specFieldSaving.value[key] = true
 
   try {
+    // 只有修改庫存欄位時才送出 stock，其他欄位不帶庫存，避免覆寫期間已賣出的數量
     await productSpecificationApi.updateSpecification(spec.id, {
       ...spec,
+      stock: undefined,
       [field]: normalizedValue
     })
 
@@ -1459,6 +1492,9 @@ const selectedImageCount = computed(() => {
   return selectedAlbumImages.value.length + uploadCount
 })
 const specImagePreviewUrl = computed(() => specImagePreviewObjectUrl.value || specForm.value.image || '')
+
+// 開啟編輯時的庫存；送出時未修改就不送 stock，避免覆寫期間已賣出的庫存
+const originalStock = ref<number | undefined>(undefined)
 
 const form = ref<ProductRow>({
   name: '',
@@ -1549,7 +1585,10 @@ const loadProducts = async () => {
       return {
         ...product,
         status,
-        price: product.salePrice ?? product.basePrice ?? 0
+        // 列表顯示實際售價：有效特價（大於 0 且低於定價）優先，否則為定價
+        price: product.salePrice && product.salePrice > 0 && (!product.basePrice || product.salePrice < product.basePrice)
+          ? product.salePrice
+          : (product.basePrice ?? product.salePrice ?? 0)
       }
     })
   } catch (error) {
@@ -1631,8 +1670,9 @@ const handleEdit = async (product: Product | ProductRow) => {
   form.value = {
     ...product,
     status,
-    price: product.salePrice ?? product.basePrice ?? 0
+    price: product.basePrice ?? product.salePrice ?? 0
   }
+  originalStock.value = product.stock
   showDialog.value = true
   dialogTab.value = 'basic'
   
@@ -1753,8 +1793,19 @@ const handleSubmit = async () => {
     // 2. --- 關鍵修改：欄位轉換 ---
     // 將前端的 'price' 填入後端需要的價格欄位
     payload.basePrice = form.value.price
-    payload.salePrice = form.value.price
-    payload.costPrice = 0 // 必須給個預設值，否則後端 @DecimalMin 檢查可能會擋
+    const salePrice = form.value.salePrice as number | string | null | undefined
+    payload.salePrice = salePrice === '' || salePrice === null || salePrice === undefined ? null : Number(salePrice)
+    if (payload.salePrice !== null && payload.salePrice >= payload.basePrice) {
+      $q.notify({ type: 'warning', message: '特價須低於定價；不需要特價請清空欄位', position: 'top' })
+      return
+    }
+    const costPrice = form.value.costPrice as number | string | null | undefined
+    payload.costPrice = costPrice === '' || costPrice === null || costPrice === undefined ? null : Number(costPrice)
+
+    // 有規格的商品庫存由各規格管理；編輯時庫存未修改就不送出，避免覆寫期間已賣出的庫存
+    if (specifications.value.length > 0 || (form.value.id && payload.stock === originalStock.value)) {
+      delete payload.stock
+    }
 
     // 3. 狀態值轉換：將前端狀態值轉換為後端可接受的狀態值
     // 前端: PUBLISHED/UNPUBLISHED  -> 後端: ACTIVE/INACTIVE
@@ -1881,6 +1932,7 @@ const closeDialog = async () => {
   showDialog.value = false
   dialogTab.value = 'basic'
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
+  originalStock.value = undefined
   selectedAlbumImages.value = []
   productImage.value = null
   // 重置規格和描述區塊
@@ -1973,7 +2025,12 @@ const saveSpecification = async () => {
 
     if (specForm.value.id) {
       // 更新規格
-      await productSpecificationApi.updateSpecification(specForm.value.id, specForm.value)
+      const specPayload = { ...specForm.value }
+      if (specPayload.stock === originalSpecStock.value) {
+        // 庫存沒改就不送，避免覆寫期間已賣出的數量
+        specPayload.stock = undefined
+      }
+      await productSpecificationApi.updateSpecification(specForm.value.id, specPayload)
       $q.notify({
         type: 'positive',
         message: '規格已更新',
@@ -2023,6 +2080,7 @@ const editSpecification = (spec: ProductSpecification) => {
   specImageFile.value = null
   selectedSpecAlbumImage.value = null
   specForm.value = { ...spec }
+  originalSpecStock.value = spec.stock
   showSpecDialog.value = true
 }
 
@@ -2059,7 +2117,7 @@ const deleteSpecification = (specId?: number) => {
 // 切換規格啟用狀態
 const toggleSpecEnabled = async (spec: ProductSpecification, enabled: boolean) => {
   try {
-    await productSpecificationApi.updateSpecification(spec.id!, { ...spec, enabled })
+    await productSpecificationApi.updateSpecification(spec.id!, { ...spec, stock: undefined, enabled })
     if (form.value.id) {
       await loadSpecifications(form.value.id)
     }

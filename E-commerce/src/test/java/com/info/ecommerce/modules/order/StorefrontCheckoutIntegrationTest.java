@@ -242,4 +242,28 @@ class StorefrontCheckoutIntegrationTest {
         changeStatus(orderId, "REFUNDED");
         assertEquals(0, BigDecimal.ZERO.compareTo(totalSpent(email)), "退款後應扣回");
     }
+
+    @Test
+    void editingSpecWithoutStock_keepsLiveStock_andExplicitStockIsLogged() throws Exception {
+        checkout(checkoutBody("spec-edit@example.com", cup.getId(), blueCup.getId(), 2)); // 3 -> 1
+
+        // 後台以開啟頁面時的資料改名稱，未帶庫存：不可把賣掉的 2 件加回去
+        mockMvc.perform(put("/api/product-specifications/" + blueCup.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":%d,\"specName\":\"深藍色\",\"price\":380,\"enabled\":true}".formatted(cup.getId())))
+                .andExpect(status().isOk());
+        assertEquals(1, specStock());
+        assertEquals("深藍色", specificationRepository.findById(blueCup.getId()).orElseThrow().getSpecName());
+
+        // 明確設定庫存才會變動，並留下異動紀錄
+        mockMvc.perform(put("/api/product-specifications/" + blueCup.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":%d,\"specName\":\"深藍色\",\"price\":380,\"stock\":10,\"enabled\":true}".formatted(cup.getId())))
+                .andExpect(status().isOk());
+        assertEquals(10, specStock());
+        assertTrue(movementLogRepository.findTop100ByProductIdOrderByCreatedAtDesc(cup.getId()).stream()
+                .anyMatch(log -> "SPEC_EDIT".equals(log.getSource()) && log.getAfterStock() == 10 && log.getBeforeStock() == 1));
+    }
 }

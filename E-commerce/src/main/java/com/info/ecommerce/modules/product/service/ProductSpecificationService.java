@@ -2,7 +2,10 @@ package com.info.ecommerce.modules.product.service;
 
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.product.dto.ProductSpecificationDTO;
+import com.info.ecommerce.modules.product.entity.InventoryMovementLog;
 import com.info.ecommerce.modules.product.entity.ProductSpecification;
+import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
+import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
 import com.info.ecommerce.modules.product.repository.ProductRepository;
 import com.info.ecommerce.modules.product.repository.ProductSpecificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ public class ProductSpecificationService {
 
     private final ProductSpecificationRepository specificationRepository;
     private final ProductRepository productRepository;
+    private final ProductInventoryRepository productInventoryRepository;
+    private final InventoryMovementLogRepository movementLogRepository;
 
     /**
      * 添加商品規格
@@ -66,7 +71,29 @@ public class ProductSpecificationService {
             dto.setSku(normalizedSku);
         }
 
-        BeanUtils.copyProperties(dto, spec, "id", "productId", "createdAt", "updatedAt");
+        // 庫存另外處理：未傳入（null）表示不變動，避免以開啟頁面時的舊數字覆寫期間已賣出的庫存
+        Integer beforeStock = spec.getStock();
+        BeanUtils.copyProperties(dto, spec, "id", "productId", "createdAt", "updatedAt", "stock");
+        Integer newStock = dto.getStock();
+        if (newStock != null && newStock < 0) {
+            throw new BusinessException("庫存不可小於 0");
+        }
+        if (newStock != null && !newStock.equals(beforeStock)) {
+            spec.setStock(newStock);
+            int before = beforeStock == null ? 0 : beforeStock;
+            productInventoryRepository.adjustSpecificationStock(spec.getProductId(), spec.getId(), newStock - before);
+            movementLogRepository.save(InventoryMovementLog.builder()
+                    .productId(spec.getProductId())
+                    .specificationId(spec.getId())
+                    .warehouseId(1L)
+                    .changeType("SET")
+                    .source("SPEC_EDIT")
+                    .changeQuantity(newStock - before)
+                    .beforeStock(before)
+                    .afterStock(newStock)
+                    .remark("規格編輯設定庫存")
+                    .build());
+        }
         spec = specificationRepository.save(spec);
         return toDTO(spec);
     }
