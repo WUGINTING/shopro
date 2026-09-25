@@ -25,12 +25,20 @@ public class RateLimiter {
      * 記錄一次請求；同一 bucket + key 在 window 內超過 max 次時丟出 BusinessException
      */
     public void check(String bucket, String key, int max, Duration window, String message) {
+        assertAllowed(bucket, key, max, window, message);
+        record(bucket, key);
+    }
+
+    /** 只檢查不計數（例如登入：只有失敗才計數） */
+    public void assertAllowed(String bucket, String key, int max, Duration window, String message) {
         if (key == null || key.isBlank()) {
             return;
         }
-        Instant now = Instant.now();
-        Instant cutoff = now.minus(window);
-        Deque<Instant> recent = hits.computeIfAbsent(bucket + "|" + key.trim().toLowerCase(), k -> new ArrayDeque<>());
+        Deque<Instant> recent = hits.get(keyOf(bucket, key));
+        if (recent == null) {
+            return;
+        }
+        Instant cutoff = Instant.now().minus(window);
         synchronized (recent) {
             while (!recent.isEmpty() && recent.peekFirst().isBefore(cutoff)) {
                 recent.pollFirst();
@@ -38,11 +46,33 @@ public class RateLimiter {
             if (recent.size() >= max) {
                 throw new BusinessException(message);
             }
+        }
+    }
+
+    /** 記錄一次 */
+    public void record(String bucket, String key) {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+        Instant now = Instant.now();
+        Deque<Instant> recent = hits.computeIfAbsent(keyOf(bucket, key), k -> new ArrayDeque<>());
+        synchronized (recent) {
             recent.addLast(now);
         }
         if (hits.size() > MAX_KEYS) {
             evictStale(now.minus(Duration.ofHours(1)));
         }
+    }
+
+    /** 清除計數（例如登入成功後） */
+    public void reset(String bucket, String key) {
+        if (key != null && !key.isBlank()) {
+            hits.remove(keyOf(bucket, key));
+        }
+    }
+
+    private static String keyOf(String bucket, String key) {
+        return bucket + "|" + key.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     /** 只移除已經一段時間沒有請求的 key，不影響仍在計數中的來源 */

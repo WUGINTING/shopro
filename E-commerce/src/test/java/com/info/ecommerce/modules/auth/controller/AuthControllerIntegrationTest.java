@@ -129,4 +129,27 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.username").value("pwduser"));
     }
+
+    @Test
+    void repeatedFailedLogins_lockTheAccountTemporarily() throws Exception {
+        RegisterRequest registerRequest = RegisterRequest.builder()
+                .username("bruteuser").email("brute@example.com").password("password123").role(Role.CUSTOMER).build();
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isOk());
+
+        for (int i = 0; i < 10; i++) {
+            String ip = "10.88.0." + (i % 3 + 1);
+            mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr(ip); return request; })
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"bruteuser\",\"password\":\"wrong-" + i + "\"}"))
+                    .andExpect(status().is4xxClientError());
+        }
+        // 帳號已暫停登入：即使密碼正確也要等待
+        mockMvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("10.88.0.9"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"bruteuser\",\"password\":\"password123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("次數過多")));
+    }
 }

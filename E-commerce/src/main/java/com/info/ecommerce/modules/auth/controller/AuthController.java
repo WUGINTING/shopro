@@ -38,8 +38,23 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "用戶登錄", description = "驗證憑據並返回JWT令牌")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.success("登錄成功", authService.login(request));
+    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request,
+                                           jakarta.servlet.http.HttpServletRequest http) {
+        // 同一帳號 15 分鐘內失敗 10 次、同一來源失敗 30 次後暫停登入，避免暴力猜密碼
+        String tooMany = "登入失敗次數過多，請 15 分鐘後再試，或使用「忘記密碼」重設";
+        java.time.Duration window = java.time.Duration.ofMinutes(15);
+        rateLimiter.assertAllowed("login-user", request.getUsername(), 10, window, tooMany);
+        rateLimiter.assertAllowed("login-ip", http.getRemoteAddr(), 30, window, tooMany);
+        try {
+            AuthResponse response = authService.login(request);
+            rateLimiter.reset("login-user", request.getUsername());
+            return ApiResponse.success("登錄成功", response);
+        } catch (org.springframework.security.core.AuthenticationException
+                 | com.info.ecommerce.common.exception.BusinessException e) {
+            rateLimiter.record("login-user", request.getUsername());
+            rateLimiter.record("login-ip", http.getRemoteAddr());
+            throw e;
+        }
     }
 
     @GetMapping("/profile")
