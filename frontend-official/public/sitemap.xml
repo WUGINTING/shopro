@@ -9,10 +9,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://index.shenyuans.com/founder</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://index.shenyuans.com/menu</loc>
     <priority>0.8</priority>
   </url>
@@ -27,5 +23,29 @@
   <url>
     <loc>https://index.shenyuans.com/contact</loc>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop</loc>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop/product/list</loc>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop/news</loc>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop/introduce</loc>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop/page/faq</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://index.shenyuans.com/shop/page/returns</loc>
+    <priority>0.5</priority>
   </url>
 </urlset>

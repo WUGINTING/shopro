@@ -166,6 +166,7 @@
 </template>
 
 <script setup>
+import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
@@ -263,6 +264,8 @@ watch(
   },
   { immediate: true }
 );
+
+useShopMeta(() => ({ title: '最新消息' }));
 </script>
 
 <style lang="scss" scoped>

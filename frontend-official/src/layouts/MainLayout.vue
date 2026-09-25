@@ -29,8 +29,8 @@
           flat
           dense
           round
-          icon="design_services"
-          aria-label="Design Menu"
+          icon="storefront"
+          aria-label="線上商店選單"
           class="lt-md q-ml-sm"
           @click="rightDrawerOpen = !rightDrawerOpen"
         />

@@ -893,58 +893,19 @@ export const heroSlides = [
 // 左侧菜单 (MainLayout.vue)
 export const leftMenuItems = [
   { name: 'about', label: '品牌介紹', path: '/about', icon: 'mdi:information' },
-  { name: 'shop1', label: '遇日小舖', path: '/shop1', icon: 'mdi:store' },
-  {
-    name: 'shop2',
-    label: '遇日角鋪',
-    path: '/shop2',
-    icon: 'mdi:store-outline',
-  },
+  { name: 'shop', label: '遇日小舖', path: '/shop', icon: 'mdi:store' },
   { name: 'menu', label: '餐點介紹', path: '/menu', icon: 'mdi:food' },
   { name: 'cases', label: '成功案例', path: '/cases', icon: 'mdi:star' },
   { name: 'faq', label: '常見問題', path: '/faq', icon: 'mdi:help-circle' },
   { name: 'contact', label: '聯絡我們', path: '/contact', icon: 'mdi:phone' },
 ];
 
-// 右侧菜单 (MainLayout.vue)
+// 右侧菜单 (MainLayout.vue)：線上商店入口
 export const rightMenuItems = [
-  {
-    name: 'graphic',
-    label: '平面設計',
-    path: '/graphic-design',
-    icon: 'mdi:palette',
-  },
-  {
-    name: 'print',
-    label: '印刷設計',
-    path: '/print-design',
-    icon: 'mdi:printer',
-  },
-  {
-    name: 'web',
-    label: '網頁設計',
-    icon: 'mdi:web',
-    children: [
-      {
-        name: 'web-corporate',
-        label: '形象網站',
-        path: '/web-corporate',
-        icon: 'mdi:briefcase',
-      },
-      {
-        name: 'web-custom',
-        label: '客製化網站',
-        path: '/web-custom',
-        icon: 'mdi:code-tags',
-      },
-      {
-        name: 'web-stream',
-        label: '監視器直播串接',
-        path: '/web-stream',
-        icon: 'mdi:video',
-      },
-    ],
-  },
+  { name: 'shop-home', label: '遇日小舖首頁', path: '/shop', icon: 'mdi:store' },
+  { name: 'shop-products', label: '全部商品', path: '/shop/product/list', icon: 'mdi:shopping' },
+  { name: 'shop-news', label: '最新消息', path: '/shop/news', icon: 'mdi:newspaper' },
+  { name: 'shop-lookup', label: '訂單查詢', path: '/shop/order/lookup', icon: 'mdi:receipt-text-outline' },
 ];
 
 // 社交链接 (MainLayout.vue)

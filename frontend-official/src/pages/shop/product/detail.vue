@@ -288,6 +288,7 @@
 </template>
 
 <script setup>
+import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
@@ -539,6 +540,8 @@ const mapProductData = (apiData) => {
     badges: [],
     maxPurchaseQuantity: apiData.maxPurchaseQuantity,
     minPurchaseQuantity: apiData.minPurchaseQuantity,
+    metaTitle: apiData.metaTitle,
+    metaDescription: apiData.metaDescription,
     // stock 為 null 表示未追蹤庫存（不限量）
     stock: apiData.stock,
     soldOut: apiData.status === 'OUT_OF_STOCK' || (apiData.stock !== null && apiData.stock !== undefined && apiData.stock <= 0),
@@ -595,6 +598,13 @@ watch(() => route.params.id, (id, oldId) => {
 onMounted(() => {
   fetchProduct();
 });
+
+// SEO：商品名稱、描述與主圖
+useShopMeta(() => ({
+  title: product.value ? product.value.metaTitle || product.value.name : '商品',
+  description: product.value?.metaDescription || product.value?.description,
+  image: product.value?.images?.[0],
+}));
 </script>
 
 <style lang="scss" scoped>

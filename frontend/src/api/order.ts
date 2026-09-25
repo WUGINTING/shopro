@@ -316,6 +316,24 @@ export const orderApi = {
    * const updated = await orderApi.updateOrderStatus(123, 'PROCESSING')
    * console.log(updated.data.status) // 'PROCESSING'
    */
+  /** 訂單歷程（狀態變更、付款、出貨、退款、折扣等紀錄） */
+  getOrderHistory: (orderId: number) => {
+    return axios.get<any, ApiResponse<Array<{
+      id: number
+      actionType: string
+      actionDescription?: string
+      oldStatus?: string
+      newStatus?: string
+      operatorName?: string
+      createdAt: string
+    }>>>(`/orders/history/order/${orderId}`)
+  },
+
+  /** 匯出訂單 CSV（依建立日期與狀態） */
+  exportOrdersCsv: (params: { startDate?: string; endDate?: string; status?: string }) => {
+    return axios.get<any, Blob>('/orders/batch/export.csv', { params, responseType: 'blob' })
+  },
+
   /** 各狀態可變更的方向（依後端規則） */
   getStatusTransitions: () => {
     return axios.get<any, ApiResponse<Record<string, string[]>>>('/orders/status-transitions')

@@ -26,6 +26,14 @@
             @click="showStatusModal = true"
           />
           <q-btn
+            v-if="['ADMIN', 'MANAGER'].includes(authStore.userRole || '')"
+            color="grey-8"
+            icon="download"
+            label="匯出 CSV"
+            flat
+            @click="showExportDialog = true"
+          />
+          <q-btn
             color="primary"
             icon="add"
             label="新增訂單"
@@ -34,6 +42,40 @@
           />
         </div>
       </div>
+
+      <q-dialog v-model="showExportDialog">
+        <q-card style="width: 420px; max-width: 95vw">
+          <q-card-section class="text-h6">匯出訂單 CSV</q-card-section>
+          <q-card-section class="q-gutter-md">
+            <div class="row q-col-gutter-sm">
+              <div class="col-6"><q-input v-model="exportForm.startDate" type="date" outlined dense label="開始日期" /></div>
+              <div class="col-6"><q-input v-model="exportForm.endDate" type="date" outlined dense label="結束日期" /></div>
+            </div>
+            <q-select
+              v-model="exportForm.status"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              label="訂單狀態（空白為全部）"
+              :options="[
+                { label: '待付款', value: 'PENDING_PAYMENT' },
+                { label: '已付款', value: 'PAID' },
+                { label: '處理中', value: 'PROCESSING' },
+                { label: '已完成', value: 'COMPLETED' },
+                { label: '已取消', value: 'CANCELLED' },
+                { label: '已退款', value: 'REFUNDED' }
+              ]"
+            />
+            <div class="text-caption text-grey-7">依訂單建立日期篩選，最長一年；檔案可直接用 Excel 開啟。</div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" v-close-popup />
+            <q-btn color="primary" unelevated label="下載" :loading="exporting" @click="exportCsv" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
       <!-- Metrics -->
       <div class="row q-col-gutter-md q-mb-md">
@@ -1464,6 +1506,29 @@
                   </q-card-section>
                 </q-card>
               </div>
+
+              <!-- 訂單歷程 -->
+              <div class="col-12">
+                <q-card flat bordered class="order-detail-panel-card">
+                  <q-card-section>
+                    <div class="text-h6 q-mb-sm">訂單歷程</div>
+                    <div v-if="orderHistory.length === 0" class="text-grey-6">尚無紀錄</div>
+                    <q-timeline v-else color="primary" layout="dense" class="q-mt-none">
+                      <q-timeline-entry
+                        v-for="entry in orderHistory"
+                        :key="entry.id"
+                        :subtitle="`${formatDateTime(entry.createdAt)}${entry.operatorName ? '・' + entry.operatorName : ''}`"
+                        :icon="historyIcon(entry.actionType)"
+                      >
+                        <div>{{ entry.actionDescription || entry.actionType }}</div>
+                        <div v-if="entry.oldStatus && entry.newStatus && isOrderStatus(entry.newStatus)" class="text-caption text-grey-7">
+                          {{ getStatusLabel(entry.oldStatus as Order['status']) }} → {{ getStatusLabel(entry.newStatus as Order['status']) }}
+                        </div>
+                      </q-timeline-entry>
+                    </q-timeline>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
           </q-card-section>
 
@@ -2115,6 +2180,37 @@ const formatDateTime = (value?: string | null) => {
   })
 }
 
+// 匯出 CSV
+const showExportDialog = ref(false)
+const exporting = ref(false)
+const today = new Date()
+const exportForm = ref({
+  startDate: new Date(today.getTime() - 30 * 864e5).toISOString().slice(0, 10),
+  endDate: today.toISOString().slice(0, 10),
+  status: null as string | null
+})
+const exportCsv = async () => {
+  exporting.value = true
+  try {
+    const blob = await orderApi.exportOrdersCsv({
+      startDate: exportForm.value.startDate || undefined,
+      endDate: exportForm.value.endDate || undefined,
+      status: exportForm.value.status || undefined
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `orders-${exportForm.value.startDate}-${exportForm.value.endDate}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    showExportDialog.value = false
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  } finally {
+    exporting.value = false
+  }
+}
+
 // 訂單狀態可變更方向（後端規則）；退款走「登記退款」
 const statusTransitions = ref<Record<string, string[]>>({})
 const loadStatusTransitions = async () => {
@@ -2425,8 +2521,8 @@ const handleViewDetail = async (order: Order) => {
       selectedOrder.value = order
     }
 
-    // 載入物流記錄
-    await loadShipments(order.id)
+    // 載入物流記錄與歷程
+    await Promise.all([loadShipments(order.id), loadOrderHistory(order.id)])
 
     showDetailDialog.value = true
   } catch (error: any) {
@@ -2435,6 +2531,28 @@ const handleViewDetail = async (order: Order) => {
     await loadShipments(order.id)
     showDetailDialog.value = true
   }
+}
+
+// 訂單歷程（新到舊）
+const orderHistory = ref<Array<{ id: number; actionType: string; actionDescription?: string; oldStatus?: string; newStatus?: string; operatorName?: string; createdAt: string }>>([])
+const loadOrderHistory = async (orderId: number) => {
+  try {
+    const response = await orderApi.getOrderHistory(orderId)
+    orderHistory.value = [...(response.data || [])].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  } catch {
+    orderHistory.value = []
+  }
+}
+const ORDER_STATUSES = ['PENDING_PAYMENT', 'PAID', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'REFUNDED']
+const isOrderStatus = (value: string) => ORDER_STATUSES.includes(value)
+const historyIcon = (actionType: string) => {
+  if (actionType.includes('REFUND')) return 'undo'
+  if (actionType.includes('SHIP')) return 'local_shipping'
+  if (actionType.includes('PAY') || actionType.includes('PAID')) return 'payments'
+  if (actionType.includes('STOCK')) return 'inventory_2'
+  if (actionType.includes('COUPON') || actionType.includes('DISCOUNT')) return 'sell'
+  if (actionType.includes('STATUS')) return 'sync_alt'
+  return 'history'
 }
 
 const loadShipments = async (orderId: number) => {

@@ -112,6 +112,7 @@ public class SecurityConfig {
 
                         // 2. 已登入（會員）：控制器內檢查只能存取自己的資料
                         .requestMatchers("/api/auth/profile").authenticated()
+                        .requestMatchers("/api/account/member").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/auth/email-verification").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/orders/my").authenticated()
                         .requestMatchers(RegexRequestMatcher.regexMatcher(HttpMethod.GET, "^/api/orders/\\d+(\\?.*)?$")).authenticated()

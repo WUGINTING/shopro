@@ -228,6 +228,7 @@ import { clearCart, getCartItems, removeFromCart, type CartItem } from '@/utils/
 import { getCheckoutDraft, saveCheckoutDraft } from '@/utils/storePreferences'
 import { trackEvent } from '@/utils/tracking'
 import { redirectToEcPay } from '@/utils/ecpay'
+import { accountApi } from '@/api/account'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -439,13 +440,28 @@ const submitCheckout = async () => {
 
 watch(() => form.value.shippingMethod, () => refreshQuote())
 
-onMounted(() => {
+onMounted(async () => {
   trackEvent('view_checkout')
   refreshQuote()
   const draft = getCheckoutDraft()
   form.value.customerName = draft.customerName || authStore.user?.username || ''
   form.value.customerPhone = draft.customerPhone || ''
   form.value.shippingAddress = draft.shippingAddress || ''
+  // 帶入會員中心儲存的預設收件資料（未填寫的欄位）
+  try {
+    const response = await accountApi.getMember()
+    const member = response.data
+    if (member?.exists) {
+      if (!draft.customerName && member.name) form.value.customerName = member.name
+      if (!form.value.customerPhone && member.phone) form.value.customerPhone = member.phone
+      if (!form.value.shippingAddress && member.address) {
+        form.value.shippingAddress = member.postalCode ? `${member.postalCode} ${member.address}` : member.address
+      }
+      if (member.marketingOptIn) marketingOptIn.value = true
+    }
+  } catch {
+    // 沒有會員資料時維持空白
+  }
 })
 </script>
 

@@ -142,6 +142,11 @@ export interface ProductCategory {
  * @namespace productApi
  */
 export const productApi = {
+  /** 批次上架 */
+  batchActivate: (ids: number[]) => axios.put<any, ApiResponse<void>>('/products/batch/activate', ids),
+  /** 批次下架 */
+  batchDeactivate: (ids: number[]) => axios.put<any, ApiResponse<void>>('/products/batch/deactivate', ids),
+
   /**
    * 分頁查詢商品
    * @description 支援分頁查詢商品列表，可依狀態篩選

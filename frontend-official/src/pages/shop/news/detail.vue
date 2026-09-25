@@ -256,6 +256,7 @@
 </template>
 
 <script setup>
+import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuasar, copyToClipboard } from 'quasar';
@@ -424,6 +425,12 @@ watch(
   },
   { immediate: true }
 );
+
+useShopMeta(() => ({
+  title: article.value ? article.value.metaTitle || article.value.title : '最新消息',
+  description: article.value?.metaDescription || article.value?.summary,
+  image: article.value?.coverImageUrl,
+}));
 </script>
 
 <style lang="scss" scoped>

@@ -3,6 +3,8 @@ package com.info.ecommerce.modules.crm.service;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.crm.dto.MemberDTO;
 import com.info.ecommerce.modules.crm.entity.Member;
+import com.info.ecommerce.modules.crm.entity.PointRecord;
+import com.info.ecommerce.modules.crm.enums.PointType;
 import com.info.ecommerce.modules.crm.enums.MemberStatus;
 import com.info.ecommerce.modules.crm.repository.MemberRepository;
 import com.info.ecommerce.modules.order.entity.Order;
@@ -28,6 +30,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final OrderRepository orderRepository;
+    private final com.info.ecommerce.modules.crm.repository.PointRecordRepository pointRecordRepository;
 
     @Transactional
     public MemberDTO createMember(MemberDTO dto) {
@@ -111,23 +114,45 @@ public class MemberService {
 
     @Transactional
     public MemberDTO addPoints(Long id, Integer points) {
+        if (points == null || points <= 0) {
+            throw new BusinessException("積點需大於 0");
+        }
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("會員不存在"));
-        member.setTotalPoints(member.getTotalPoints() + points);
-        member.setAvailablePoints(member.getAvailablePoints() + points);
+        member.setTotalPoints((member.getTotalPoints() == null ? 0 : member.getTotalPoints()) + points);
+        member.setAvailablePoints((member.getAvailablePoints() == null ? 0 : member.getAvailablePoints()) + points);
         member = memberRepository.save(member);
+        // 記錄到積點明細，積點紀錄頁才看得到
+        pointRecordRepository.save(PointRecord.builder()
+                .memberId(id)
+                .pointType(PointType.ADJUST)
+                .points(points)
+                .balanceAfter(member.getAvailablePoints())
+                .reason("後台手動增加")
+                .build());
         return toDTO(member);
     }
 
     @Transactional
     public MemberDTO deductPoints(Long id, Integer points) {
+        if (points == null || points <= 0) {
+            throw new BusinessException("積點需大於 0");
+        }
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("會員不存在"));
-        if (member.getAvailablePoints() < points) {
+        int available = member.getAvailablePoints() == null ? 0 : member.getAvailablePoints();
+        if (available < points) {
             throw new BusinessException("可用積點不足");
         }
-        member.setAvailablePoints(member.getAvailablePoints() - points);
+        member.setAvailablePoints(available - points);
         member = memberRepository.save(member);
+        pointRecordRepository.save(PointRecord.builder()
+                .memberId(id)
+                .pointType(PointType.ADJUST)
+                .points(-points)
+                .balanceAfter(member.getAvailablePoints())
+                .reason("後台手動扣除")
+                .build());
         return toDTO(member);
     }
 

@@ -65,6 +65,11 @@ const routes = [
         path: '/shop/unsubscribe',
         component: () => import('pages/shop/unsubscribe.vue'),
       },
+      // 商店內找不到的網址顯示商店版 404
+      {
+        path: '/shop/:catchAll(.*)*',
+        component: () => import('pages/shop/NotFound.vue'),
+      },
     ],
   },
 

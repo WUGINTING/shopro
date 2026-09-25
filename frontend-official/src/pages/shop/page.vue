@@ -87,6 +87,7 @@
 </template>
 
 <script setup>
+import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getCustomPageBySlug } from 'src/api/customPage.js';
@@ -224,6 +225,11 @@ watch(
 );
 
 onMounted(loadStoreContent);
+
+useShopMeta(() => ({
+  title: page.value?.metaTitle || page.value?.title,
+  description: page.value?.metaDescription || page.value?.content,
+}));
 </script>
 
 <style lang="scss" scoped>

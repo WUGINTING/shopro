@@ -123,6 +123,7 @@
 </template>
 
 <script setup>
+import { useShopMeta } from 'src/composables/useShopMeta.js';
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
@@ -192,6 +193,8 @@ onMounted(() => {
     }
   });
 });
+
+useShopMeta(() => ({ description: '遇日小舖線上商店：精選甜品與伴手禮，線上付款或貨到付款，宅配到府或門市自取。' }));
 </script>
 
 <style lang="scss" scoped>

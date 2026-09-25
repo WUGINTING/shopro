@@ -144,7 +144,15 @@
 
       <!-- Products Table -->
       <q-card class="table-shell-card">
+        <div v-if="selectedProducts.length > 0" class="row items-center q-gutter-sm q-pa-sm bg-blue-1">
+          <div class="text-body2">已選 {{ selectedProducts.length }} 項商品</div>
+          <q-btn dense unelevated color="positive" no-caps icon="publish" label="批次上架" @click="batchSetStatus(true)" />
+          <q-btn dense unelevated color="grey-7" no-caps icon="unpublished" label="批次下架" @click="batchSetStatus(false)" />
+          <q-btn dense flat no-caps label="取消選取" @click="selectedProducts = []" />
+        </div>
         <q-table
+          v-model:selected="selectedProducts"
+          selection="multiple"
           :rows="products"
           :columns="columns"
           row-key="id"
@@ -1506,6 +1514,25 @@ const selectedImageCount = computed(() => {
   return selectedAlbumImages.value.length + uploadCount
 })
 const specImagePreviewUrl = computed(() => specImagePreviewObjectUrl.value || specForm.value.image || '')
+
+// 批次上架 / 下架
+const selectedProducts = ref<ProductRow[]>([])
+const batchSetStatus = async (activate: boolean) => {
+  const ids = selectedProducts.value.map((product) => product.id).filter((id): id is number => typeof id === 'number')
+  if (ids.length === 0) return
+  try {
+    if (activate) {
+      await productApi.batchActivate(ids)
+    } else {
+      await productApi.batchDeactivate(ids)
+    }
+    $q.notify({ type: 'positive', message: `已${activate ? '上架' : '下架'} ${ids.length} 項商品`, position: 'top' })
+    selectedProducts.value = []
+    loadProducts()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+}
 
 // 開啟編輯時的庫存；送出時未修改就不送 stock，避免覆寫期間已賣出的庫存
 const originalStock = ref<number | undefined>(undefined)

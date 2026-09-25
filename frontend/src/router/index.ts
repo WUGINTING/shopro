@@ -104,6 +104,12 @@ const router = createRouter({
           meta: { roles: ['ADMIN', 'MANAGER', 'STAFF'] }
         },
         {
+          path: 'blacklist',
+          name: 'blacklist',
+          component: () => import('@/views/BlacklistView.vue'),
+          meta: { roles: ['ADMIN', 'MANAGER'] }
+        },
+        {
           path: 'order-discounts',
           name: 'orderDiscounts',
           component: () => import('@/views/OrderDiscountView.vue'),

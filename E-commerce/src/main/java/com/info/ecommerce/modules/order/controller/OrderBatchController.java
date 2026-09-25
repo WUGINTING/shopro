@@ -46,4 +46,19 @@ public class OrderBatchController {
         return ApiResponse.success("訂單資料已準備導出", 
             orderBatchService.exportOrders(orderIds));
     }
+
+    @GetMapping(value = "/export.csv", produces = "text/csv; charset=UTF-8")
+    @Operation(summary = "匯出訂單 CSV", description = "依建立日期（含）與狀態篩選；Excel 可直接開啟（UTF-8 BOM）")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public org.springframework.http.ResponseEntity<byte[]> exportCsv(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
+            @RequestParam(required = false) com.info.ecommerce.modules.order.enums.OrderStatus status) {
+        byte[] csv = orderBatchService.exportCsv(startDate, endDate, status);
+        String filename = "orders-" + java.time.LocalDate.now() + ".csv";
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csv);
+    }
 }

@@ -30,6 +30,7 @@ public class OrderBatchService {
     private final MemberService memberService;
     private final OrderStockService orderStockService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.info.ecommerce.modules.order.repository.OrderItemRepository orderItemRepository;
 
     /**
      * 批次更新訂單狀態
@@ -120,5 +121,69 @@ public class OrderBatchService {
             return orderRepository.findAll();
         }
         return orderRepository.findAllById(orderIds);
+    }
+
+    /**
+     * 匯出訂單 CSV（最多 1 年）：每筆訂單一列，商品明細以「名稱 x 數量」串接
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportCsv(java.time.LocalDate startDate, java.time.LocalDate endDate, OrderStatus status) {
+        java.time.LocalDate end = endDate != null ? endDate : java.time.LocalDate.now();
+        java.time.LocalDate start = startDate != null ? startDate : end.minusDays(30);
+        if (start.isAfter(end) || start.plusDays(366).isBefore(end)) {
+            throw new BusinessException("匯出期間需在一年內，且開始日期不可晚於結束日期");
+        }
+        List<Order> orders = orderRepository.findByCreatedAtBetween(start.atStartOfDay(), end.plusDays(1).atStartOfDay().minusNanos(1))
+                .stream()
+                .filter(order -> status == null || order.getStatus() == status)
+                .sorted(java.util.Comparator.comparing(Order::getCreatedAt))
+                .toList();
+        java.util.Map<Long, List<com.info.ecommerce.modules.order.entity.OrderItem>> itemsByOrder = orders.isEmpty()
+                ? java.util.Map.of()
+                : orderItemRepository.findByOrderIdIn(orders.stream().map(Order::getId).toList()).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(com.info.ecommerce.modules.order.entity.OrderItem::getOrderId));
+
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("訂單編號,建立時間,狀態,顧客,Email,電話,配送方式,收件地址,商品明細,小計,折扣,運費,總額,備註\r\n");
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        for (Order order : orders) {
+            String items = itemsByOrder.getOrDefault(order.getId(), List.of()).stream()
+                    .map(item -> (item.getProductName() != null ? item.getProductName() : "#" + item.getProductId())
+                            + (item.getProductSpec() != null ? "(" + item.getProductSpec() + ")" : "")
+                            + " x " + item.getQuantity())
+                    .collect(java.util.stream.Collectors.joining("；"));
+            sb.append(String.join(",",
+                    csv(order.getOrderNumber()),
+                    csv(order.getCreatedAt() != null ? order.getCreatedAt().format(formatter) : ""),
+                    csv(order.getStatus() != null ? order.getStatus().getDescription() : ""),
+                    csv(order.getCustomerName()),
+                    csv(order.getCustomerEmail()),
+                    csv(order.getCustomerPhone()),
+                    csv(order.getPickupType() == com.info.ecommerce.modules.order.enums.PickupType.STORE_PICKUP ? "門市自取" : "宅配"),
+                    csv(order.getShippingAddress()),
+                    csv(items),
+                    csv(plain(order.getSubtotalAmount())),
+                    csv(plain(order.getDiscountAmount())),
+                    csv(plain(order.getShippingFee())),
+                    csv(plain(order.getTotalAmount())),
+                    csv(order.getNotes()))).append("\r\n");
+        }
+        return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static String plain(java.math.BigDecimal value) {
+        return value == null ? "0" : value.stripTrailingZeros().toPlainString();
+    }
+
+    /** CSV 欄位跳脫；開頭為公式字元時加上單引號，避免 Excel 公式注入 */
+    private static String csv(String value) {
+        if (value == null) {
+            return "";
+        }
+        String text = value.replace("\r", " ").replace("\n", " ");
+        if (!text.isEmpty() && "=+-@".indexOf(text.charAt(0)) >= 0) {
+            text = "'" + text;
+        }
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 }
