@@ -84,6 +84,10 @@ public class ProductSpecificationController {
             productService.assertPubliclyVisible(productId);
         }
         List<ProductSpecificationDTO> specs = specificationService.listProductSpecifications(productId);
+        if (!currentUserService.isStaff()) {
+            // 顧客只看得到啟用中的規格
+            specs = specs.stream().filter(spec -> !Boolean.FALSE.equals(spec.getEnabled())).toList();
+        }
         specs.forEach(this::forCaller);
         return ApiResponse.success(specs);
     }

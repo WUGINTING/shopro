@@ -89,6 +89,8 @@
                 </div>
               </div>
 
+              <q-checkbox v-model="marketingOptIn" dense label="我願意收到優惠與新品通知 Email（可隨時取消訂閱）" />
+
               <q-banner rounded class="bg-blue-1 text-primary">
                 <template #avatar><q-icon name="lock" /></template>
                 訂單建立後若選擇 ECPay，系統會導向 ECPay 付款頁完成付款；請勿關閉或重整頁面直到導轉完成。
@@ -240,6 +242,7 @@ const quoting = ref(false)
 const quoteError = ref('')
 let quoteSeq = 0
 const couponInput = ref('')
+const marketingOptIn = ref(false)
 const requestedCoupon = ref('')
 const localSubtotal = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0))
 const subtotal = computed(() => (quote.value ? Number(quote.value.subtotalAmount) : localSubtotal.value))
@@ -402,6 +405,7 @@ const submitCheckout = async () => {
       paymentMethod: form.value.paymentMethod === 'COD' ? 'COD' : 'ECPAY',
       channel: 'ADMIN_STORE',
       couponCode: quote.value?.couponCode || null,
+      marketingOptIn: marketingOptIn.value,
       items: toCheckoutItems()
     })
 

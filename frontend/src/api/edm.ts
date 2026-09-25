@@ -183,19 +183,6 @@ export const edmApi = {
   },
 
   /**
-   * 獲取 EDM 統計資訊
-   * @description 查詢 EDM 系統的總體統計數據
-   * @returns {Promise<EdmStatistics>} EDM 統計資料
-   * @swagger GET /api/crm/edm/statistics
-   * @example
-   * const stats = await edmApi.getStatistics()
-   * console.log(stats.averageOpenRate) // 平均開信率
-   */
-  getStatistics: async () => {
-    return axiosInstance.get<any, EdmStatistics>(`${API_BASE}/statistics`)
-  },
-
-  /**
    * 按狀態查詢 EDM 活動
    * @description 根據狀態分頁查詢 EDM 活動
    * @param {string} status - 活動狀態（DRAFT/SCHEDULED/SENT/FAILED）

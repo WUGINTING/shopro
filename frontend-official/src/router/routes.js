@@ -61,6 +61,10 @@ const routes = [
         path: '/shop/order/lookup',
         component: () => import('pages/shop/order/lookup.vue'),
       },
+      {
+        path: '/shop/unsubscribe',
+        component: () => import('pages/shop/unsubscribe.vue'),
+      },
     ],
   },
 

@@ -21,6 +21,8 @@ export interface StorefrontCheckoutRequest {
   channel?: 'STOREFRONT' | 'ADMIN_STORE'
   /** 優惠券代碼（只送試算確認會套用的代碼） */
   couponCode?: string | null
+  /** 同意接收優惠與新品通知 Email */
+  marketingOptIn?: boolean
   items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
 }
 

@@ -389,6 +389,9 @@
                       </span>
                     </template>
                   </q-checkbox>
+                  <q-checkbox v-model="marketingOptIn" dense color="primary" class="terms-checkbox q-mt-xs">
+                    <span class="terms-text">我願意收到優惠與新品通知 Email（可隨時取消訂閱）</span>
+                  </q-checkbox>
                 </div>
               </div>
 
@@ -492,6 +495,8 @@ const shippingFee = computed(() => Number(quote.value?.shippingFee ?? 0));
 
 // 優惠券：requestedCoupon 為顧客送出試算的代碼；實際是否套用以試算結果 quote.couponCode 為準
 const couponInput = ref('');
+// 行銷 Email 同意（預設不勾選）
+const marketingOptIn = ref(false);
 const requestedCoupon = ref('');
 const amountDiscounts = computed(() =>
   (quote.value?.discounts || []).filter(discount => Number(discount.amount) > 0)
@@ -669,6 +674,7 @@ const submitOrder = async () => {
       paymentMethod: paymentMethod.value,
       // 只送出試算確認會套用的優惠券
       couponCode: quote.value?.couponCode || null,
+      marketingOptIn: marketingOptIn.value,
       items: toOrderItems(cartItems.value),
     });
 

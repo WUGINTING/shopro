@@ -24,6 +24,7 @@ public class ProductSpecificationService {
     private final ProductRepository productRepository;
     private final ProductInventoryRepository productInventoryRepository;
     private final InventoryMovementLogRepository movementLogRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * 添加商品規格
@@ -82,6 +83,8 @@ public class ProductSpecificationService {
             spec.setStock(newStock);
             int before = beforeStock == null ? 0 : beforeStock;
             productInventoryRepository.adjustSpecificationStock(spec.getProductId(), spec.getId(), newStock - before);
+            eventPublisher.publishEvent(new com.info.ecommerce.modules.product.event.StockChangedEvent(
+                    java.util.List.of(spec.getProductId()), newStock > before));
             movementLogRepository.save(InventoryMovementLog.builder()
                     .productId(spec.getProductId())
                     .specificationId(spec.getId())

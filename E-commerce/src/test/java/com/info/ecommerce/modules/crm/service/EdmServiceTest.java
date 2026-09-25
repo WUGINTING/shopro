@@ -54,6 +54,15 @@ class EdmServiceTest {
     @InjectMocks
     private EdmService edmService;
 
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<org.springframework.mail.javamail.JavaMailSender> mailSenderProvider;
+
+    @Mock
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
+    @Mock
+    private com.info.ecommerce.modules.auth.service.JwtService jwtService;
+
     private EdmCampaign edmCampaign;
     private EdmCampaignDTO edmCampaignDTO;
     private Member member;
@@ -82,7 +91,12 @@ class EdmServiceTest {
                 .id(1L)
                 .email("test@example.com")
                 .name("Test Member")
+                .marketingOptIn(true)
                 .build();
+        org.mockito.Mockito.lenient().when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        org.mockito.Mockito.lenient().when(mailSender.createMimeMessage())
+                .thenAnswer(invocation -> new jakarta.mail.internet.MimeMessage((jakarta.mail.Session) null));
+        org.mockito.Mockito.lenient().when(jwtService.generatePurposeToken(any(), any(), any(), anyLong())).thenReturn("token");
     }
 
     @Test
@@ -363,5 +377,40 @@ class EdmServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(edmSendLogRepository, times(1)).findByCampaignId(1L, pageable);
+    }
+
+    @Test
+    void should_OnlyMailOptedInActiveMembers_AndIncludeUnsubscribeLink() throws Exception {
+        Member noConsent = Member.builder().id(2L).email("no@example.com").marketingOptIn(false).build();
+        Member suspended = Member.builder().id(3L).email("s@example.com").marketingOptIn(true)
+                .status(com.info.ecommerce.modules.crm.enums.MemberStatus.SUSPENDED).build();
+        Member duplicate = Member.builder().id(4L).email("TEST@example.com").marketingOptIn(true).build();
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(memberRepository.findAll()).thenReturn(List.of(member, noConsent, suspended, duplicate));
+
+        EdmCampaignDTO result = edmService.sendEdmCampaign(1L);
+
+        org.mockito.ArgumentCaptor<jakarta.mail.internet.MimeMessage> sent =
+                org.mockito.ArgumentCaptor.forClass(jakarta.mail.internet.MimeMessage.class);
+        verify(mailSender, times(1)).send(sent.capture());
+        assertThat(sent.getValue().getAllRecipients()[0].toString()).isEqualTo("test@example.com");
+        sent.getValue().saveChanges();
+        assertThat(sent.getValue().getContent().toString()).contains("/shop/unsubscribe?token=token");
+        assertThat(result.getSuccessCount()).isEqualTo(1);
+    }
+
+    @Test
+    void should_RefuseToSend_When_MailNotConfiguredOrNoRecipients() {
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(null);
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("SMTP");
+
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        when(memberRepository.findAll()).thenReturn(List.of(Member.builder().id(9L).email("x@example.com").build()));
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("同意接收");
+        verify(edmCampaignRepository, never()).save(any());
     }
 }

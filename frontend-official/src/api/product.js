@@ -19,6 +19,16 @@ export function getStorefrontProducts(params = {}) {
 }
 
 /**
+ * 缺貨商品登記到貨通知
+ * @param {number} id - 商品 ID
+ * @param {string} email - 通知 Email
+ * @param {number|null} specificationId - 規格 ID（選填）
+ */
+export function subscribeRestock(id, email, specificationId = null) {
+  return http.post(`/storefront/products/${id}/restock-notification`, { email, specificationId });
+}
+
+/**
  * 前台商品詳情（未上架商品回傳錯誤）
  * @param {number} id - 商品 ID
  * @returns {Promise} ProductDTO

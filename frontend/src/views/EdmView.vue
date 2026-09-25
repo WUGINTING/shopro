@@ -3,6 +3,9 @@
     <div class="row items-center q-mb-md">
       <div class="col">
         <h4 class="q-my-none">EDM 電子報管理</h4>
+        <div class="text-caption text-grey-7 q-mt-xs">
+          只會寄給狀態正常、且在結帳時勾選「同意接收優惠與新品通知」的會員；每封信附退訂連結。需設定寄信（SMTP）才能發送。
+        </div>
       </div>
       <div class="col-auto">
         <q-btn
@@ -529,19 +532,16 @@ const saveCampaign = async () => {
 const sendCampaign = async (id: number) => {
   $q.loading.show()
   try {
-    await edmApi.sendCampaign(id)
+    const result: any = await edmApi.sendCampaign(id)
+    const data = result?.data ?? result
     $q.notify({
       type: 'positive',
-      message: '活動已發送',
+      message: data?.totalSent != null ? `已寄出 ${data.successCount ?? 0} / ${data.totalSent} 封` : '活動已發送',
       position: 'top'
     })
     loadCampaigns()
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '發送失敗',
-      position: 'top'
-    })
+  } catch {
+    // 錯誤訊息（例如未設定寄信、沒有同意接收的會員）由系統通知顯示
   } finally {
     $q.loading.hide()
   }

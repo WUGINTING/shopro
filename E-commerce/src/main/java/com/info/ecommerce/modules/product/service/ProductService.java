@@ -38,6 +38,7 @@ public class ProductService {
     private final ProductInventoryRepository productInventoryRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
     private final InventoryMovementLogRepository inventoryMovementLogRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * 驗證並標準化 SKU
@@ -403,37 +404,32 @@ public class ProductService {
         return dto;
     }
 
+    /**
+     * 商品可售庫存（與結帳扣庫存的規則一致）：
+     * - 有啟用中的規格：各規格庫存加總；任一規格未設定庫存（null）視為不限量，回傳 null
+     * - 無規格：商品層級庫存；沒有庫存紀錄或未設定時回傳 null（不追蹤庫存、不限量）
+     */
     private Integer calculateProductStock(Long productId) {
         if (productId == null) {
-            return 0;
+            return null;
         }
 
-        List<ProductInventory> inventories = productInventoryRepository.findByProductId(productId);
-        if (inventories != null && !inventories.isEmpty()) {
-            boolean hasSpecificationRows = inventories.stream()
-                    .anyMatch(inventory -> inventory.getSpecificationId() != null);
-
-            int inventoryStock = inventories.stream()
-                    .filter(inventory -> !hasSpecificationRows || inventory.getSpecificationId() != null)
-                    .map(ProductInventory::getAvailableStock)
-                    .filter(stock -> stock != null && stock > 0)
-                    .reduce(0, Integer::sum);
-
-            return Math.max(inventoryStock, 0);
-        }
-
-        List<ProductSpecification> specifications = productSpecificationRepository.findByProductId(productId);
-        if (specifications == null || specifications.isEmpty()) {
-            return 0;
-        }
-
-        int specificationStock = specifications.stream()
+        List<ProductSpecification> specifications = productSpecificationRepository.findByProductId(productId).stream()
                 .filter(spec -> spec.getEnabled() == null || Boolean.TRUE.equals(spec.getEnabled()))
-                .map(ProductSpecification::getStock)
-                .filter(stock -> stock != null && stock > 0)
-                .reduce(0, Integer::sum);
+                .toList();
+        if (!specifications.isEmpty()) {
+            if (specifications.stream().anyMatch(spec -> spec.getStock() == null)) {
+                return null;
+            }
+            return specifications.stream()
+                    .mapToInt(spec -> Math.max(spec.getStock(), 0))
+                    .sum();
+        }
 
-        return Math.max(specificationStock, 0);
+        return productInventoryRepository.findByProductIdAndSpecificationId(productId, null)
+                .map(ProductInventory::getAvailableStock)
+                .map(stock -> Math.max(stock, 0))
+                .orElse(null);
     }
 
     private void syncProductLevelInventory(Long productId, Integer stock) {
@@ -470,6 +466,8 @@ public class ProductService {
         productInventoryRepository.save(productLevelInventory);
 
         if (beforeStock != normalizedStock) {
+            eventPublisher.publishEvent(new com.info.ecommerce.modules.product.event.StockChangedEvent(
+                    List.of(productId), normalizedStock > beforeStock));
             inventoryMovementLogRepository.save(InventoryMovementLog.builder()
                     .productId(productId)
                     .specificationId(null)

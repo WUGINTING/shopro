@@ -9,7 +9,14 @@ import com.info.ecommerce.modules.crm.enums.EdmStatus;
 import com.info.ecommerce.modules.crm.repository.EdmCampaignRepository;
 import com.info.ecommerce.modules.crm.repository.EdmSendLogRepository;
 import com.info.ecommerce.modules.crm.repository.MemberRepository;
+import com.info.ecommerce.modules.auth.service.JwtService;
+import com.info.ecommerce.modules.crm.enums.MemberStatus;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +34,20 @@ public class EdmService {
     private final EdmSendLogRepository edmSendLogRepository;
     private final MemberRepository memberRepository;
     private final MemberGroupService memberGroupService;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final JwtService jwtService;
+
+    static final String UNSUBSCRIBE_PURPOSE = "edm-unsubscribe";
+    private static final long UNSUBSCRIBE_TOKEN_TTL_MILLIS = 365L * 24 * 60 * 60 * 1000;
+
+    @Value("${app.mail.from:}")
+    private String mailFrom;
+
+    @Value("${app.mail.store-name:遇日小舖}")
+    private String storeName;
+
+    @Value("${app.storefront-url:}")
+    private String storefrontUrl;
 
     @Transactional
     public EdmCampaignDTO createEdmCampaign(EdmCampaignDTO dto) {
@@ -100,42 +121,62 @@ public class EdmService {
             throw new BusinessException("EDM 活動已發送");
         }
 
-        edmCampaign.setStatus(EdmStatus.SENDING);
-        edmCampaign = edmCampaignRepository.save(edmCampaign);
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            throw new BusinessException("尚未設定寄信（SMTP），無法發送 EDM");
+        }
 
-        // 取得目標會員
-        List<Member> targetMembers;
+        // 取得目標會員：只寄給狀態正常、且同意接收行銷 Email 的會員（同一 Email 只寄一次）
+        List<Member> candidates;
         if (edmCampaign.getTargetGroupId() != null) {
             List<Long> memberIds = memberGroupService.getGroupMembers(edmCampaign.getTargetGroupId());
-            targetMembers = memberRepository.findAllById(memberIds);
+            candidates = memberRepository.findAllById(memberIds);
         } else {
-            targetMembers = memberRepository.findAll();
+            candidates = memberRepository.findAll();
         }
+        java.util.Set<String> seenEmails = new java.util.HashSet<>();
+        List<Member> targetMembers = candidates.stream()
+                .filter(member -> Boolean.TRUE.equals(member.getMarketingOptIn()))
+                .filter(member -> member.getStatus() == null || member.getStatus() == MemberStatus.ACTIVE)
+                .filter(member -> member.getEmail() != null && !member.getEmail().isBlank())
+                .filter(member -> seenEmails.add(member.getEmail().trim().toLowerCase(java.util.Locale.ROOT)))
+                .toList();
+        if (targetMembers.isEmpty()) {
+            throw new BusinessException("沒有符合條件的收件人：EDM 只會寄給狀態正常且同意接收優惠通知的會員");
+        }
+
+        edmCampaign.setStatus(EdmStatus.SENDING);
+        edmCampaign = edmCampaignRepository.save(edmCampaign);
 
         int successCount = 0;
         int failureCount = 0;
 
-        // 模擬發送郵件（實際應用中應整合郵件服務）
         for (Member member : targetMembers) {
             try {
-                // 這裡應該調用實際的郵件發送服務
-                EdmSendLog log = EdmSendLog.builder()
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+                if (mailFrom != null && !mailFrom.isBlank()) {
+                    helper.setFrom(mailFrom, storeName);
+                }
+                helper.setTo(member.getEmail().trim());
+                helper.setSubject(edmCampaign.getSubject() != null ? edmCampaign.getSubject() : edmCampaign.getName());
+                helper.setText(withUnsubscribeFooter(edmCampaign.getContent(), member), true);
+                mailSender.send(message);
+                edmSendLogRepository.save(EdmSendLog.builder()
                         .campaignId(id)
                         .memberId(member.getId())
                         .recipientEmail(member.getEmail())
                         .success(true)
-                        .build();
-                edmSendLogRepository.save(log);
+                        .build());
                 successCount++;
             } catch (Exception e) {
-                EdmSendLog log = EdmSendLog.builder()
+                edmSendLogRepository.save(EdmSendLog.builder()
                         .campaignId(id)
                         .memberId(member.getId())
                         .recipientEmail(member.getEmail())
                         .success(false)
                         .errorMessage(e.getMessage())
-                        .build();
-                edmSendLogRepository.save(log);
+                        .build());
                 failureCount++;
             }
         }
@@ -166,6 +207,35 @@ public class EdmService {
 
     public Page<EdmSendLog> getEdmSendLogs(Long campaignId, Pageable pageable) {
         return edmSendLogRepository.findByCampaignId(campaignId, pageable);
+    }
+
+    /** EDM 內容加上退訂說明與一鍵退訂連結（個資法：行銷信需提供拒絕接收的方式） */
+    private String withUnsubscribeFooter(String content, Member member) {
+        String token = jwtService.generatePurposeToken(UNSUBSCRIBE_PURPOSE, String.valueOf(member.getId()),
+                java.util.Map.of(), UNSUBSCRIBE_TOKEN_TTL_MILLIS);
+        String base = storefrontUrl == null ? "" : storefrontUrl.replaceAll("/+$", "");
+        String link = base + "/shop/unsubscribe?token=" + java.net.URLEncoder.encode(token, java.nio.charset.StandardCharsets.UTF_8);
+        return (content == null ? "" : content)
+                + "<hr style=\"margin-top:32px;border:none;border-top:1px solid #eee\">"
+                + "<p style=\"font-size:12px;color:#888\">您收到這封信是因為您同意接收" + escape(storeName)
+                + "的優惠與新品通知。若不想再收到，請<a href=\"" + link + "\">按此取消訂閱</a>。</p>";
+    }
+
+    private static String escape(String text) {
+        return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    /**
+     * 以 EDM 信中的退訂連結取消訂閱
+     */
+    @Transactional
+    public void unsubscribe(String token) {
+        io.jsonwebtoken.Claims claims = jwtService.parsePurposeToken(token, UNSUBSCRIBE_PURPOSE)
+                .orElseThrow(() -> new BusinessException("退訂連結無效或已過期"));
+        memberRepository.findById(Long.valueOf(claims.getSubject())).ifPresent(member -> {
+            member.setMarketingOptIn(false);
+            memberRepository.save(member);
+        });
     }
 
     private EdmCampaignDTO toDTO(EdmCampaign edmCampaign) {

@@ -31,6 +31,7 @@ class OrderStockServiceTest {
     @Mock private OrderHistoryRepository orderHistoryRepository;
     @Mock private OrderHistoryService orderHistoryService;
     @Mock private OrderCouponService orderCouponService;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OrderStockService orderStockService;

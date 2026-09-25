@@ -178,8 +178,8 @@
                     <div class="row items-center q-gutter-xs q-mt-xs">
                       <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
                       <q-badge
-                        :color="props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
-                        :label="'庫存: ' + props.row.stock"
+                        :color="props.row.stock == null || props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                        :label="props.row.stock == null ? '庫存: 不限量' : '庫存: ' + props.row.stock"
                       />
                     </div>
                   </div>
@@ -249,11 +249,11 @@
             <q-td :props="props">
               <div class="row items-center no-wrap q-gutter-xs">
                 <q-badge
-                  :color="(props.row.stock ?? 0) > 10 ? 'positive' : (props.row.stock ?? 0) > 0 ? 'warning' : 'negative'"
-                  :label="props.row.stock ?? 0"
+                  :color="props.row.stock == null || props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                  :label="props.row.stock == null ? '不限量' : props.row.stock"
                 />
                 <q-icon
-                  v-if="(props.row.stock ?? 0) <= 10"
+                  v-if="props.row.stock != null && props.row.stock <= 10"
                   name="warning"
                   :color="(props.row.stock ?? 0) === 0 ? 'negative' : 'warning'"
                   size="16px"
@@ -261,7 +261,7 @@
                   <q-tooltip>{{ (props.row.stock ?? 0) === 0 ? '已缺貨' : '庫存不足' }}</q-tooltip>
                 </q-icon>
                 <q-btn
-                  v-if="(props.row.stock ?? 0) <= 10"
+                  v-if="props.row.stock == null || props.row.stock <= 10"
                   flat
                   dense
                   round
@@ -1250,12 +1250,26 @@
               <div class="text-caption text-grey-7">
                 目前庫存：
                 <q-badge
-                  :color="(restockProduct.stock ?? 0) > 10 ? 'positive' : (restockProduct.stock ?? 0) > 0 ? 'warning' : 'negative'"
+                  v-if="restockProduct.stock != null"
+                  :color="restockProduct.stock > 10 ? 'positive' : restockProduct.stock > 0 ? 'warning' : 'negative'"
                 >
-                  {{ restockProduct.stock ?? 0 }}
+                  {{ restockProduct.stock }}
                 </q-badge>
+                <span v-else>未追蹤（不限量）</span>
               </div>
             </div>
+
+            <q-select
+              v-if="restockSpecs.length > 0"
+              v-model="restockSpecId"
+              outlined
+              dense
+              emit-value
+              map-options
+              label="補貨規格 *"
+              class="q-mb-md"
+              :options="restockSpecs.map((spec) => ({ label: `${spec.specName}（目前 ${spec.stock ?? '不限量'}）`, value: spec.id }))"
+            />
 
             <q-input
               v-model.number="restockQuantity"
@@ -1549,7 +1563,7 @@ const productMetrics = computed(() => {
     total: list.length,
     published: list.filter((p) => p.status === 'PUBLISHED').length,
     draft: list.filter((p) => p.status === 'DRAFT').length,
-    lowStock: list.filter((p) => Number(p.stock || 0) <= 10).length
+    lowStock: list.filter((p) => p.stock != null && Number(p.stock) <= 10).length
   }
 })
 
@@ -1623,27 +1637,50 @@ const getProductAlertLevel = (productId: number): string | null => {
 }
 
 // 開啟快速補貨對話框
-const openRestockDialog = (product: ProductRow) => {
+// 有規格的商品需選擇補貨規格（結帳以規格庫存為準）
+const restockSpecs = ref<ProductSpecification[]>([])
+const restockSpecId = ref<number | null>(null)
+
+const openRestockDialog = async (product: ProductRow) => {
   restockProduct.value = product
   restockQuantity.value = 100 // 預設補貨數量
+  restockSpecs.value = []
+  restockSpecId.value = null
+  if (product.id) {
+    try {
+      const response = await productSpecificationApi.getProductSpecifications(product.id)
+      restockSpecs.value = (response.data || []).filter((spec) => spec.enabled !== false)
+      // 預設選庫存最少的規格
+      const lowest = [...restockSpecs.value].sort((a, b) => (a.stock ?? Infinity) - (b.stock ?? Infinity))[0]
+      restockSpecId.value = lowest?.id ?? null
+    } catch {
+      restockSpecs.value = []
+    }
+  }
   showRestockDialog.value = true
 }
 
 // 執行快速補貨
 const handleRestock = async () => {
   if (!restockProduct.value?.id || restockQuantity.value <= 0) return
+  if (restockSpecs.value.length > 0 && !restockSpecId.value) {
+    $q.notify({ type: 'warning', message: '請選擇要補貨的規格', position: 'top' })
+    return
+  }
 
   restockLoading.value = true
   try {
-    await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value)
+    await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value, restockSpecId.value ?? undefined)
+    const specName = restockSpecs.value.find((spec) => spec.id === restockSpecId.value)?.specName
     $q.notify({
       type: 'positive',
-      message: `已為「${restockProduct.value.name}」補貨 ${restockQuantity.value} 件`,
+      message: `已為「${restockProduct.value.name}${specName ? `（${specName}）` : ''}」補貨 ${restockQuantity.value} 件`,
       position: 'top'
     })
     showRestockDialog.value = false
-    // 重新載入庫存警示
-    await loadInventoryAlerts()
+    // 重新載入商品與庫存警示（警示於背景更新）
+    loadProducts()
+    setTimeout(loadInventoryAlerts, 1000)
   } catch (error) {
     $q.notify({
       type: 'negative',

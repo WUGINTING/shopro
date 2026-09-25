@@ -38,7 +38,8 @@ export function mapProduct(item) {
     sku: item.sku,
     status: item.status,
     hasSpecs: specifications.length > 0,
-    soldOut: item.status === 'OUT_OF_STOCK' || (hasStockInfo && specifications.length > 0 && item.stock <= 0),
+    // stock 為 null 表示未追蹤庫存（不限量）
+    soldOut: item.status === 'OUT_OF_STOCK' || (hasStockInfo && item.stock <= 0),
     createdAt: item.createdAt,
   };
 }

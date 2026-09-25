@@ -139,9 +139,11 @@ export function updateCartItemSpec(productId, oldSpecId, newSpec) {
 
     // 更新規格和價格
     cartItems[itemIndex].specification = newSpec;
-    cartItems[itemIndex].selectedPrice = newSpec.price;
+    // 規格沒有自己的價格時沿用商品價格（實際金額以結帳試算為準）
+    const specPrice = Number(newSpec.price) > 0 ? Number(newSpec.price) : cartItems[itemIndex].price;
+    cartItems[itemIndex].selectedPrice = specPrice;
     cartItems[itemIndex].selectedSku = newSpec.sku;
-    cartItems[itemIndex].price = newSpec.price;
+    cartItems[itemIndex].price = specPrice;
     
     // 檢查數量是否超過新規格的庫存（未追蹤庫存時不限制）
     if (newSpec.stock !== null && newSpec.stock !== undefined && cartItems[itemIndex].quantity > newSpec.stock) {

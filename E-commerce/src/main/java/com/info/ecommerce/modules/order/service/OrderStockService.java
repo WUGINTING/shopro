@@ -41,6 +41,7 @@ public class OrderStockService {
     private final OrderHistoryRepository orderHistoryRepository;
     private final OrderHistoryService orderHistoryService;
     private final OrderCouponService orderCouponService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * 扣除訂單品項庫存；任一品項庫存不足時丟出 BusinessException（呼叫端交易會整筆回滾）
@@ -110,6 +111,7 @@ public class OrderStockService {
     }
 
     private void reserveItems(List<OrderItem> items, String orderNumber) {
+        publishStockChanged(items, false);
         for (OrderItem item : items) {
             int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
             if (quantity <= 0) {
@@ -123,7 +125,19 @@ public class OrderStockService {
         }
     }
 
+    /** 交易提交後更新低庫存警示；歸還庫存時一併檢查到貨通知 */
+    private void publishStockChanged(List<OrderItem> items, boolean replenished) {
+        java.util.Set<Long> productIds = items.stream()
+                .map(OrderItem::getProductId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!productIds.isEmpty()) {
+            eventPublisher.publishEvent(new com.info.ecommerce.modules.product.event.StockChangedEvent(productIds, replenished));
+        }
+    }
+
     private void returnItems(List<OrderItem> items, String remark) {
+        publishStockChanged(items, true);
         for (OrderItem item : items) {
             int quantity = item.getQuantity() != null ? item.getQuantity() : 0;
             if (quantity <= 0) {

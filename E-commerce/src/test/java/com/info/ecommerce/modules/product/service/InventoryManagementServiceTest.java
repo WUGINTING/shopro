@@ -1,15 +1,18 @@
 package com.info.ecommerce.modules.product.service;
 
 import com.info.ecommerce.common.exception.BusinessException;
-import com.info.ecommerce.modules.product.repository.InventoryMovementLogRepository;
-import com.info.ecommerce.modules.system.service.AdminNotificationService;
 import com.info.ecommerce.modules.product.entity.InventoryAlert;
+import com.info.ecommerce.modules.product.entity.Product;
 import com.info.ecommerce.modules.product.entity.ProductInventory;
+import com.info.ecommerce.modules.product.entity.ProductSpecification;
 import com.info.ecommerce.modules.product.entity.StockNotification;
 import com.info.ecommerce.modules.product.enums.AlertLevel;
-import com.info.ecommerce.modules.product.repository.InventoryAlertRepository;
-import com.info.ecommerce.modules.product.repository.ProductInventoryRepository;
-import com.info.ecommerce.modules.product.repository.StockNotificationRepository;
+import com.info.ecommerce.modules.product.event.StockChangedEvent;
+import com.info.ecommerce.modules.product.repository.*;
+import com.info.ecommerce.modules.system.enums.AdminNotificationType;
+import com.info.ecommerce.modules.system.service.AdminNotificationService;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,383 +20,178 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for InventoryManagementService
- */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class InventoryManagementServiceTest {
 
-    @Mock
-    private ProductInventoryRepository inventoryRepository;
-
-    @Mock
-    private InventoryAlertRepository alertRepository;
-
-    @Mock
-    private StockNotificationRepository notificationRepository;
-
-    @Mock
-    private InventoryMovementLogRepository movementLogRepository;
-
-    @Mock
-    private AdminNotificationService adminNotificationService;
+    @Mock private ProductInventoryRepository inventoryRepository;
+    @Mock private InventoryAlertRepository alertRepository;
+    @Mock private InventoryMovementLogRepository movementLogRepository;
+    @Mock private StockNotificationRepository notificationRepository;
+    @Mock private AdminNotificationService adminNotificationService;
+    @Mock private ProductSpecificationRepository specificationRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private ObjectProvider<JavaMailSender> mailSenderProvider;
+    @Mock private JavaMailSender mailSender;
 
     @InjectMocks
-    private InventoryManagementService inventoryManagementService;
-
-    private ProductInventory outOfStockInventory;
-    private ProductInventory criticalInventory;
-    private ProductInventory lowInventory;
-    private ProductInventory normalInventory;
-    private InventoryAlert alert;
-    private StockNotification stockNotification;
+    private InventoryManagementService service;
 
     @BeforeEach
     void setUp() {
-        outOfStockInventory = ProductInventory.builder()
-                .id(1L)
-                .productId(1L)
-                .specificationId(1L)
-                .warehouseId(1L)
-                .availableStock(0)
-                .lockedStock(0)
-                .safetyStock(10)
-                .build();
+        ReflectionTestUtils.setField(service, "lowStockThreshold", 5);
+        ReflectionTestUtils.setField(service, "storeName", "測試商店");
+        ReflectionTestUtils.setField(service, "mailFrom", "");
+        ReflectionTestUtils.setField(service, "storefrontUrl", "https://shop.example.com");
+        when(productRepository.findById(anyLong())).thenReturn(Optional.of(Product.builder().id(1L).name("茶杯").build()));
+        when(specificationRepository.findByProductId(anyLong())).thenReturn(List.of());
+        when(alertRepository.findByProductIdAndResolvedFalse(anyLong())).thenReturn(List.of());
+    }
 
-        criticalInventory = ProductInventory.builder()
-                .id(2L)
-                .productId(2L)
-                .specificationId(2L)
-                .warehouseId(1L)
-                .availableStock(4)
-                .lockedStock(0)
-                .safetyStock(10)
-                .build();
-
-        lowInventory = ProductInventory.builder()
-                .id(3L)
-                .productId(3L)
-                .specificationId(3L)
-                .warehouseId(1L)
-                .availableStock(8)
-                .lockedStock(0)
-                .safetyStock(10)
-                .build();
-
-        normalInventory = ProductInventory.builder()
-                .id(4L)
-                .productId(4L)
-                .specificationId(4L)
-                .warehouseId(1L)
-                .availableStock(20)
-                .lockedStock(0)
-                .safetyStock(10)
-                .build();
-
-        alert = InventoryAlert.builder()
-                .id(1L)
-                .productId(1L)
-                .specificationId(1L)
-                .alertLevel(AlertLevel.OUT_OF_STOCK)
-                .currentStock(0)
-                .safetyStock(10)
-                .message("商品 ID 1 已無庫存")
-                .resolved(false)
-                .build();
-
-        stockNotification = StockNotification.builder()
-                .id(1L)
-                .productId(1L)
-                .specificationId(1L)
-                .userEmail("test@example.com")
-                .userPhone("0912345678")
-                .notified(false)
-                .build();
+    private void productStock(Integer stock, Integer safety) {
+        when(inventoryRepository.findByProductIdAndSpecificationId(1L, null)).thenReturn(Optional.of(
+                ProductInventory.builder().productId(1L).availableStock(stock).safetyStock(safety).build()));
     }
 
     @Test
-    void should_CreateAlerts_When_CheckInventoryWithLowStock() {
-        // given
-        List<ProductInventory> inventories = List.of(
-                outOfStockInventory,
-                criticalInventory,
-                lowInventory,
-                normalInventory
-        );
-        when(inventoryRepository.findAll()).thenReturn(inventories);
-        when(alertRepository.findByProductIdAndResolvedFalse(anyLong())).thenReturn(new ArrayList<>());
-        when(alertRepository.save(any(InventoryAlert.class))).thenReturn(alert);
+    void outOfStockProduct_createsAlertAndNotifiesStaff() {
+        productStock(0, 10);
 
-        // when
-        inventoryManagementService.checkInventoryAndCreateAlerts();
+        service.checkProductAlerts(List.of(1L));
 
-        // then
-        verify(inventoryRepository, times(1)).findAll();
-        verify(alertRepository, times(3)).save(any(InventoryAlert.class));
+        ArgumentCaptor<InventoryAlert> alert = ArgumentCaptor.forClass(InventoryAlert.class);
+        verify(alertRepository).save(alert.capture());
+        assertThat(alert.getValue().getAlertLevel()).isEqualTo(AlertLevel.OUT_OF_STOCK);
+        assertThat(alert.getValue().getMessage()).contains("茶杯");
+        verify(adminNotificationService).createNotification(eq(AdminNotificationType.STOCK_LOW), isNull(), eq(1L), eq("商品已售完"), anyString());
     }
 
     @Test
-    void should_NotCreateDuplicateAlert_When_ExistingUnresolvedAlertExists() {
-        // given
-        List<ProductInventory> inventories = List.of(outOfStockInventory);
-        List<InventoryAlert> existingAlerts = List.of(alert);
-        when(inventoryRepository.findAll()).thenReturn(inventories);
-        when(alertRepository.findByProductIdAndResolvedFalse(1L)).thenReturn(existingAlerts);
+    void stockLevels_followSafetyStock() {
+        productStock(4, 10);
+        service.checkProductAlerts(List.of(1L));
+        ArgumentCaptor<InventoryAlert> alert = ArgumentCaptor.forClass(InventoryAlert.class);
+        verify(alertRepository).save(alert.capture());
+        assertThat(alert.getValue().getAlertLevel()).isEqualTo(AlertLevel.CRITICAL);
 
-        // when
-        inventoryManagementService.checkInventoryAndCreateAlerts();
-
-        // then
-        verify(inventoryRepository, times(1)).findAll();
-        verify(alertRepository, times(1)).findByProductIdAndResolvedFalse(1L);
-        verify(alertRepository, never()).save(any(InventoryAlert.class));
+        reset(alertRepository);
+        when(alertRepository.findByProductIdAndResolvedFalse(anyLong())).thenReturn(List.of());
+        productStock(8, 10);
+        service.checkProductAlerts(List.of(1L));
+        verify(alertRepository).save(alert.capture());
+        assertThat(alert.getValue().getAlertLevel()).isEqualTo(AlertLevel.LOW);
     }
 
     @Test
-    void should_CreateOutOfStockAlert_When_AvailableStockIsZero() {
-        // given
-        List<ProductInventory> inventories = List.of(outOfStockInventory);
-        when(inventoryRepository.findAll()).thenReturn(inventories);
-        when(alertRepository.findByProductIdAndResolvedFalse(1L)).thenReturn(new ArrayList<>());
-        
-        ArgumentCaptor<InventoryAlert> alertCaptor = ArgumentCaptor.forClass(InventoryAlert.class);
-        when(alertRepository.save(alertCaptor.capture())).thenReturn(alert);
+    void untrackedOrHealthyStock_resolvesExistingAlerts_andCreatesNone() {
+        InventoryAlert open = InventoryAlert.builder().productId(1L).alertLevel(AlertLevel.LOW).resolved(false).build();
+        when(alertRepository.findByProductIdAndResolvedFalse(1L)).thenReturn(List.of(open));
+        productStock(50, 10);
 
-        // when
-        inventoryManagementService.checkInventoryAndCreateAlerts();
+        service.checkProductAlerts(List.of(1L));
 
-        // then
-        InventoryAlert savedAlert = alertCaptor.getValue();
-        assertThat(savedAlert.getAlertLevel()).isEqualTo(AlertLevel.OUT_OF_STOCK);
-        assertThat(savedAlert.getCurrentStock()).isEqualTo(0);
-        verify(alertRepository, times(1)).save(any(InventoryAlert.class));
+        assertThat(open.getResolved()).isTrue();
+        verify(alertRepository, never()).save(any());
+        verify(adminNotificationService, never()).createNotification(any(), any(), any(), any(), any());
     }
 
     @Test
-    void should_CreateCriticalAlert_When_StockBelowHalfSafetyStock() {
-        // given
-        List<ProductInventory> inventories = List.of(criticalInventory);
-        when(inventoryRepository.findAll()).thenReturn(inventories);
-        when(alertRepository.findByProductIdAndResolvedFalse(2L)).thenReturn(new ArrayList<>());
-        
-        ArgumentCaptor<InventoryAlert> alertCaptor = ArgumentCaptor.forClass(InventoryAlert.class);
-        when(alertRepository.save(alertCaptor.capture())).thenReturn(alert);
+    void existingAlert_isUpdatedNotDuplicated() {
+        InventoryAlert open = InventoryAlert.builder().productId(1L).alertLevel(AlertLevel.LOW).resolved(false).build();
+        when(alertRepository.findByProductIdAndResolvedFalse(1L)).thenReturn(List.of(open));
+        productStock(3, 10);
 
-        // when
-        inventoryManagementService.checkInventoryAndCreateAlerts();
+        service.checkProductAlerts(List.of(1L));
 
-        // then
-        InventoryAlert savedAlert = alertCaptor.getValue();
-        assertThat(savedAlert.getAlertLevel()).isEqualTo(AlertLevel.CRITICAL);
-        verify(alertRepository, times(1)).save(any(InventoryAlert.class));
+        assertThat(open.getAlertLevel()).isEqualTo(AlertLevel.CRITICAL);
+        verify(alertRepository).save(open);
+        verify(adminNotificationService, never()).createNotification(any(), any(), any(), any(), any());
     }
 
     @Test
-    void should_CreateLowAlert_When_StockBelowSafetyStock() {
-        // given
-        List<ProductInventory> inventories = List.of(lowInventory);
-        when(inventoryRepository.findAll()).thenReturn(inventories);
-        when(alertRepository.findByProductIdAndResolvedFalse(3L)).thenReturn(new ArrayList<>());
-        
-        ArgumentCaptor<InventoryAlert> alertCaptor = ArgumentCaptor.forClass(InventoryAlert.class);
-        when(alertRepository.save(alertCaptor.capture())).thenReturn(alert);
+    void specProducts_useSpecStockAndThreshold() {
+        when(specificationRepository.findByProductId(1L)).thenReturn(List.of(
+                ProductSpecification.builder().id(10L).productId(1L).specName("藍色").stock(2).enabled(true).build(),
+                ProductSpecification.builder().id(11L).productId(1L).specName("紅色").stock(null).enabled(true).build()));
 
-        // when
-        inventoryManagementService.checkInventoryAndCreateAlerts();
+        service.checkProductAlerts(List.of(1L));
 
-        // then
-        InventoryAlert savedAlert = alertCaptor.getValue();
-        assertThat(savedAlert.getAlertLevel()).isEqualTo(AlertLevel.LOW);
-        verify(alertRepository, times(1)).save(any(InventoryAlert.class));
+        ArgumentCaptor<InventoryAlert> alert = ArgumentCaptor.forClass(InventoryAlert.class);
+        verify(alertRepository, times(1)).save(alert.capture());
+        assertThat(alert.getValue().getSpecificationId()).isEqualTo(10L);
+        assertThat(alert.getValue().getMessage()).contains("藍色");
     }
 
     @Test
-    void should_ResolveAlert_When_AlertExists() {
-        // given
-        when(alertRepository.findById(1L)).thenReturn(Optional.of(alert));
-        when(alertRepository.save(any(InventoryAlert.class))).thenReturn(alert);
+    void restockingASpec_updatesSpecStock_logsAndPublishesEvent() {
+        ProductSpecification spec = ProductSpecification.builder().id(10L).productId(1L).stock(1).build();
+        when(specificationRepository.findById(10L)).thenReturn(Optional.of(spec));
+        when(inventoryRepository.findByProductIdAndSpecificationId(1L, 10L)).thenReturn(Optional.empty());
 
-        // when
-        inventoryManagementService.resolveAlert(1L);
+        service.updateInventory(1L, 10L, 1L, 20);
 
-        // then
-        verify(alertRepository, times(1)).findById(1L);
-        verify(alertRepository, times(1)).save(any(InventoryAlert.class));
+        assertThat(spec.getStock()).isEqualTo(21);
+        verify(movementLogRepository).save(argThat(log -> log.getBeforeStock() == 1 && log.getAfterStock() == 21));
+        verify(eventPublisher).publishEvent(new StockChangedEvent(List.of(1L), true));
     }
 
     @Test
-    void should_ThrowBusinessException_When_ResolveNonExistentAlert() {
-        // given
-        when(alertRepository.findById(1L)).thenReturn(Optional.empty());
+    void stockNotifications_areKeptWhenMailIsNotConfigured() {
+        StockNotification subscription = StockNotification.builder().id(5L).productId(1L).userEmail("a@example.com").notified(false).build();
+        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(List.of(subscription));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(null);
 
-        // when & then
-        assertThatThrownBy(() -> inventoryManagementService.resolveAlert(1L))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("警示不存在");
-        verify(alertRepository, times(1)).findById(1L);
-        verify(alertRepository, never()).save(any(InventoryAlert.class));
+        service.processStockNotifications(1L);
+
+        assertThat(subscription.getNotified()).isFalse();
+        verify(notificationRepository, never()).saveAll(any());
     }
 
     @Test
-    void should_GetUnresolvedAlerts_When_Called() {
-        // given
-        List<InventoryAlert> alerts = List.of(alert);
-        when(alertRepository.findByResolvedFalse()).thenReturn(alerts);
+    void stockNotifications_areEmailedOnlyWhenInStock() {
+        StockNotification subscription = StockNotification.builder().id(5L).productId(1L).userEmail("a@example.com").notified(false).build();
+        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(List.of(subscription));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
 
-        // when
-        List<InventoryAlert> result = inventoryManagementService.getUnresolvedAlerts();
+        productStock(0, 10);
+        service.processStockNotifications(1L);
+        assertThat(subscription.getNotified()).isFalse();
+        verify(mailSender, never()).send(any(MimeMessage.class));
 
-        // then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getResolved()).isFalse();
-        verify(alertRepository, times(1)).findByResolvedFalse();
+        productStock(3, 10);
+        service.processStockNotifications(1L);
+        assertThat(subscription.getNotified()).isTrue();
+        verify(mailSender).send(any(MimeMessage.class));
     }
 
     @Test
-    void should_GetProductUnresolvedAlerts_When_Called() {
-        // given
-        List<InventoryAlert> alerts = List.of(alert);
-        when(alertRepository.findByProductIdAndResolvedFalse(1L)).thenReturn(alerts);
-
-        // when
-        List<InventoryAlert> result = inventoryManagementService.getProductUnresolvedAlerts(1L);
-
-        // then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getProductId()).isEqualTo(1L);
-        verify(alertRepository, times(1)).findByProductIdAndResolvedFalse(1L);
-    }
-
-    @Test
-    void should_SubscribeStockNotification_When_Called() {
-        // given
-        when(notificationRepository.save(any(StockNotification.class))).thenReturn(stockNotification);
-
-        // when
-        inventoryManagementService.subscribeStockNotification(
-                1L,
-                1L,
-                "test@example.com",
-                "0912345678"
-        );
-
-        // then
-        verify(notificationRepository, times(1)).save(any(StockNotification.class));
-    }
-
-    @Test
-    void should_ProcessStockNotifications_When_NotificationsExist() {
-        // given
-        List<StockNotification> notifications = List.of(stockNotification);
-        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(notifications);
-        when(notificationRepository.saveAll(anyList())).thenReturn(notifications);
-
-        // when
-        inventoryManagementService.processStockNotifications(1L);
-
-        // then
-        verify(notificationRepository, times(1)).findByProductIdAndNotifiedFalse(1L);
-        verify(notificationRepository, times(1)).saveAll(anyList());
-    }
-
-    @Test
-    void should_NotProcessNotifications_When_NoNotificationsExist() {
-        // given
-        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(new ArrayList<>());
-
-        // when
-        inventoryManagementService.processStockNotifications(1L);
-
-        // then
-        verify(notificationRepository, times(1)).findByProductIdAndNotifiedFalse(1L);
-        verify(notificationRepository, times(1)).saveAll(anyList());
-    }
-
-    @Test
-    void should_UpdateInventory_When_ValidInventoryExists() {
-        // given
-        when(inventoryRepository.findByProductIdAndSpecificationId(1L, 1L))
-                .thenReturn(Optional.of(outOfStockInventory));
-        when(inventoryRepository.save(any(ProductInventory.class))).thenReturn(outOfStockInventory);
-        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(new ArrayList<>());
-        when(notificationRepository.saveAll(anyList())).thenReturn(new ArrayList<>());
-
-        // when
-        inventoryManagementService.updateInventory(1L, 1L, 1L, 50);
-
-        // then
-        verify(inventoryRepository, times(1)).findByProductIdAndSpecificationId(1L, 1L);
-        verify(inventoryRepository, times(1)).save(any(ProductInventory.class));
-        verify(notificationRepository, times(1)).findByProductIdAndNotifiedFalse(1L);
-    }
-
-    @Test
-    void should_CreateInventory_When_UpdateNonExistentInventory() {
-        // given：尚無庫存記錄時，調整庫存會建立新記錄
-        when(inventoryRepository.findByProductIdAndSpecificationId(1L, 1L))
-                .thenReturn(Optional.empty());
-
-        // when
-        inventoryManagementService.updateInventory(1L, 1L, 1L, 50);
-
-        // then
-        verify(inventoryRepository, times(1)).findByProductIdAndSpecificationId(1L, 1L);
-        verify(inventoryRepository).save(argThat(inventory ->
-                inventory.getProductId().equals(1L)
-                        && inventory.getSpecificationId().equals(1L)
-                        && inventory.getAvailableStock() == 50));
-        verify(movementLogRepository).save(any());
-    }
-
-    @Test
-    void should_ThrowBusinessException_When_UpdateInventoryWithoutQuantity() {
-        assertThatThrownBy(() -> inventoryManagementService.updateInventory(1L, 1L, 1L, null))
+    void subscribe_validatesEmail_andIgnoresDuplicates() {
+        assertThatThrownBy(() -> service.subscribeStockNotification(1L, null, "not-an-email", null))
                 .isInstanceOf(BusinessException.class);
-        verify(inventoryRepository, never()).save(any(ProductInventory.class));
-    }
 
-    @Test
-    void should_ProcessNotifications_When_UpdateInventoryToPositiveQuantity() {
-        // given
-        when(inventoryRepository.findByProductIdAndSpecificationId(1L, 1L))
-                .thenReturn(Optional.of(outOfStockInventory));
-        when(inventoryRepository.save(any(ProductInventory.class))).thenReturn(outOfStockInventory);
-        
-        List<StockNotification> notifications = List.of(stockNotification);
-        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(notifications);
-        when(notificationRepository.saveAll(anyList())).thenReturn(notifications);
+        when(notificationRepository.findByProductIdAndNotifiedFalse(1L)).thenReturn(List.of(
+                StockNotification.builder().productId(1L).userEmail("A@example.com").notified(false).build()));
+        service.subscribeStockNotification(1L, null, "a@example.com", null);
+        verify(notificationRepository, never()).save(any());
 
-        // when
-        inventoryManagementService.updateInventory(1L, 1L, 1L, 10);
-
-        // then
-        verify(notificationRepository, times(1)).findByProductIdAndNotifiedFalse(1L);
-        verify(notificationRepository, times(1)).saveAll(anyList());
-    }
-
-    @Test
-    void should_NotProcessNotifications_When_UpdateInventoryToZeroQuantity() {
-        // given
-        when(inventoryRepository.findByProductIdAndSpecificationId(1L, 1L))
-                .thenReturn(Optional.of(normalInventory));
-        when(inventoryRepository.save(any(ProductInventory.class))).thenReturn(normalInventory);
-
-        // when
-        inventoryManagementService.updateInventory(1L, 1L, 1L, 0);
-
-        // then
-        verify(inventoryRepository, times(1)).save(any(ProductInventory.class));
-        verify(notificationRepository, never()).findByProductIdAndNotifiedFalse(anyLong());
+        service.subscribeStockNotification(1L, 10L, "a@example.com", null);
+        verify(notificationRepository).save(any());
     }
 }

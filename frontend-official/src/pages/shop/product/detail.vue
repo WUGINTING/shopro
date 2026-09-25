@@ -150,7 +150,7 @@
               round
               icon="remove"
               @click="decreaseQuantity"
-              :disable="quantity <= 1"
+              :disable="quantity <= minQuantity"
             />
             <span class="quantity-value">{{ quantity }}</span>
             <q-btn
@@ -161,6 +161,15 @@
               @click="increaseQuantity"
               :disable="quantity >= maxQuantity"
             />
+          </div>
+
+          <div v-if="minQuantity > 1 || product.maxPurchaseQuantity > 0" class="stock-hint">
+            <q-icon name="info" size="16px" />
+            <span>
+              <template v-if="minQuantity > 1">最少購買 {{ minQuantity }} 件</template>
+              <template v-if="minQuantity > 1 && product.maxPurchaseQuantity > 0">，</template>
+              <template v-if="product.maxPurchaseQuantity > 0">每筆訂單最多 {{ product.maxPurchaseQuantity }} 件</template>
+            </span>
           </div>
 
           <!-- 庫存提示 -->
@@ -213,6 +222,19 @@
             >
               立即購買
             </q-btn>
+          </div>
+
+          <!-- 到貨通知：商品或選擇的規格缺貨時 -->
+          <div v-if="showRestockForm" class="restock-box">
+            <div class="restock-title">
+              <q-icon name="notifications_active" size="18px" />
+              {{ selectedSpec ? `「${selectedSpec.specName}」` : '此商品' }}目前缺貨，補貨時寄信通知我
+            </div>
+            <div v-if="restockDone" class="restock-done">已登記，補貨時會寄信到 {{ restockEmail }}</div>
+            <div v-else class="restock-form">
+              <q-input v-model="restockEmail" dense outlined type="email" placeholder="您的 Email" class="restock-input" />
+              <q-btn unelevated color="secondary" label="登記" :loading="restockSubmitting" @click="submitRestock" />
+            </div>
           </div>
         </div>
       </div>
@@ -271,7 +293,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { addToCart } from 'src/utils/cart.js';
 import Breadcrumb from 'src/components/shop/Breadcrumb.vue';
-import { getStorefrontProduct, getProductCategory } from 'src/api/product.js';
+import { getStorefrontProduct, getProductCategory, subscribeRestock } from 'src/api/product.js';
 import { effectivePrice, PRODUCT_PLACEHOLDER } from 'src/utils/product.js';
 import { formatCurrency } from 'src/utils/format.js';
 
@@ -333,12 +355,12 @@ const selectSpecification = (spec) => {
     if (product.value?.images?.length > 0) {
       currentImage.value = product.value.images[0];
     }
-    quantity.value = 1;
+    quantity.value = minQuantity.value;
     return;
   }
 
   selectedSpec.value = spec;
-  quantity.value = 1;
+  quantity.value = minQuantity.value;
 
   if (spec.image) {
     currentImage.value = spec.image;
@@ -371,11 +393,44 @@ const allThumbnails = computed(() => {
   return thumbs;
 });
 
+// 到貨通知
+const restockEmail = ref('');
+const restockSubmitting = ref(false);
+const restockDone = ref(false);
+watch(selectedSpec, () => {
+  restockDone.value = false;
+});
+const showRestockForm = computed(() => {
+  if (!product.value) return false;
+  if (product.value.soldOut) return true;
+  return !!selectedSpec.value && isSpecSoldOut(selectedSpec.value);
+});
+const submitRestock = async () => {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(restockEmail.value.trim())) {
+    $q.notify({ type: 'warning', message: '請輸入正確的 Email', position: 'top' });
+    return;
+  }
+  restockSubmitting.value = true;
+  try {
+    await subscribeRestock(product.value.id, restockEmail.value.trim(), selectedSpec.value?.id ?? null);
+    restockDone.value = true;
+  } catch (error) {
+    // 錯誤訊息已由 request 攔截器顯示
+  } finally {
+    restockSubmitting.value = false;
+  }
+};
+
+// 每筆訂單最少購買數量
+const minQuantity = computed(() => Math.max(1, Number(product.value?.minPurchaseQuantity) || 1));
+
 // 可購買數量上限：規格庫存、每筆訂單上限，未追蹤庫存時 999
 const maxQuantity = computed(() => {
   let max = 999;
   if (selectedSpec.value && selectedSpec.value.stock !== null && selectedSpec.value.stock !== undefined) {
     max = Math.max(selectedSpec.value.stock, 0);
+  } else if (!selectedSpec.value && product.value?.stock !== null && product.value?.stock !== undefined) {
+    max = Math.max(product.value.stock, 0);
   }
   if (product.value?.maxPurchaseQuantity > 0) {
     max = Math.min(max, product.value.maxPurchaseQuantity);
@@ -397,7 +452,7 @@ const increaseQuantity = () => {
 };
 
 const decreaseQuantity = () => {
-  if (quantity.value > 1) {
+  if (quantity.value > minQuantity.value) {
     quantity.value--;
   }
 };
@@ -483,7 +538,10 @@ const mapProductData = (apiData) => {
     tags: apiData.tags || [],
     badges: [],
     maxPurchaseQuantity: apiData.maxPurchaseQuantity,
-    soldOut: apiData.status === 'OUT_OF_STOCK',
+    minPurchaseQuantity: apiData.minPurchaseQuantity,
+    // stock 為 null 表示未追蹤庫存（不限量）
+    stock: apiData.stock,
+    soldOut: apiData.status === 'OUT_OF_STOCK' || (apiData.stock !== null && apiData.stock !== undefined && apiData.stock <= 0),
     descriptionBlocks: (apiData.descriptionBlocks || [])
       .filter(block => block.enabled)
       .sort((a, b) => a.blockOrder - b.blockOrder),
@@ -506,6 +564,7 @@ const fetchProduct = async () => {
   loading.value = true;
   selectedSpec.value = null;
   quantity.value = 1;
+  restockDone.value = false;
   try {
     const response = await getStorefrontProduct(route.params.id);
     const data = response?.data;
@@ -514,6 +573,7 @@ const fetchProduct = async () => {
       return;
     }
     product.value = mapProductData(data);
+    quantity.value = minQuantity.value;
     specifications.value = (data.specifications || []).filter(spec => spec.enabled !== false);
     currentImage.value = product.value.images[0] || PRODUCT_PLACEHOLDER;
     tab.value = product.value.descriptionBlocks.length > 0
@@ -538,6 +598,36 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.restock-box {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px dashed #d9c3a5;
+  border-radius: 8px;
+  background: #fffaf3;
+
+  .restock-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .restock-form {
+    display: flex;
+    gap: 8px;
+  }
+
+  .restock-input {
+    flex: 1;
+  }
+
+  .restock-done {
+    color: #2e7d32;
+    font-size: 14px;
+  }
+}
+
 @import '../../../css/variables.scss';
 
 .product-detail-page {

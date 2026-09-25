@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class StorefrontProductController {
 
     private final ProductService productService;
+    private final com.info.ecommerce.modules.product.service.InventoryManagementService inventoryManagementService;
 
     @GetMapping
     @Operation(summary = "前台商品列表", description = "可依分類（含子分類）、關鍵字篩選；sort = newest / price_asc / price_desc / name")
@@ -36,5 +37,17 @@ public class StorefrontProductController {
     @Operation(summary = "前台商品詳情")
     public ApiResponse<ProductDTO> getProduct(@Parameter(description = "商品 ID") @PathVariable Long id) {
         return ApiResponse.success(productService.getPublicProduct(id));
+    }
+
+    @PostMapping("/{id}/restock-notification")
+    @Operation(summary = "到貨通知登記", description = "缺貨商品補貨時寄信通知（每個 Email 同一商品 / 規格只登記一次）")
+    public ApiResponse<Void> subscribeRestock(@Parameter(description = "商品 ID") @PathVariable Long id,
+                                              @RequestBody java.util.Map<String, Object> body) {
+        productService.assertPubliclyVisible(id);
+        Object spec = body.get("specificationId");
+        Long specificationId = spec == null || spec.toString().isBlank() ? null : Long.valueOf(spec.toString());
+        inventoryManagementService.subscribeStockNotification(id, specificationId,
+                body.get("email") == null ? null : body.get("email").toString(), null);
+        return ApiResponse.success("已登記到貨通知，商品補貨時會寄信給您", null);
     }
 }

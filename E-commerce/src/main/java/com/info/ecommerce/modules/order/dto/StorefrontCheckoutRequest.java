@@ -55,6 +55,9 @@ public class StorefrontCheckoutRequest {
     @Schema(description = "優惠券代碼（選填）")
     private String couponCode;
 
+    @Schema(description = "同意接收優惠與新品通知 Email（勾選才會加入 EDM 名單）")
+    private Boolean marketingOptIn;
+
     @Schema(description = "下單來源：STOREFRONT（前台商城，預設）/ ADMIN_STORE（後台 App 的顧客商城），決定付款完成後導回的頁面")
     private String channel;
 

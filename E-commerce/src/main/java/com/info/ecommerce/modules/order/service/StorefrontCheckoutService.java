@@ -479,13 +479,19 @@ public class StorefrontCheckoutService {
 
     private Member findOrCreateMember(StorefrontCheckoutRequest request) {
         String email = normalizeEmail(request.getCustomerEmail());
-        return memberRepository.findByEmail(email).orElseGet(() -> memberRepository.save(Member.builder()
+        Member member = memberRepository.findByEmail(email).orElseGet(() -> memberRepository.save(Member.builder()
                 .name(request.getCustomerName().trim())
                 .email(email)
                 .phone(request.getCustomerPhone().trim())
                 .address(isBlank(request.getShippingAddress()) ? null : request.getShippingAddress().trim())
                 .notes("前台結帳自動建立")
                 .build()));
+        // 只記錄「同意」；取消訂閱請使用 EDM 信中的退訂連結
+        if (Boolean.TRUE.equals(request.getMarketingOptIn()) && !Boolean.TRUE.equals(member.getMarketingOptIn())) {
+            member.setMarketingOptIn(true);
+            member = memberRepository.save(member);
+        }
+        return member;
     }
 
     /**
