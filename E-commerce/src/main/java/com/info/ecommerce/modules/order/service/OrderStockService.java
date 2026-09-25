@@ -60,7 +60,17 @@ public class OrderStockService {
      */
     @Transactional
     public void release(Long orderId, String orderNumber) {
-        orderCouponService.release(orderId);
+        release(orderId, orderNumber, true);
+    }
+
+    /**
+     * 歸還庫存；returnCoupon 為 false 時不歸還優惠券次數（例如退款：優惠券已實際使用）
+     */
+    @Transactional
+    public void release(Long orderId, String orderNumber, boolean returnCoupon) {
+        if (returnCoupon) {
+            orderCouponService.release(orderId);
+        }
         if (!holdsStock(orderId)) {
             return;
         }

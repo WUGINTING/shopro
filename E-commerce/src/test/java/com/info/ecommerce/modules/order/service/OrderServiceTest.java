@@ -38,6 +38,12 @@ import static org.mockito.Mockito.*;
 class OrderServiceTest {
 
     @Mock
+    private com.info.ecommerce.modules.order.repository.OrderHistoryRepository orderHistoryRepository;
+
+    @Mock
+    private com.info.ecommerce.modules.order.repository.OrderPaymentRepository orderPaymentRepository;
+
+    @Mock
     private com.info.ecommerce.modules.order.repository.OrderDiscountRepository orderDiscountRepository;
 
     @Mock

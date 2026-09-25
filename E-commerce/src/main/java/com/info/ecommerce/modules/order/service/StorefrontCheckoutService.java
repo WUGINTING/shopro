@@ -345,7 +345,8 @@ public class StorefrontCheckoutService {
         return StorefrontOrderLookupDTO.builder()
                 .order(orderService.getOrder(order.getId()))
                 .paymentMethod(paymentMethod)
-                .canPayOnline(PAYMENT_ECPAY.equals(paymentMethod) && order.getStatus() == OrderStatus.PENDING_PAYMENT)
+                .canPayOnline(PAYMENT_ECPAY.equals(paymentMethod) && order.getStatus() == OrderStatus.PENDING_PAYMENT
+                        && !orderService.hasBeenPaid(order.getId()))
                 .canCancel(order.getStatus() == OrderStatus.PENDING_PAYMENT && shipments.isEmpty())
                 .shipments(shipments)
                 .build();
@@ -404,6 +405,10 @@ public class StorefrontCheckoutService {
         }
         if (!PAYMENT_ECPAY.equals(storefrontPaymentMethod(order.getId()))) {
             throw new BusinessException("此訂單為貨到付款，請於取貨時付款");
+        }
+        // 曾收過款（例如取消後才收到的付款）的訂單不可再次付款，避免重複扣款
+        if (orderService.hasBeenPaid(order.getId())) {
+            throw new BusinessException("此訂單已有付款紀錄，請聯繫客服確認，不需要再次付款");
         }
         OrderDTO orderDTO = orderService.getOrder(order.getId());
         StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()

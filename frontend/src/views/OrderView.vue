@@ -1569,7 +1569,12 @@
               hint="部分退款不會改變訂單狀態；全額退款後訂單改為「已退款」並寄送通知"
             />
             <q-input v-model="refundForm.reason" outlined dense label="退款原因 *" maxlength="500" />
-            <q-checkbox v-model="refundForm.restock" label="歸還庫存（商品已退回或尚未出貨）" />
+            <q-checkbox
+              v-model="refundForm.restock"
+              :disable="isPartialRefund"
+              label="歸還整筆訂單的庫存（全額退款且商品已退回或尚未出貨）"
+            />
+            <div v-if="isPartialRefund" class="text-caption text-grey-7">部分退款不會自動歸還庫存；如有退回商品，請到商品頁手動補貨。</div>
           </q-card-section>
           <q-card-actions align="right">
             <q-btn flat label="取消" v-close-popup />
@@ -2183,10 +2188,13 @@ const formatDateTime = (value?: string | null) => {
 // 匯出 CSV
 const showExportDialog = ref(false)
 const exporting = ref(false)
+// 以本地日期（台灣時間）產生預設期間，避免 toISOString 的 UTC 日期少一天
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 const today = new Date()
 const exportForm = ref({
-  startDate: new Date(today.getTime() - 30 * 864e5).toISOString().slice(0, 10),
-  endDate: today.toISOString().slice(0, 10),
+  startDate: localDate(new Date(today.getTime() - 30 * 864e5)),
+  endDate: localDate(today),
   status: null as string | null
 })
 const exportCsv = async () => {
@@ -2243,9 +2251,14 @@ const showRefundDialog = ref(false)
 const refundOrder = ref<Order | null>(null)
 const refundForm = ref<{ amount: number | null; reason: string; restock: boolean }>({ amount: null, reason: '', restock: true })
 const refunding = ref(false)
+const isPartialRefund = computed(() => {
+  const amount = refundForm.value.amount as unknown
+  if (amount === null || amount === '' || amount === undefined) return false
+  return Number(amount) < Number(refundOrder.value?.totalAmount || 0)
+})
 const openRefund = (order: Order) => {
   refundOrder.value = order
-  refundForm.value = { amount: null, reason: '', restock: order.status === 'PAID' }
+  refundForm.value = { amount: null, reason: '', restock: false }
   showRefundDialog.value = true
 }
 const submitRefund = async () => {
@@ -2253,9 +2266,10 @@ const submitRefund = async () => {
   refunding.value = true
   try {
     await orderApi.refundOrder(refundOrder.value.id, {
-      amount: refundForm.value.amount ? Number(refundForm.value.amount) : null,
+      // 空白為全額；其他數字原樣送出（0 或負數由後端拒絕）
+      amount: refundForm.value.amount === null || (refundForm.value.amount as unknown) === '' ? null : Number(refundForm.value.amount),
       reason: refundForm.value.reason.trim(),
-      restock: refundForm.value.restock
+      restock: refundForm.value.restock && !isPartialRefund.value
     })
     $q.notify({ type: 'positive', message: '退款已登記', position: 'top' })
     showRefundDialog.value = false

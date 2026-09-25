@@ -228,8 +228,11 @@ const initializeDateRange = () => {
   const end = new Date()
   const start = new Date(end)
   start.setDate(start.getDate() - 30)
-  endDate.value = end.toISOString().split('T')[0] ?? ''
-  startDate.value = start.toISOString().split('T')[0] ?? ''
+  // 本地日期（避免 UTC 日期少一天）
+  const localDate = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  endDate.value = localDate(end)
+  startDate.value = localDate(start)
 }
 
 onMounted(() => {

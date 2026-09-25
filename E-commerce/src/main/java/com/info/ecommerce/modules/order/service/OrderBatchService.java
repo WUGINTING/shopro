@@ -30,6 +30,7 @@ public class OrderBatchService {
     private final MemberService memberService;
     private final OrderStockService orderStockService;
     private final ApplicationEventPublisher eventPublisher;
+    private final OrderService orderService;
     private final com.info.ecommerce.modules.order.repository.OrderItemRepository orderItemRepository;
 
     /**
@@ -47,7 +48,9 @@ public class OrderBatchService {
                 
                 OrderStatus oldStatus = order.getStatus();
                 // 不允許的狀態變更（例如已付款直接取消）跳過此筆，在交易外判斷避免整批回滾
-                if (!OrderStatusRules.canChange(oldStatus, dto.getTargetStatus())) {
+                if (!OrderStatusRules.canChange(oldStatus, dto.getTargetStatus())
+                        || (dto.getTargetStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED
+                            && orderService.hasBeenPaid(orderId))) {
                     log.info("Batch status update skipped for order {}: {} -> {} not allowed", orderId, oldStatus, dto.getTargetStatus());
                     failedIds.add(orderId);
                     continue;

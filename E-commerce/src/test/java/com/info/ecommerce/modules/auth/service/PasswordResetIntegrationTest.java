@@ -69,4 +69,22 @@ class PasswordResetIntegrationTest {
                         .content("{\"email\":\"nobody@example.com\"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void resetLink_isInvalidAfterEmailChange_soItCannotVerifySomeoneElsesEmail() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        User attacker = userRepository.save(User.builder()
+                .username("attacker-" + suffix).email("attacker-" + suffix + "@example.com")
+                .password(passwordEncoder.encode("OldPassw0rd")).role(Role.CUSTOMER).enabled(true).emailVerified(true)
+                .build());
+        String token = passwordResetService.createToken(attacker);
+        attacker.setEmail("victim-" + suffix + "@example.com");
+        attacker.setEmailVerified(false);
+        userRepository.save(attacker);
+
+        mockMvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + token + "\",\"newPassword\":\"NewPassw0rd!\"}"))
+                .andExpect(status().isBadRequest());
+        org.junit.jupiter.api.Assertions.assertFalse(userRepository.findById(attacker.getId()).orElseThrow().isEmailConfirmed());
+    }
 }

@@ -46,6 +46,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderDiscountRepository orderDiscountRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderHistoryRepository orderHistoryRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderPaymentRepository orderPaymentRepository;
     private final CustomerBlacklistRepository customerBlacklistRepository;
     private final OrderHistoryService orderHistoryService;
     private final ProductRepository productRepository;
@@ -66,6 +68,25 @@ public class OrderService {
         String random = String.format("%04d", (int)(Math.random() * 10000));
         // 總長度：3(ORD) + 12(時間戳) + 4(隨機數) = 19字元
         return "ORD" + timestamp + random;
+    }
+
+    /**
+     * 訂單是否曾收款：有成功的付款紀錄（線上付款），或曾被標記為已付款（例如貨到付款收款）
+     */
+    @Transactional(readOnly = true)
+    public boolean hasBeenPaid(Long orderId) {
+        return orderHistoryRepository.existsByOrderIdAndNewStatus(orderId, OrderStatus.PAID.name())
+            || orderPaymentRepository.findByOrderId(orderId).stream()
+                .anyMatch(payment -> payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.PAID
+                    || payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.REFUNDING
+                    || payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.REFUNDED);
+    }
+
+    /** 已收款的訂單不可直接取消（處理中的線上付款訂單也一樣），必須走退款 */
+    private void assertCancellable(Long orderId, OrderStatus oldStatus, OrderStatus newStatus) {
+        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED && hasBeenPaid(orderId)) {
+            throw new BusinessException("此訂單已收款，不可直接取消，請使用「登記退款」");
+        }
     }
 
     /**
@@ -356,6 +377,7 @@ public class OrderService {
         order.setCustomerEmail(dto.getCustomerEmail());
         if (dto.getStatus() != null) {
             OrderStatusRules.assertCanChange(oldStatus, dto.getStatus());
+            assertCancellable(id, oldStatus, dto.getStatus());
             order.setStatus(dto.getStatus());
         }
         order.setPickupType(dto.getPickupType());
@@ -507,6 +529,7 @@ public class OrderService {
 
         OrderStatus oldStatus = order.getStatus();
         OrderStatusRules.assertCanChange(oldStatus, newStatus);
+        assertCancellable(id, oldStatus, newStatus);
         order.setStatus(newStatus);
 
         if (newStatus == OrderStatus.COMPLETED && order.getCompletedAt() == null) {

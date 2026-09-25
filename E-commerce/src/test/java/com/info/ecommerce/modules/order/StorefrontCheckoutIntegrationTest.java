@@ -401,4 +401,33 @@ class StorefrontCheckoutIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void paidOrderInProcessing_cannotBeCancelled_butUnpaidCodCan() throws Exception {
+        long paidId = checkout(checkoutBody("paid-ship@example.com", cone.getId(), null, 1)).get("id").asLong();
+        changeStatus(paidId, "PAID");
+        changeStatus(paidId, "PROCESSING");
+        mockMvc.perform(patch("/api/orders/" + paidId + "/status").param("status", "CANCELLED")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("退款")));
+
+        long codId = checkout(checkoutBody("cod-refused@example.com", cone.getId(), null, 1)).get("id").asLong();
+        changeStatus(codId, "PROCESSING");
+        // 未收款的貨到付款不能退款，但拒收時可以取消
+        mockMvc.perform(post("/api/orders/" + codId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"拒收\"}"))
+                .andExpect(status().isBadRequest());
+        changeStatus(codId, "CANCELLED");
+    }
+
+    @Test
+    void partialRefund_cannotRestockWholeOrder() throws Exception {
+        long orderId = checkout(checkoutBody("partial@example.com", cone.getId(), null, 2)).get("id").asLong();
+        changeStatus(orderId, "PAID");
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"amount\":50,\"reason\":\"補償\",\"restock\":true}"))
+                .andExpect(status().isBadRequest());
+        assertEquals(3, coneStock());
+    }
 }

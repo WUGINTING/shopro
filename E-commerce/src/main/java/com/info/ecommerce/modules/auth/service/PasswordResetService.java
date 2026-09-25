@@ -87,7 +87,7 @@ public class PasswordResetService {
 
     String createToken(User user) {
         return jwtService.generatePurposeToken(PURPOSE, String.valueOf(user.getId()),
-                Map.of("pwd", fingerprint(user.getPassword())), TOKEN_TTL_MILLIS);
+                Map.of("pwd", fingerprint(user.getPassword() + "|" + normalize(user.getEmail()))), TOKEN_TTL_MILLIS);
     }
 
     @Transactional
@@ -99,13 +99,19 @@ public class PasswordResetService {
                 .orElseThrow(() -> new BusinessException("重設連結無效或已過期，請重新申請"));
         User user = userRepository.findById(Long.valueOf(claims.getSubject()))
                 .orElseThrow(() -> new BusinessException("重設連結無效或已過期，請重新申請"));
-        if (!fingerprint(user.getPassword()).equals(claims.get("pwd"))) {
+        // 指紋包含密碼與 Email：密碼已變更（連結用過）或帳號 Email 已變更時連結失效，
+        // 避免先申請連結、再把 Email 改成別人的，藉此把他人 Email 標記為已驗證
+        if (!fingerprint(user.getPassword() + "|" + normalize(user.getEmail())).equals(claims.get("pwd"))) {
             throw new BusinessException("此重設連結已使用過或已失效，請重新申請");
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         // 能收到信代表擁有此信箱，順便完成 Email 驗證
         user.setEmailVerified(true);
         return userRepository.save(user);
+    }
+
+    private static String normalize(String email) {
+        return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static String fingerprint(String passwordHash) {

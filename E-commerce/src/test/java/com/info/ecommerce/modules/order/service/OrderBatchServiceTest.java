@@ -31,6 +31,9 @@ import static org.mockito.Mockito.*;
 class OrderBatchServiceTest {
 
     @Mock
+    private OrderService orderService;
+
+    @Mock
     private OrderRepository orderRepository;
 
     @Mock

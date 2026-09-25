@@ -47,6 +47,11 @@ public class OrderRefundService {
             throw new BusinessException("訂單狀態為「" + order.getStatus().getDescription() + "」，無法退款；未付款的訂單請直接取消");
         }
 
+        // 貨到付款尚未收款（處理中）的訂單沒有錢可退；已完成的貨到付款訂單視為已收款
+        if (order.getStatus() != OrderStatus.COMPLETED && !orderService.hasBeenPaid(orderId)) {
+            throw new BusinessException("此訂單尚未收款，無法退款；如需取消請使用「取消訂單」");
+        }
+
         List<OrderPayment> payments = orderPaymentRepository.findByOrderId(orderId);
         BigDecimal alreadyRefunded = payments.stream()
                 .map(OrderPayment::getRefundAmount)
@@ -59,6 +64,9 @@ public class OrderRefundService {
             throw new BusinessException("退款金額需介於 1 到可退金額 NT$" + refundable.stripTrailingZeros().toPlainString() + " 之間");
         }
         boolean fullRefund = amount.compareTo(refundable) == 0;
+        if (request.isRestock() && !fullRefund) {
+            throw new BusinessException("部分退款無法自動歸還整筆訂單的庫存；如有退回商品，請到商品頁手動補貨");
+        }
 
         // 記錄到付款紀錄（沒有付款紀錄時，例如貨到付款，建立一筆退款紀錄）
         OrderPayment payment = payments.stream()
@@ -86,7 +94,8 @@ public class OrderRefundService {
                 null, amount.toPlainString(), operatorId, operatorName);
 
         if (request.isRestock()) {
-            orderStockService.release(orderId, order.getOrderNumber());
+            // 退款不歸還優惠券：優惠券已實際使用
+            orderStockService.release(orderId, order.getOrderNumber(), false);
         }
         if (fullRefund) {
             return orderService.updateOrderStatus(orderId, OrderStatus.REFUNDED, operatorId, operatorName);
