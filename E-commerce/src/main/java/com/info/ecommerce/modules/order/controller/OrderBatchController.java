@@ -20,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/orders/batch")
 @RequiredArgsConstructor
 @Tag(name = "訂單批次操作", description = "批量更新訂單狀態及批量導出訂單資料")
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
 public class OrderBatchController {
 
     private final OrderBatchService orderBatchService;
@@ -32,6 +33,7 @@ public class OrderBatchController {
 
     @DeleteMapping
     @Operation(summary = "批量刪除訂單")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> batchDeleteOrders(
             @Parameter(description = "訂單 ID 列表") @RequestBody List<Long> orderIds) {
         orderBatchService.batchDeleteOrders(orderIds);
@@ -40,6 +42,7 @@ public class OrderBatchController {
 
     @PostMapping("/export")
     @Operation(summary = "導出訂單資料", description = "批量導出訂單資料為 Excel/CSV（返回訂單列表）")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<List<Order>> exportOrders(
             @Parameter(description = "訂單 ID 列表（為空則導出全部）") 
             @RequestBody(required = false) List<Long> orderIds) {

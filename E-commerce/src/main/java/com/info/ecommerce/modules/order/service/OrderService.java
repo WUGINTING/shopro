@@ -255,7 +255,7 @@ public class OrderService {
                 item.setProductSpec(spec.getSpecName());
             }
             // 如果DTO中沒有提供單價，使用規格的價格
-            if (dto.getUnitPrice() == null && spec.getPrice() != null) {
+            if (dto.getUnitPrice() == null && spec.getPrice() != null && spec.getPrice().signum() > 0) {
                 item.setUnitPrice(spec.getPrice());
             }
         }

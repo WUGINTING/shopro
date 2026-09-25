@@ -164,6 +164,23 @@ export const productApi = {
   },
 
   /**
+   * 取得全部商品（後台列表、訂單選商品用）：逐頁載入直到最後一頁，不受單頁 20 筆限制
+   */
+  getAllProducts: async (): Promise<Product[]> => {
+    const all: Product[] = []
+    const size = 200
+    for (let page = 0; page < 100; page++) {
+      const response = await axios.get<any, ApiResponse<PageResponse<Product> | Product[]>>('/products', { params: { page, size } })
+      const data = response.data
+      if (Array.isArray(data)) return data
+      const content = data?.content || []
+      all.push(...content)
+      if (content.length < size || (data?.totalPages !== undefined && page + 1 >= data.totalPages)) break
+    }
+    return all
+  },
+
+  /**
    * 搜尋商品
    */
   searchProducts: (keyword: string, page = 0, size = 20) => {

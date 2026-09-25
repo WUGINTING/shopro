@@ -64,6 +64,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                              Pageable pageable);
     
     boolean existsBySku(String sku);
+
+    long countByCategoryId(Long categoryId);
     
     java.util.Optional<Product> findBySku(String sku);
     

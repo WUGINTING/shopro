@@ -181,12 +181,8 @@ class OrderBatchServiceTest {
         // then
         verify(orderRepository, times(1)).findById(1L);
         verify(orderRepository, times(1)).findById(2L);
-        verify(orderRepository, times(1)).delete(order1);
-        verify(orderRepository, times(1)).delete(order2);
-        verify(orderHistoryService, times(2)).recordHistory(
-                anyLong(), eq("BATCH_DELETE"), eq("批次刪除訂單"),
-                anyString(), isNull(), isNull(), isNull()
-        );
+        verify(orderService, times(1)).deleteOrder(1L);
+        verify(orderService, times(1)).deleteOrder(2L);
     }
 
     @Test

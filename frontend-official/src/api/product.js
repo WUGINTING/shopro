@@ -105,8 +105,8 @@ export function getProductsByStatus(status, params = {}) {
  * @param {number} productId - 商品 ID
  * @returns {Promise} List<ProductSpecificationDTO>
  */
-export function getProductSpecifications(productId) {
-  return http.get(`/product-specifications/product/${productId}`);
+export function getProductSpecifications(productId, options) {
+  return http.get(`/product-specifications/product/${productId}`, undefined, options);
 }
 
 /**
@@ -157,5 +157,6 @@ export function getEnabledCategories() {
  * @returns {Promise} ProductCategoryDTO
  */
 export function getProductCategory(id) {
-  return http.get(`/product-categories/${id}`);
+  // 分類名稱只是輔助資訊，取不到時不顯示錯誤
+  return http.get(`/product-categories/${id}`, undefined, { silent: true });
 }

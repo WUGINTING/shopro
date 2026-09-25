@@ -247,6 +247,10 @@ public class InventoryManagementService {
             if (!isAvailable(productId, notification.getSpecificationId())) {
                 continue;
             }
+            // 先搶到這筆通知才寄信：多個庫存事件同時處理時，同一位顧客只會收到一次
+            if (notificationRepository.claim(notification.getId(), LocalDateTime.now()) == 0) {
+                continue;
+            }
             try {
                 MimeMessage message = mailSender.createMimeMessage();
                 MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
@@ -260,13 +264,11 @@ public class InventoryManagementService {
                 helper.setText("您好：\n\n您登記到貨通知的商品「" + product.getName() + "」已經補貨，數量有限，歡迎盡快選購。"
                         + link + "\n\n" + storeName + " 敬上\n（此信件由系統自動發送，您只會收到這一次通知）\n", false);
                 mailSender.send(message);
-                notification.setNotified(true);
-                notification.setNotifiedAt(LocalDateTime.now());
             } catch (Exception e) {
                 log.warn("Failed to send restock notification {}: {}", notification.getId(), e.getMessage());
+                notificationRepository.unclaim(notification.getId());
             }
         }
-        notificationRepository.saveAll(notifications);
     }
 
     /** 商品或規格目前可購買（未追蹤庫存視為可購買） */

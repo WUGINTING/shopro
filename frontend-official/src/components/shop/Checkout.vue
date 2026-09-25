@@ -413,7 +413,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { getCartItems, clearCart, removeFromCart } from 'src/utils/cart.js';
-import { quoteOrder, checkoutOrder, toOrderItems, getShippingOptions } from 'src/api/order.js';
+import { quoteOrder, checkoutOrder, toOrderItems, getShippingOptions, getPaymentOptions } from 'src/api/order.js';
 import {
   getCheckoutDraft,
   saveCheckoutDraft,
@@ -463,8 +463,29 @@ const loadShippingOptions = async () => {
 
 // 付款方式
 const paymentMethod = ref('ECPAY');
+// 線上付款依後台金流設定（停用 / 維護中時不可選）
+const onlinePaymentUnavailable = ref('');
+const loadPaymentOptions = async () => {
+  try {
+    const res = await getPaymentOptions();
+    const online = (res?.data || []).find(option => option.method === 'ECPAY');
+    onlinePaymentUnavailable.value = online && !online.available ? online.message || '線上付款暫停服務' : '';
+    if (onlinePaymentUnavailable.value && paymentMethod.value === 'ECPAY') {
+      paymentMethod.value = 'COD';
+    }
+  } catch {
+    // 取不到時保留選項，由後端下單時檢查
+  }
+};
 const paymentOptions = computed(() => [
-  { label: '線上付款（信用卡 / ATM / 超商）', value: 'ECPAY', icon: 'credit_card' },
+  {
+    label: onlinePaymentUnavailable.value
+      ? `線上付款（${onlinePaymentUnavailable.value}）`
+      : '線上付款（信用卡 / ATM / 超商）',
+    value: 'ECPAY',
+    icon: 'credit_card',
+    disable: !!onlinePaymentUnavailable.value,
+  },
   {
     label: shippingMethod.value === 'STORE_PICKUP' ? '取貨時付款' : '貨到付款',
     value: 'COD',
@@ -773,6 +794,7 @@ onMounted(() => {
   loadCartData();
   refreshQuote();
   loadShippingOptions();
+  loadPaymentOptions();
   window.addEventListener('cart-updated', handleCartUpdated);
 });
 </script>

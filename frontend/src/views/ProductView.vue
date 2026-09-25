@@ -550,7 +550,7 @@
                     <div v-if="form.id && selectedAlbumImages.length > 0" class="row q-col-gutter-sm">
                       <div
                         v-for="(img, index) in selectedAlbumImages"
-                        :key="img.id"
+                        :key="img.id ?? img.imageUrl"
                         class="col-12 col-sm-6 col-md-4 col-lg-3"
                       >
                         <div class="selected-image-card" :class="{ 'selected-image-card--primary': isPrimarySelectedImage(index) }">
@@ -573,7 +573,7 @@
                                 color="white"
                                 icon="close"
                                 size="sm"
-                                @click="removeSelectedImage(img.id)"
+                                @click="removeSelectedImage(index)"
                                 aria-label="移除圖片"
                               >
                                 <q-tooltip>移除圖片</q-tooltip>
@@ -1052,11 +1052,12 @@
                 <div class="col-6">
                   <q-input
                     v-model.number="specForm.price"
-                    label="規格價格 *"
+                    label="規格價格"
+                    hint="0 或空白 = 與商品售價相同"
                     outlined
                     type="number"
-                    prefix="¥"
-                    :rules="[val => val >= 0 || '價格不能為負數']"
+                    prefix="NT$"
+                    :rules="[val => val === null || val === '' || val >= 0 || '價格不能為負數']"
                   />
                 </div>
                 <div class="col-6">
@@ -1065,7 +1066,7 @@
                     label="規格成本"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                   />
                 </div>
               </div>
@@ -1597,15 +1598,7 @@ const productMetrics = computed(() => {
 const loadProducts = async () => {
   loading.value = true
   try {
-    const response = await productApi.getProducts()
-    console.log('[loadProducts] API 回應:', response)
-    const data = response.data as PageResponse<Product> | Product[]
-    let productList: Product[] = []
-    if (Array.isArray(data)) {
-      productList = data
-    } else if (data && 'content' in data) {
-      productList = data.content
-    }
+    const productList: Product[] = await productApi.getAllProducts()
 
     // 調試：輸出有圖片的商品
     const productsWithImages = productList.filter(p => p.images && p.images.length > 0)
@@ -1695,6 +1688,25 @@ const handleRestock = async () => {
     return
   }
 
+  // 目前不限量（未追蹤庫存）：補貨後會改為追蹤庫存，只能賣出補貨的數量，先請使用者確認
+  const currentStock = restockSpecs.value.length > 0
+    ? restockSpecs.value.find((spec) => spec.id === restockSpecId.value)?.stock
+    : restockProduct.value.stock
+  if (currentStock == null) {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      $q.dialog({
+        title: '改為追蹤庫存？',
+        message: `目前為「不限量」。補貨後將改為追蹤庫存，之後只能賣出 ${restockQuantity.value} 件，售完即顯示缺貨。確定要繼續嗎？`,
+        cancel: true,
+        persistent: true
+      })
+        .onOk(() => resolve(true))
+        .onCancel(() => resolve(false))
+        .onDismiss(() => resolve(false))
+    })
+    if (!confirmed) return
+  }
+
   restockLoading.value = true
   try {
     await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value, restockSpecId.value ?? undefined)
@@ -1746,50 +1758,12 @@ const handleEdit = async (product: Product | ProductRow) => {
     await loadDescriptionBlocks(product.id)
   }
 
-  // Load existing album images for this product if it has images
+  // 依商品目前的圖片順序載入（第一張為主圖）；移除 / 排序 / 設主圖在儲存時以完整清單取代
   if (product.id && product.images && product.images.length > 0) {
-    try {
-      // Try to match product images with album images
-      // This is a best-effort approach since we need to query albums for matching URLs
-      selectedAlbumImages.value = []
-
-      // 先提取所有商品圖片的 URL
-      const productImageUrls: string[] = product.images.map(img => {
-        if (typeof img === 'string') {
-          return img
-        } else if (img && typeof img === 'object' && 'imageUrl' in img) {
-          return img.imageUrl
-        }
-        return ''
-      }).filter(url => url !== '')
-
-      // Load all albums and their images to find matches
-      const albumsResponse = await albumApi.getAlbums({ page: 0, size: 100 })
-      if (albumsResponse.success && albumsResponse.data) {
-        const allAlbums = albumsResponse.data.content || []
-
-        // For each album, load images and check if they match product images
-        for (const album of allAlbums) {
-          if (album.id) {
-            const imagesResponse = await albumApi.getAlbumImages(album.id)
-            if (imagesResponse.success && imagesResponse.data) {
-              const albumImages = imagesResponse.data
-              // Check if any product images match album images
-              for (const productImageUrl of productImageUrls) {
-                const matchingAlbumImage = albumImages.find(
-                  (albumImg) => albumImg.imageUrl === productImageUrl
-                )
-                if (matchingAlbumImage && !selectedAlbumImages.value.some(img => img.id === matchingAlbumImage.id)) {
-                  selectedAlbumImages.value.push(matchingAlbumImage)
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load existing album images:', error)
-    }
+    selectedAlbumImages.value = product.images
+      .map((img) => (typeof img === 'string' ? img : img && typeof img === 'object' && 'imageUrl' in img ? img.imageUrl : ''))
+      .filter((url): url is string => !!url)
+      .map((imageUrl) => ({ albumId: 0, imageUrl, fileName: imageUrl.split('/').pop() || imageUrl }))
   } else {
     selectedAlbumImages.value = []
   }
@@ -1883,12 +1857,20 @@ const handleSubmit = async () => {
     // 4. 移除後端不認識的欄位
     delete payload.price // 後端沒有 'price' 欄位，刪掉避免報錯
 
+    // 編輯時以畫面上的圖片清單（含順序）取代商品圖片，移除 / 排序 / 設主圖才會生效
+    if (form.value.id) {
+      payload.images = selectedAlbumImages.value.map((img) => ({ imageUrl: img.imageUrl }))
+    } else {
+      delete payload.images
+    }
+
     // !!! 注意 !!!
     // 如果您還沒在 Java DTO 加入 'stock' 欄位，請把下面這行取消註解，否則後端會報錯
     // delete payload.stock
 
     // 5. 先創建或更新商品（需要先有商品ID才能添加圖片）
     let productId = form.value.id
+    const isNewProduct = !productId
     if (!productId) {
       const response = await productApi.createProduct(payload)
       // 更新 form ID 以便後續操作
@@ -1941,12 +1923,13 @@ const handleSubmit = async () => {
       imageIdsToAdd.push(uploadedImageId)
     }
     
-    // 添加已選中的相冊圖片ID
-    const selectedImageIds = selectedAlbumImages.value
-      .map(img => img.id)
-      .filter((id): id is number => id !== undefined && id !== uploadedImageId) // 避免重複添加
-    
-    imageIdsToAdd.push(...selectedImageIds)
+    // 新建商品：加入已選中的相冊圖片（編輯時已在上方以完整清單更新）
+    if (isNewProduct) {
+      const selectedImageIds = selectedAlbumImages.value
+        .map(img => img.id)
+        .filter((id): id is number => id !== undefined && id !== uploadedImageId) // 避免重複添加
+      imageIdsToAdd.push(...selectedImageIds)
+    }
 
     // 8. 將所有圖片添加到商品
     if (productId && imageIdsToAdd.length > 0) {
@@ -2461,11 +2444,9 @@ const clearSpecImageSelection = () => {
   specForm.value.image = ''
 }
 
-const removeSelectedImage = (imageId?: number) => {
-  // Remove from local preview
-  // The actual backend update happens when user clicks "保存" or "完成"
-  const index = selectedAlbumImages.value.findIndex(img => img.id === imageId)
-  if (index > -1) {
+const removeSelectedImage = (index: number) => {
+  // 只移除預覽，按「保存」或「完成」時才寫回商品
+  if (index > -1 && index < selectedAlbumImages.value.length) {
     selectedAlbumImages.value.splice(index, 1)
   }
 }

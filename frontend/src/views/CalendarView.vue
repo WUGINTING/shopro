@@ -651,7 +651,10 @@ $q.lang.set(quasarLangZhTW)
 const events = ref<CalendarEvent[]>([])
 const loading = ref(false)
 const viewMode = ref<'calendar' | 'list'>('calendar')
-const selectedDate = ref(new Date().toISOString().split('T')[0])
+// 當地日期 YYYY-MM-DD（toISOString 為 UTC，台灣午夜會變成前一天）
+const localDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const selectedDate = ref(localDateKey(new Date()))
 const selectedEvents = ref<CalendarEvent[]>([])
 const showDialog = ref(false)
 const showBatchUpdateDialog = ref(false)
@@ -762,7 +765,7 @@ const calendarEventsMap = computed(() => {
       current.setDate(current.getDate() + 1)
 
       while (current < end) {
-        const dateKey = current.toISOString().split('T')[0]?.replace(/-/g, '/')
+        const dateKey = localDateKey(current).replace(/-/g, '/')
         if (dateKey && !eventsMap[dateKey]) {
           eventsMap[dateKey] = hexColor
         }
@@ -1462,18 +1465,18 @@ const formatDateTimeLocal = (dateTimeStr: string) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
+// 後端以 LocalDateTime（商店當地時間）儲存：送出當地時間，不轉成 UTC（否則會差 8 小時）
 const formatDateTimeToISO = (dateTimeStr: string) => {
   if (!dateTimeStr) return ''
-  // 如果沒有時區信息，添加本地時區
-  if (!dateTimeStr.includes('Z') && !dateTimeStr.includes('+') && !dateTimeStr.includes('-', 10)) {
-    return new Date(dateTimeStr).toISOString()
-  }
-  return dateTimeStr
+  const date = new Date(dateTimeStr)
+  if (Number.isNaN(date.getTime())) return dateTimeStr
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${localDateKey(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 onMounted(async () => {
   // 確保選中今天的日期
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateKey(new Date())
   if (today) {
     selectedDate.value = today
     console.log('Mounted: Setting selected date to today:', today)

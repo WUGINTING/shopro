@@ -27,6 +27,15 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
 
     List<com.info.ecommerce.modules.order.entity.OrderHistory> findByOrderIdInAndActionType(java.util.Collection<Long> orderIds, String actionType);
 
+    /** 分批查詢（SQL Server 單一查詢最多 2100 個參數） */
+    default List<OrderHistory> findByOrderIdInAndActionTypeInBatches(java.util.List<Long> orderIds, String actionType) {
+        List<OrderHistory> result = new java.util.ArrayList<>();
+        for (int from = 0; from < orderIds.size(); from += 1000) {
+            result.addAll(findByOrderIdInAndActionType(orderIds.subList(from, Math.min(from + 1000, orderIds.size())), actionType));
+        }
+        return result;
+    }
+
     boolean existsByOrderIdAndNewStatusAndActionTypeIn(Long orderId, String newStatus, java.util.Collection<String> actionTypes);
 
     List<OrderHistory> findByActionTypeAndCreatedAtBetween(String actionType, java.time.LocalDateTime from, java.time.LocalDateTime to);

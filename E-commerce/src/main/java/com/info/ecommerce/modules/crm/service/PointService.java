@@ -28,11 +28,14 @@ public class PointService {
 
     @Transactional
     public PointRecordDTO addPoints(Long memberId, Integer points, PointType pointType, String reason, Long orderId) {
+        if (points == null || points <= 0) {
+            throw new BusinessException("積點需大於 0");
+        }
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException("會員不存在"));
 
-        member.setTotalPoints(member.getTotalPoints() + points);
-        member.setAvailablePoints(member.getAvailablePoints() + points);
+        member.setTotalPoints((member.getTotalPoints() != null ? member.getTotalPoints() : 0) + points);
+        member.setAvailablePoints((member.getAvailablePoints() != null ? member.getAvailablePoints() : 0) + points);
         memberRepository.save(member);
 
         PointRecord record = PointRecord.builder()
@@ -50,10 +53,13 @@ public class PointService {
 
     @Transactional
     public PointRecordDTO deductPoints(Long memberId, Integer points, PointType pointType, String reason) {
+        if (points == null || points <= 0) {
+            throw new BusinessException("積點需大於 0");
+        }
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException("會員不存在"));
 
-        if (member.getAvailablePoints() < points) {
+        if (member.getAvailablePoints() == null || member.getAvailablePoints() < points) {
             throw new BusinessException("可用積點不足");
         }
 

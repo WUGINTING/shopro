@@ -62,6 +62,14 @@ export function payOrder(orderNumber, email) {
  * 目前開放的配送方式與運費（依後台運費設定）
  * @returns {Promise} ApiResponse<Array<{method, name, fee, freeShippingThreshold}>>
  */
+export function getPaymentOptions() {
+  return http.get('/storefront/orders/payment-options', undefined, { silent: true });
+}
+
+/**
+ * 目前開放的配送方式與運費（依後台運費設定）
+ * @returns {Promise} ApiResponse<Array<{method, name, fee, freeShippingThreshold}>>
+ */
 export function getShippingOptions() {
   return http.get('/storefront/orders/shipping-options', undefined, { silent: true });
 }

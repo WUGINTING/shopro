@@ -12,4 +12,16 @@ public interface StockNotificationRepository extends JpaRepository<StockNotifica
     List<StockNotification> findByProductIdAndNotifiedFalse(Long productId);
     
     List<StockNotification> findByNotifiedFalse();
+
+    /** 原子性地標記為已通知；同時處理的另一個執行緒已標記時回傳 0（避免同一位顧客收到兩封信） */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE StockNotification n SET n.notified = true, n.notifiedAt = :now "
+            + "WHERE n.id = :id AND n.notified = false")
+    int claim(@org.springframework.data.repository.query.Param("id") Long id,
+              @org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
+
+    /** 寄信失敗時還原，下次補貨再通知 */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE StockNotification n SET n.notified = false, n.notifiedAt = null WHERE n.id = :id")
+    int unclaim(@org.springframework.data.repository.query.Param("id") Long id);
 }

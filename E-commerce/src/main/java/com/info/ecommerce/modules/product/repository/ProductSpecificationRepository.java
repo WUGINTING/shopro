@@ -14,6 +14,8 @@ import java.util.Optional;
 public interface ProductSpecificationRepository extends JpaRepository<ProductSpecification, Long> {
     
     List<ProductSpecification> findByProductId(Long productId);
+
+    List<ProductSpecification> findByProductIdIn(java.util.Collection<Long> productIds);
     
     Optional<ProductSpecification> findBySku(String sku);
     

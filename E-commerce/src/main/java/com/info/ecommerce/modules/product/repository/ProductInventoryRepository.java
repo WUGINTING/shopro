@@ -14,6 +14,8 @@ import java.util.Optional;
 public interface ProductInventoryRepository extends JpaRepository<ProductInventory, Long> {
     
     List<ProductInventory> findByProductId(Long productId);
+
+    List<ProductInventory> findByProductIdInAndSpecificationIdIsNull(java.util.Collection<Long> productIds);
     
     Optional<ProductInventory> findByProductIdAndSpecificationId(Long productId, Long specificationId);
     

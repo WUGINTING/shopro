@@ -106,12 +106,11 @@ public class OrderBatchService {
      */
     @Transactional
     public void batchDeleteOrders(List<Long> orderIds) {
+        // 與單筆刪除相同流程：歸還庫存與優惠券、刪除訂單品項並記錄歷程
         for (Long orderId : orderIds) {
-            orderRepository.findById(orderId).ifPresent(order -> {
-                orderHistoryService.recordHistory(orderId, "BATCH_DELETE", "批次刪除訂單", 
-                    order.getStatus().name(), null, null, null);
-                orderRepository.delete(order);
-            });
+            if (orderRepository.findById(orderId).isPresent()) {
+                orderService.deleteOrder(orderId);
+            }
         }
     }
 
@@ -143,7 +142,7 @@ public class OrderBatchService {
                 .toList();
         java.util.Map<Long, List<com.info.ecommerce.modules.order.entity.OrderItem>> itemsByOrder = orders.isEmpty()
                 ? java.util.Map.of()
-                : orderItemRepository.findByOrderIdIn(orders.stream().map(Order::getId).toList()).stream()
+                : orderItemRepository.findByOrderIdInBatches(orders.stream().map(Order::getId).toList()).stream()
                         .collect(java.util.stream.Collectors.groupingBy(com.info.ecommerce.modules.order.entity.OrderItem::getOrderId));
 
         StringBuilder sb = new StringBuilder("\uFEFF");

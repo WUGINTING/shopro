@@ -272,7 +272,7 @@
                     dense
                     clearable
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                     step="0.01"
                     min="0"
                     inputmode="decimal"
@@ -289,7 +289,7 @@
                     dense
                     clearable
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                     step="0.01"
                     min="0"
                     inputmode="decimal"
@@ -374,7 +374,7 @@
                     text-color="white"
                     @remove="filterForm.minAmount = null"
                   >
-                    最小金額: ¥{{ filterForm.minAmount }}
+                    最小金額: NT$ {{ filterForm.minAmount }}
                   </q-chip>
                   <q-chip
                     v-if="filterForm.maxAmount"
@@ -383,7 +383,7 @@
                     text-color="white"
                     @remove="filterForm.maxAmount = null"
                   >
-                    最大金額: ¥{{ filterForm.maxAmount }}
+                    最大金額: NT$ {{ filterForm.maxAmount }}
                   </q-chip>
                 </div>
               </div>
@@ -724,7 +724,7 @@
                               <q-item-section>
                                 <q-item-label>{{ scope.opt.specName || '無規格名稱' }}</q-item-label>
                                 <q-item-label caption v-if="scope.opt.sku">
-                                  SKU: {{ scope.opt.sku }} | 價格: ¥{{ (scope.opt.price || 0).toFixed(2) }} | 庫存: {{ scope.opt.stock || 0 }}
+                                  SKU: {{ scope.opt.sku }} | 價格: NT$ {{ (scope.opt.price || 0).toFixed(2) }} | 庫存: {{ scope.opt.stock || 0 }}
                                 </q-item-label>
                               </q-item-section>
                             </q-item>
@@ -895,7 +895,7 @@
               >
                 <template v-slot:body-cell-discountAmount="props">
                   <q-td :props="props">
-                    <span class="text-weight-bold text-primary">¥{{ props.row.discountAmount?.toFixed(2) }}</span>
+                    <span class="text-weight-bold text-primary">NT$ {{ props.row.discountAmount?.toFixed(2) }}</span>
                   </q-td>
                 </template>
                 <template v-slot:body-cell-discountType="props">
@@ -2387,13 +2387,7 @@ const loadCustomers = async () => {
 
 const loadProducts = async () => {
   try {
-    const response = await productApi.getProducts()
-    const data = response.data as PageResponse<Product> | Product[]
-    if (Array.isArray(data)) {
-      products.value = data
-    } else if (data && 'content' in data) {
-      products.value = data.content
-    }
+    products.value = await productApi.getAllProducts()
   } catch (error) {
     console.error('Failed to load products:', error)
   }

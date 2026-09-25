@@ -31,6 +31,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final OrderRepository orderRepository;
     private final com.info.ecommerce.modules.crm.repository.PointRecordRepository pointRecordRepository;
+    private final com.info.ecommerce.modules.crm.repository.MemberLevelRepository memberLevelRepository;
 
     @Transactional
     public MemberDTO createMember(MemberDTO dto) {
@@ -53,7 +54,10 @@ public class MemberService {
             throw new BusinessException("電子郵件已存在");
         }
 
-        BeanUtils.copyProperties(dto, member, "id", "createdAt", "updatedAt", "registeredAt");
+        // 積點、累積消費、等級、行銷訂閱由各自的流程維護（積點明細、訂單、等級調整、顧客本人），
+        // 編輯基本資料時不覆寫，避免以畫面載入時的舊值蓋掉期間的變動
+        BeanUtils.copyProperties(dto, member, "id", "createdAt", "updatedAt", "registeredAt", "lastLoginAt",
+                "totalPoints", "availablePoints", "totalSpent", "levelId", "marketingOptIn");
         member = memberRepository.save(member);
         return toDTO(member);
     }
@@ -172,8 +176,27 @@ public class MemberService {
         }
         memberRepository.findById(memberId).ifPresent(member -> {
             member.setTotalSpent(orderRepository.sumTotalAmountByCustomerIdAndStatusIn(memberId, SPENDING_STATUSES));
+            upgradeLevel(member, memberLevelRepository.findByEnabledOrderByLevelOrderAsc(true));
             memberRepository.save(member);
         });
+    }
+
+    /**
+     * 累積消費達門檻自動升級到符合的最高等級。只升不降：退款或後台手動調高的等級不會被自動調低
+     */
+    private void upgradeLevel(Member member, List<com.info.ecommerce.modules.crm.entity.MemberLevel> enabledLevels) {
+        BigDecimal spent = member.getTotalSpent() != null ? member.getTotalSpent() : BigDecimal.ZERO;
+        java.util.Comparator<com.info.ecommerce.modules.crm.entity.MemberLevel> byThreshold = java.util.Comparator.comparing(
+                level -> level.getMinSpendAmount() != null ? level.getMinSpendAmount() : BigDecimal.ZERO);
+        enabledLevels.stream()
+                .filter(level -> (level.getMinSpendAmount() != null ? level.getMinSpendAmount() : BigDecimal.ZERO).compareTo(spent) <= 0)
+                .max(byThreshold)
+                .ifPresent(earned -> {
+                    var current = enabledLevels.stream().filter(level -> level.getId().equals(member.getLevelId())).findFirst();
+                    if (current.isEmpty() || byThreshold.compare(earned, current.get()) > 0) {
+                        member.setLevelId(earned.getId());
+                    }
+                });
     }
 
     /**
@@ -198,8 +221,10 @@ public class MemberService {
                     Collectors.reducing(BigDecimal.ZERO, Order::getTotalAmount, BigDecimal::add)
                 ));
 
+        List<com.info.ecommerce.modules.crm.entity.MemberLevel> enabledLevels = memberLevelRepository.findByEnabledOrderByLevelOrderAsc(true);
         memberRepository.findAll().forEach(member -> {
             member.setTotalSpent(customerTotalSpent.getOrDefault(member.getId(), BigDecimal.ZERO));
+            upgradeLevel(member, enabledLevels);
             memberRepository.save(member);
         });
     }

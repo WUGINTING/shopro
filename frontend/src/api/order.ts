@@ -269,6 +269,13 @@ export const orderApi = {
   },
 
   /** 目前開放的配送方式與運費 */
+  /** 目前可用的付款方式（線上付款依後台金流設定的啟用 / 維護狀態） */
+  storefrontPaymentOptions: () => {
+    return axios.get<any, ApiResponse<Array<{ method: string; available: boolean; message?: string | null }>>>(
+      '/storefront/orders/payment-options'
+    )
+  },
+
   storefrontShippingOptions: () => {
     return axios.get<any, ApiResponse<Array<{ method: string; name: string; fee: number; freeShippingThreshold?: number | null }>>>(
       '/storefront/orders/shipping-options'

@@ -109,6 +109,9 @@ class StorefrontCheckoutServiceTest {
     @Mock
     private com.info.ecommerce.modules.order.repository.OrderShipmentRepository orderShipmentRepository;
 
+    @Mock
+    private com.info.ecommerce.modules.payment.repository.PaymentSettingRepository paymentSettingRepository;
+
     @InjectMocks
     private StorefrontCheckoutService storefrontCheckoutService;
 

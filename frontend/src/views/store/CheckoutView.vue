@@ -311,10 +311,28 @@ const removeCoupon = () => {
 }
 const defaultGateway = (import.meta.env.VITE_DEFAULT_PAYMENT_GATEWAY || 'ECPAY').toUpperCase()
 
-const paymentOptions = [
-  { label: 'ECPay', value: 'ECPAY' },
+// 線上付款依後台金流設定（停用 / 維護中時不可選）
+const onlinePaymentUnavailable = ref('')
+const paymentOptions = computed(() => [
+  {
+    label: onlinePaymentUnavailable.value ? `ECPay（${onlinePaymentUnavailable.value}）` : 'ECPay',
+    value: 'ECPAY',
+    disable: !!onlinePaymentUnavailable.value
+  },
   { label: '貨到付款', value: 'COD' }
-]
+])
+const loadPaymentOptions = async () => {
+  try {
+    const response = await orderApi.storefrontPaymentOptions()
+    const online = (response.data || []).find((option) => option.method === 'ECPAY')
+    onlinePaymentUnavailable.value = online && !online.available ? online.message || '線上付款暫停服務' : ''
+    if (onlinePaymentUnavailable.value && form.value.paymentMethod === 'ECPAY') {
+      form.value.paymentMethod = 'COD'
+    }
+  } catch {
+    // 取不到時保留選項，由後端下單時檢查
+  }
+}
 
 const allShippingOptions = [
   { label: '宅配到府', value: 'DELIVERY', method: 'HOME_DELIVERY' },
@@ -460,6 +478,7 @@ onMounted(async () => {
   trackEvent('view_checkout')
   refreshQuote()
   loadShippingOptions()
+  loadPaymentOptions()
   const draft = getCheckoutDraft()
   form.value.customerName = draft.customerName || authStore.user?.username || ''
   form.value.customerPhone = draft.customerPhone || ''

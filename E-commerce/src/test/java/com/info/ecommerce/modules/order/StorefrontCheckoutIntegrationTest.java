@@ -53,6 +53,10 @@ class StorefrontCheckoutIntegrationTest {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtService jwtService;
     @Autowired private MemberRepository memberRepository;
+    @Autowired private com.info.ecommerce.modules.payment.repository.PaymentSettingRepository paymentSettingRepository;
+    @Autowired private com.info.ecommerce.modules.product.repository.ProductCategoryRepository categoryRepository;
+    @Autowired private com.info.ecommerce.modules.crm.repository.MemberLevelRepository memberLevelRepository;
+    @Autowired private com.info.ecommerce.modules.crm.service.MemberService memberService;
 
     private Product cup;
     private ProductSpecification blueCup;
@@ -471,5 +475,77 @@ class StorefrontCheckoutIntegrationTest {
         mockMvc.perform(get("/api/storefront/orders/lookup").with(request -> { request.setRemoteAddr("10.77.0.2"); return request; })
                         .param("orderNumber", "ORD-NOPE-X").param("email", "guess@example.com"))
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("次數過多"))));
+    }
+
+    @Test
+    void specWithZeroPrice_isSoldAtTheProductPrice() throws Exception {
+        ProductSpecification sameAsProduct = specificationRepository.save(ProductSpecification.builder()
+                .productId(cup.getId()).specName("白色").sku("CUP-WH-" + UUID.randomUUID().toString().substring(0, 8))
+                .price(BigDecimal.ZERO).stock(3).enabled(true).build());
+        mockMvc.perform(post("/api/storefront/orders/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"productId\":" + cup.getId() + ",\"specificationId\":" + sameAsProduct.getId() + ",\"quantity\":1}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.subtotalAmount").value(350));
+    }
+
+    @Test
+    void onlinePayment_isRefused_whileEcPayIsInMaintenance() throws Exception {
+        var setting = paymentSettingRepository.findByGateway(com.info.ecommerce.modules.payment.enums.PaymentGateway.ECPAY).orElseThrow();
+        Boolean previous = setting.getMaintenanceMode();
+        setting.setMaintenanceMode(true);
+        setting.setMaintenanceMessage("綠界維護中，預計 30 分鐘後恢復");
+        paymentSettingRepository.save(setting);
+        try {
+            mockMvc.perform(get("/api/storefront/orders/payment-options"))
+                    .andExpect(jsonPath("$.data[0].method").value("ECPAY"))
+                    .andExpect(jsonPath("$.data[0].available").value(false))
+                    .andExpect(jsonPath("$.data[0].message").value("綠界維護中，預計 30 分鐘後恢復"));
+            mockMvc.perform(post("/api/storefront/orders/checkout").contentType(MediaType.APPLICATION_JSON)
+                            .content(checkoutBody("maint@example.com", cone.getId(), null, 1).replace("\"COD\"", "\"ECPAY\"")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("綠界維護中，預計 30 分鐘後恢復"));
+            // 貨到付款不受影響
+            checkout(checkoutBody("maint-cod@example.com", cone.getId(), null, 1));
+        } finally {
+            setting.setMaintenanceMode(previous);
+            setting.setMaintenanceMessage(null);
+            paymentSettingRepository.save(setting);
+        }
+    }
+
+    @Test
+    void categoryWithProducts_cannotBeDeleted() throws Exception {
+        var category = categoryRepository.save(com.info.ecommerce.modules.product.entity.ProductCategory.builder()
+                .name("茶具-" + UUID.randomUUID().toString().substring(0, 6)).build());
+        cup.setCategoryId(category.getId());
+        productRepository.save(cup);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/product-categories/" + category.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("商品")));
+        cup.setCategoryId(null);
+        productRepository.save(cup);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/product-categories/" + category.getId())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void memberLevel_upgradesAutomatically_whenSpendingReachesTheThreshold() {
+        String suffix = UUID.randomUUID().toString().substring(0, 6);
+        var level = memberLevelRepository.save(com.info.ecommerce.modules.crm.entity.MemberLevel.builder()
+                .name("鑽石-" + suffix).levelOrder(99).minSpendAmount(new BigDecimal("9000000"))
+                .discountRate(new BigDecimal("0.9")).enabled(true).build());
+        var member = memberRepository.save(com.info.ecommerce.modules.crm.entity.Member.builder()
+                .name("大戶").email("vip-" + suffix + "@example.com").build());
+        orderRepository.save(com.info.ecommerce.modules.order.entity.Order.builder()
+                .orderNumber("ORD-VIP-" + suffix).customerId(member.getId())
+                .status(com.info.ecommerce.modules.order.enums.OrderStatus.COMPLETED)
+                .pickupType(com.info.ecommerce.modules.order.enums.PickupType.DELIVERY)
+                .subtotalAmount(new BigDecimal("9500000")).totalAmount(new BigDecimal("9500000")).build());
+
+        memberService.syncTotalSpent(member.getId());
+
+        assertEquals(level.getId(), memberRepository.findById(member.getId()).orElseThrow().getLevelId());
     }
 }

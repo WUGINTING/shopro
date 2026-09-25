@@ -38,6 +38,7 @@ export function mapProduct(item) {
     sku: item.sku,
     status: item.status,
     hasSpecs: specifications.length > 0,
+    minPurchaseQuantity: Math.max(1, Number(item.minPurchaseQuantity) || 1),
     // stock 為 null 表示未追蹤庫存（不限量）
     soldOut: item.status === 'OUT_OF_STOCK' || (hasStockInfo && item.stock <= 0),
     createdAt: item.createdAt,
@@ -69,10 +70,13 @@ export function quickAddToCart(product, { router, $q }) {
       selectedSku: product.sku,
       specification: null,
     },
-    1
+    // 有最低購買數量的商品直接加入最低數量，避免結帳時才被擋下
+    product.minPurchaseQuantity || 1
   );
   $q.notify({
-    message: `已將「${product.name}」加入購物車`,
+    message: product.minPurchaseQuantity > 1
+      ? `已將「${product.name}」加入購物車（最低購買 ${product.minPurchaseQuantity} 件）`
+      : `已將「${product.name}」加入購物車`,
     color: 'positive',
     position: 'top',
     timeout: 1500,

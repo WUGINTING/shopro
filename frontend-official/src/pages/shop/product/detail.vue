@@ -128,7 +128,7 @@
                 <div class="spec-info">
                   <div class="spec-name">{{ spec.specName }}</div>
                   <div class="spec-details">
-                    <span class="spec-price">{{ formatCurrency(spec.price ?? product.price) }}</span>
+                    <span class="spec-price">{{ formatCurrency(Number(spec.price) > 0 ? spec.price : product.price) }}</span>
                     <span v-if="isSpecSoldOut(spec)" class="spec-stock out">售完</span>
                     <span v-else-if="spec.stock != null" class="spec-stock">
                       庫存: {{ spec.stock }}
@@ -370,7 +370,8 @@ const selectSpecification = (spec) => {
 
 // 計算當前顯示價格（與後端計價一致：規格價 > 特價 > 原價）
 const displayPrice = computed(() => {
-  if (selectedSpec.value && selectedSpec.value.price != null) {
+  // 規格價空白或 0 表示與商品售價相同
+  if (selectedSpec.value && Number(selectedSpec.value.price) > 0) {
     return Number(selectedSpec.value.price);
   }
   return product.value?.price || 0;

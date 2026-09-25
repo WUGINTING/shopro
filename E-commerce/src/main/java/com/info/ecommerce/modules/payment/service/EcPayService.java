@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -305,21 +304,21 @@ public class EcPayService implements PaymentGatewayService {
     }
 
     /**
-     * 構建支付 URL（用於 HTML 表單提交）
-     * 注意：參數值使用原始值（不編碼），因為前端使用 POST 表單提交時瀏覽器會自動編碼
+     * 構建支付 URL（前端解析查詢參數後以 POST 表單送出）
+     * 參數值以 application/x-www-form-urlencoded 規則編碼（與瀏覽器 URLSearchParams 的解碼規則一致），
+     * 例如 Email 中的「+」會編碼成 %2B，前端取回的值才會與計算 CheckMacValue 時的原始值相同
      */
     private String buildPaymentUrl(Map<String, String> params) {
-        // ECPay 需要透過 HTML 表單 POST 提交
-        // 這裡返回的是帶參數的 URL，前端會解析這些參數並創建 POST 表單
-        // 當使用 POST 表單提交時，瀏覽器會自動對表單字段值進行 URL 編碼
-        // 所以這裡使用原始參數值，不預先編碼
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(ecPayConfig.getApiUrl() + "/Cashier/AioCheckOut/V5");
-        
-        // 使用原始參數值，UriComponentsBuilder 會自動進行 URL 編碼
-        params.forEach(builder::queryParam);
-        
-        return builder.build().toUriString();
+        StringBuilder url = new StringBuilder(ecPayConfig.getApiUrl()).append("/Cashier/AioCheckOut/V5");
+        char separator = '?';
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            url.append(separator)
+                    .append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
+                    .append('=')
+                    .append(URLEncoder.encode(entry.getValue() == null ? "" : entry.getValue(), StandardCharsets.UTF_8));
+            separator = '&';
+        }
+        return url.toString();
     }
 
     /**

@@ -67,6 +67,12 @@ public class StorefrontOrderController {
         return ApiResponse.success(storefrontCheckoutService.shippingOptions());
     }
 
+    @GetMapping("/payment-options")
+    @Operation(summary = "付款方式", description = "目前可用的付款方式（線上付款依後台金流設定的啟用 / 維護狀態）")
+    public ApiResponse<java.util.List<java.util.Map<String, Object>>> paymentOptions() {
+        return ApiResponse.success(storefrontCheckoutService.paymentOptions());
+    }
+
     @PostMapping("/cancel")
     @Operation(summary = "取消訂單", description = "待付款且尚未出貨的訂單可由顧客自行取消（以訂單編號 + 下單 Email 驗證）")
     public ApiResponse<StorefrontOrderLookupDTO> cancel(@Valid @RequestBody StorefrontPayRequest request, HttpServletRequest http) {

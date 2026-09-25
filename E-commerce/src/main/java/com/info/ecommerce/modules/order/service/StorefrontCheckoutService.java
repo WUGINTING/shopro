@@ -86,6 +86,7 @@ public class StorefrontCheckoutService {
     private final CurrentUserService currentUserService;
     private final OrderDiscountRepository orderDiscountRepository;
     private final CouponRepository couponRepository;
+    private final com.info.ecommerce.modules.payment.repository.PaymentSettingRepository paymentSettingRepository;
 
     @Value("${app.storefront-url:}")
     private String storefrontUrl;
@@ -184,7 +185,8 @@ public class StorefrontCheckoutService {
                     throw new BusinessException("商品「" + product.getName() + " (" + spec.getSpecName() + ")」庫存不足，目前剩餘 "
                             + Math.max(spec.getStock(), 0) + " 件");
                 }
-                unitPrice = spec.getPrice() != null ? spec.getPrice() : productPrice(product);
+                // 規格價空白或 0 表示與商品售價相同（與前台顯示一致）
+                unitPrice = spec.getPrice() != null && spec.getPrice().signum() > 0 ? spec.getPrice() : productPrice(product);
                 specName = spec.getSpecName();
                 if (spec.getSku() != null && !spec.getSku().isEmpty()) {
                     sku = spec.getSku();
@@ -270,6 +272,9 @@ public class StorefrontCheckoutService {
     public StorefrontCheckoutResultDTO checkout(StorefrontCheckoutRequest request) {
         String shippingMethod = normalizeShippingMethod(request.getShippingMethod());
         String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
+        if (PAYMENT_ECPAY.equals(paymentMethod)) {
+            assertOnlinePaymentAvailable();
+        }
 
         if (SHIPPING_HOME_DELIVERY.equals(shippingMethod) && isBlank(request.getShippingAddress())) {
             throw new BusinessException("宅配到府請填寫收件地址");
@@ -346,6 +351,7 @@ public class StorefrontCheckoutService {
                 .order(orderService.getOrder(order.getId()))
                 .paymentMethod(paymentMethod)
                 .canPayOnline(PAYMENT_ECPAY.equals(paymentMethod) && order.getStatus() == OrderStatus.PENDING_PAYMENT
+                        && onlinePaymentUnavailableReason() == null
                         && !orderService.hasBeenPaid(order.getId()))
                 .canCancel(order.getStatus() == OrderStatus.PENDING_PAYMENT && shipments.isEmpty())
                 .shipments(shipments)
@@ -410,6 +416,7 @@ public class StorefrontCheckoutService {
         if (orderService.hasBeenPaid(order.getId())) {
             throw new BusinessException("此訂單已有付款紀錄，請聯繫客服確認，不需要再次付款");
         }
+        assertOnlinePaymentAvailable();
         OrderDTO orderDTO = orderService.getOrder(order.getId());
         StorefrontCheckoutResultDTO result = StorefrontCheckoutResultDTO.builder()
                 .order(orderDTO)
@@ -417,6 +424,47 @@ public class StorefrontCheckoutService {
                 .build();
         createOnlinePayment(orderDTO, result, adminStore);
         return result;
+    }
+
+    /**
+     * 前台可用的付款方式：線上付款依後台「金流設定」的啟用 / 維護模式；沒有設定資料時視為開放
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> paymentOptions() {
+        String reason = onlinePaymentUnavailableReason();
+        Map<String, Object> online = new java.util.LinkedHashMap<>();
+        online.put("method", PAYMENT_ECPAY);
+        online.put("available", reason == null);
+        online.put("message", reason);
+        Map<String, Object> cod = new java.util.LinkedHashMap<>();
+        cod.put("method", PAYMENT_COD);
+        cod.put("available", true);
+        cod.put("message", null);
+        return List.of(online, cod);
+    }
+
+    private void assertOnlinePaymentAvailable() {
+        String reason = onlinePaymentUnavailableReason();
+        if (reason != null) {
+            throw new BusinessException(reason);
+        }
+    }
+
+    /** 線上付款無法使用的原因；可使用時回傳 null */
+    private String onlinePaymentUnavailableReason() {
+        return paymentSettingRepository.findByGateway(com.info.ecommerce.modules.payment.enums.PaymentGateway.ECPAY)
+                .map(setting -> {
+                    if (Boolean.FALSE.equals(setting.getEnabled())) {
+                        return "線上付款目前暫停服務，請改選貨到付款 / 取貨付款";
+                    }
+                    if (Boolean.TRUE.equals(setting.getMaintenanceMode())) {
+                        return setting.getMaintenanceMessage() != null && !setting.getMaintenanceMessage().isBlank()
+                                ? setting.getMaintenanceMessage().trim()
+                                : "線上付款維護中，請稍後再試或改選貨到付款 / 取貨付款";
+                    }
+                    return null;
+                })
+                .orElse(null);
     }
 
     private Order findOwnedOrder(String orderNumber, String email) {

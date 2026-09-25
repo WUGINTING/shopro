@@ -43,7 +43,11 @@ const ad = ref(null);
 const safeLink = url => (/^(https?:\/\/|\/(?!\/))/i.test(url || '') ? url : null);
 const isVisible = ref(false);
 
-const today = () => new Date().toISOString().slice(0, 10);
+// 以瀏覽器當地日期計算「每天一次」（toISOString 為 UTC 日期，台灣會在早上 8 點才換日）
+const today = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 const storageFor = frequency => (frequency === 'EVERY_VISIT' ? sessionStorage : localStorage);
 

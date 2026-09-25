@@ -180,7 +180,7 @@
         <template #body-cell-totalPoints="props">
           <q-td :props="props">
             <q-chip dense color="amber" text-color="white" icon="stars">
-              {{ formatPoints(props.row.totalPoints) }}
+              {{ formatPoints(props.row.availablePoints) }}
             </q-chip>
           </q-td>
         </template>
@@ -329,17 +329,21 @@
             />
 
             <q-input
-              v-model.number="editingMember.totalPoints"
-              label="總積點"
+              v-if="editingMember.id"
+              :model-value="editingMember.availablePoints ?? 0"
+              label="可用積點"
+              hint="積點請到「客戶管理」以積點明細增減，此處僅供檢視"
               outlined
               dense
-              type="number"
+              readonly
               class="q-mb-md"
-              inputmode="numeric"
             />
 
             <q-input
-              v-model.number="editingMember.totalSpent"
+              v-if="editingMember.id"
+              :model-value="editingMember.totalSpent"
+              readonly
+              hint="依訂單自動計算"
               label="總消費金額"
               outlined
               dense
@@ -457,7 +461,7 @@ const columns: QTableColumn[] = [
   { name: 'email', label: '電子郵件', field: 'email', align: 'left' },
   { name: 'phone', label: '電話', field: 'phone', align: 'left' },
   { name: 'status', label: '狀態', field: 'status', align: 'center' },
-  { name: 'totalPoints', label: '積點', field: 'totalPoints', align: 'right' },
+  { name: 'totalPoints', label: '可用積點', field: 'availablePoints', align: 'right' },
   { name: 'totalSpent', label: '消費金額', field: 'totalSpent', align: 'right' },
   { name: 'registeredDate', label: '註冊日期', field: 'registeredDate', align: 'center' },
   { name: 'actions', label: '操作', field: 'actions', align: 'center' }
@@ -467,7 +471,7 @@ const memberMetrics = computed(() => ({
   active: members.value.filter(m => m.status === 'ACTIVE').length,
   inactive: members.value.filter(m => m.status === 'INACTIVE').length,
   suspended: members.value.filter(m => m.status === 'SUSPENDED').length,
-  points: members.value.reduce((sum, m) => sum + (Number(m.totalPoints) || 0), 0),
+  points: members.value.reduce((sum, m) => sum + (Number(m.availablePoints) || 0), 0),
   spent: members.value.reduce((sum, m) => sum + (Number(m.totalSpent) || 0), 0)
 }))
 

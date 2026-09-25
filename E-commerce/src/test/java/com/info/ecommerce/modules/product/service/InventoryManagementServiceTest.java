@@ -172,13 +172,18 @@ class InventoryManagementServiceTest {
 
         productStock(0, 10);
         service.processStockNotifications(1L);
-        assertThat(subscription.getNotified()).isFalse();
+        verify(notificationRepository, never()).claim(anyLong(), any());
         verify(mailSender, never()).send(any(MimeMessage.class));
 
         productStock(3, 10);
+        when(notificationRepository.claim(eq(5L), any())).thenReturn(1);
         service.processStockNotifications(1L);
-        assertThat(subscription.getNotified()).isTrue();
         verify(mailSender).send(any(MimeMessage.class));
+
+        // 另一個執行緒已經寄出（搶不到）時不再寄信
+        when(notificationRepository.claim(eq(5L), any())).thenReturn(0);
+        service.processStockNotifications(1L);
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
     }
 
     @Test

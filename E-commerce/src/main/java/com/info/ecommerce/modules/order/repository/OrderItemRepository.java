@@ -24,4 +24,13 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
                                           org.springframework.data.domain.Pageable pageable);
 
     List<OrderItem> findByOrderIdIn(java.util.Collection<Long> orderIds);
+
+    /** 分批查詢（SQL Server 單一查詢最多 2100 個參數），大量訂單的統計 / 匯出使用 */
+    default List<OrderItem> findByOrderIdInBatches(java.util.List<Long> orderIds) {
+        List<OrderItem> result = new java.util.ArrayList<>();
+        for (int from = 0; from < orderIds.size(); from += 1000) {
+            result.addAll(findByOrderIdIn(orderIds.subList(from, Math.min(from + 1000, orderIds.size()))));
+        }
+        return result;
+    }
 }

@@ -72,7 +72,7 @@ public class StatisticsService {
 
         // 品項銷售
         List<Long> soldIds = sold.stream().map(Order::getId).toList();
-        List<OrderItem> items = soldIds.isEmpty() ? List.of() : orderItemRepository.findByOrderIdIn(soldIds);
+        List<OrderItem> items = soldIds.isEmpty() ? List.of() : orderItemRepository.findByOrderIdInBatches(soldIds);
         Map<Long, Product> products = productRepository.findAllById(
                 items.stream().map(OrderItem::getProductId).filter(Objects::nonNull).collect(Collectors.toSet()))
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
@@ -142,7 +142,7 @@ public class StatisticsService {
 
         // 付款方式：前台訂單依結帳時選擇，其他為後台建立
         Map<Long, String> methodByOrder = soldIds.isEmpty() ? Map.of()
-                : orderHistoryRepository.findByOrderIdInAndActionType(soldIds, StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT)
+                : orderHistoryRepository.findByOrderIdInAndActionTypeInBatches(soldIds, StorefrontCheckoutService.ACTION_STOREFRONT_CHECKOUT)
                         .stream()
                         .collect(Collectors.toMap(OrderHistory::getOrderId, OrderHistory::getNewStatus, (a, b) -> a));
         Map<String, Long> paymentMethods = sold.stream()

@@ -243,4 +243,25 @@ class RoleBasedAccessControlTest {
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void batchOrderDeleteAndExport_requireManagerOrAdmin() throws Exception {
+        User staff = userRepository.save(User.builder()
+                .username("rbac-staff").email("rbac-staff@test.com")
+                .password(passwordEncoder.encode("staff123")).role(Role.STAFF).enabled(true).build());
+        String staffToken = jwtService.generateToken(staff);
+
+        mockMvc.perform(delete("/api/orders/batch").header("Authorization", "Bearer " + staffToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("[999999]"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/orders/batch/export").header("Authorization", "Bearer " + staffToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("[]"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/orders/batch/status").header("Authorization", "Bearer " + customerToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"orderIds\":[999999],\"status\":\"CANCELLED\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/orders/batch").header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("[999999]"))
+                .andExpect(status().isOk());
+    }
 }

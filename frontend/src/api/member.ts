@@ -17,6 +17,8 @@ export interface Member {
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   registeredDate?: string
   totalPoints: number
+  /** 目前可用積點（扣除已使用） */
+  availablePoints?: number
   totalSpent: number
   notes?: string
   createdAt?: string
