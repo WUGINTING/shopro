@@ -19,7 +19,46 @@ export interface StorefrontCheckoutRequest {
   paymentMethod: 'ECPAY' | 'COD'
   /** 下單來源，決定付款完成後導回的頁面 */
   channel?: 'STOREFRONT' | 'ADMIN_STORE'
+  /** 優惠券代碼（只送試算確認會套用的代碼） */
+  couponCode?: string | null
   items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
+}
+
+/** 結帳試算請求 */
+export interface StorefrontQuoteRequest {
+  items: StorefrontCheckoutRequest['items']
+  shippingMethod: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  couponCode?: string | null
+}
+
+/** 套用的折扣（促銷 / 優惠券 / 會員等級 / 免運） */
+export interface StorefrontQuoteDiscount {
+  type: 'PROMOTION' | 'COUPON' | 'MEMBER_LEVEL' | 'FREE_SHIPPING'
+  name?: string
+  code?: string | null
+  amount: number
+}
+
+/** 結帳試算結果（金額以後端計算為準） */
+export interface StorefrontQuote {
+  lines: Array<{
+    productId: number
+    specificationId?: number | null
+    productName: string
+    specName?: string | null
+    unitPrice: number
+    quantity: number
+    subtotalAmount: number
+  }>
+  subtotalAmount: number
+  shippingFee: number
+  freeShippingThreshold?: number | null
+  discountAmount: number
+  discounts: StorefrontQuoteDiscount[]
+  couponCode?: string | null
+  couponMessage?: string | null
+  totalAmount: number
+  shippingMethod: string
 }
 
 /**
@@ -192,6 +231,10 @@ export const orderApi = {
    * 顧客結帳（價格、運費由後端計算，ECPAY 時一併回傳綠界付款網址）
    * @swagger POST /api/storefront/orders/checkout
    */
+  storefrontQuote: (data: StorefrontQuoteRequest) => {
+    return axios.post<any, ApiResponse<StorefrontQuote>>('/storefront/orders/quote', data)
+  },
+
   storefrontCheckout: (data: StorefrontCheckoutRequest) => {
     return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/checkout', data)
   },

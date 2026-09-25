@@ -51,6 +51,10 @@ public class StorefrontCheckoutRequest {
     @Schema(description = "付款方式：ECPAY（線上付款）/ COD（貨到付款），預設 ECPAY")
     private String paymentMethod;
 
+    @Size(max = 50, message = "優惠券代碼長度不可超過 50 字")
+    @Schema(description = "優惠券代碼（選填）")
+    private String couponCode;
+
     @Schema(description = "下單來源：STOREFRONT（前台商城，預設）/ ADMIN_STORE（後台 App 的顧客商城），決定付款完成後導回的頁面")
     private String channel;
 
@@ -75,6 +79,10 @@ public class StorefrontCheckoutRequest {
 
         @Schema(description = "配送方式：HOME_DELIVERY / STORE_PICKUP")
         private String shippingMethod;
+
+        @Size(max = 50, message = "優惠券代碼長度不可超過 50 字")
+        @Schema(description = "優惠券代碼（選填）")
+        private String couponCode;
     }
 
     @Data

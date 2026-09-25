@@ -37,6 +37,8 @@ export interface Coupon {
   validFrom: string
   validUntil: string
   enabled: boolean
+  /** 是否公開顯示在前台優惠頁 */
+  publicVisible?: boolean
   applicable?: string
   createdAt?: string
   updatedAt?: string
@@ -172,8 +174,9 @@ export const couponApi = {
     await axiosInstance.patch<any, ApiResponse<void>>(`${COUPON_API}/${id}/disable`)
   },
 
-  validateCoupon: async (code: string) => {
-    const response = await axiosInstance.get<any, ApiResponse<Coupon>>(`${COUPON_API}/validate/${code}`)
-    return response.data
+  /** 前台優惠頁：公開且目前可使用的優惠券 */
+  getPublicCoupons: async () => {
+    const response = await axiosInstance.get<any, ApiResponse<Coupon[]>>('/storefront/coupons')
+    return response.data || []
   }
 }

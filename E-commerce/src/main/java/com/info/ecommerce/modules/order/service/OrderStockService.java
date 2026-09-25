@@ -40,6 +40,7 @@ public class OrderStockService {
     private final OrderItemRepository orderItemRepository;
     private final OrderHistoryRepository orderHistoryRepository;
     private final OrderHistoryService orderHistoryService;
+    private final OrderCouponService orderCouponService;
 
     /**
      * 扣除訂單品項庫存；任一品項庫存不足時丟出 BusinessException（呼叫端交易會整筆回滾）
@@ -58,6 +59,7 @@ public class OrderStockService {
      */
     @Transactional
     public void release(Long orderId, String orderNumber) {
+        orderCouponService.release(orderId);
         if (!holdsStock(orderId)) {
             return;
         }
@@ -85,6 +87,7 @@ public class OrderStockService {
      */
     @Transactional
     public void reserveAgain(Long orderId, String orderNumber) {
+        orderCouponService.reclaim(orderId);
         long reserved = reservedCount(orderId);
         if (reserved == 0 || reserved > releasedCount(orderId)) {
             return;

@@ -42,6 +42,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -93,6 +94,18 @@ class StorefrontCheckoutServiceTest {
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.info.ecommerce.modules.marketing.service.CheckoutDiscountService checkoutDiscountService;
+
+    @Mock
+    private com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
+
+    @Mock
+    private com.info.ecommerce.modules.order.repository.OrderDiscountRepository orderDiscountRepository;
+
+    @Mock
+    private com.info.ecommerce.modules.marketing.repository.CouponRepository couponRepository;
+
     @InjectMocks
     private StorefrontCheckoutService storefrontCheckoutService;
 
@@ -102,6 +115,10 @@ class StorefrontCheckoutServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 預設沒有任何折扣
+        when(checkoutDiscountService.calculate(any(), any(), any(), anyBoolean()))
+                .thenReturn(new com.info.ecommerce.modules.marketing.service.CheckoutDiscountService.Result(
+                        java.math.BigDecimal.ZERO, false, java.util.List.of(), null, null, null));
         plainProduct = Product.builder()
             .id(1L).name("香草甜筒").sku("P-001")
             .status(ProductStatus.ACTIVE).enabled(true)

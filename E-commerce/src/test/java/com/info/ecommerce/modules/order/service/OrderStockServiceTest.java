@@ -30,6 +30,7 @@ class OrderStockServiceTest {
     @Mock private OrderItemRepository orderItemRepository;
     @Mock private OrderHistoryRepository orderHistoryRepository;
     @Mock private OrderHistoryService orderHistoryService;
+    @Mock private OrderCouponService orderCouponService;
 
     @InjectMocks
     private OrderStockService orderStockService;

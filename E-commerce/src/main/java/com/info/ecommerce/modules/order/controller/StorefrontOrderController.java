@@ -28,7 +28,7 @@ public class StorefrontOrderController {
     @PostMapping("/quote")
     @Operation(summary = "結帳試算", description = "依後端商品價格與物流設定計算小計、運費與總額，並檢查庫存")
     public ApiResponse<StorefrontQuoteDTO> quote(@Valid @RequestBody StorefrontCheckoutRequest.QuoteRequest request) {
-        return ApiResponse.success(storefrontCheckoutService.quote(request.getItems(), request.getShippingMethod()));
+        return ApiResponse.success(storefrontCheckoutService.quote(request.getItems(), request.getShippingMethod(), request.getCouponCode()));
     }
 
     @PostMapping("/checkout")

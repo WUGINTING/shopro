@@ -163,14 +163,17 @@
               label="折扣類型 *"
               outlined
               dense
-              :options="['PERCENTAGE', 'FIXED', 'FREE_SHIPPING']"
+              :options="couponTypeOptions"
+              emit-value
+              map-options
               class="q-mb-md"
               :rules="[val => !!val || '請選擇折扣類型']"
             />
 
             <q-input
               v-model.number="editingCoupon.discountValue"
-              :label="`折扣金額${editingCoupon.type === 'PERCENTAGE' ? ' (%)' : editingCoupon.type === 'FREE_SHIPPING' ? '' : ' (NT$)'} *`"
+              :label="editingCoupon.type === 'PERCENTAGE' ? '折扣百分比 (% OFF) *' : editingCoupon.type === 'FREE_SHIPPING' ? '免運券不需折扣金額' : '折抵金額 (NT$) *'"
+              :hint="editingCoupon.type === 'PERCENTAGE' ? '例如 10 表示打 9 折' : ''"
               outlined
               dense
               type="number"
@@ -192,10 +195,29 @@
 
             <q-input
               v-model.number="editingCoupon.minPurchaseAmount"
-              label="最低購買金額"
+              label="最低購買金額（商品小計）"
               outlined
               dense
               type="number"
+              class="q-mb-md"
+            />
+
+            <q-input
+              v-if="editingCoupon.type === 'PERCENTAGE'"
+              v-model.number="editingCoupon.maxDiscountAmount"
+              label="最高折抵金額（選填）"
+              outlined
+              dense
+              type="number"
+              class="q-mb-md"
+            />
+
+            <q-input
+              v-model="editingCoupon.applicable"
+              label="適用說明（選填，顯示在前台）"
+              outlined
+              dense
+              maxlength="500"
               class="q-mb-md"
             />
 
@@ -227,6 +249,14 @@
               label="啟用此優惠券"
               class="q-mb-md"
             />
+            <q-checkbox
+              v-model="editingCoupon.publicVisible"
+              label="公開顯示在前台優惠頁（未勾選時只有拿到代碼的顧客能使用）"
+              class="q-mb-md"
+            />
+            <div class="text-caption text-grey-7 q-mb-md">
+              結帳時活動、優惠券與會員折扣會自動取折抵最多的一項；免運券可與折扣併用。優惠券在下單時扣除次數，訂單取消時歸還。
+            </div>
 
             <div class="row q-gutter-md">
               <q-btn
@@ -311,6 +341,12 @@ const editingCoupon = ref<Partial<Coupon>>({
   totalCount: 1,
   enabled: true
 })
+
+const couponTypeOptions = [
+  { label: '百分比折扣', value: 'PERCENTAGE' },
+  { label: '固定金額', value: 'FIXED' },
+  { label: '免運', value: 'FREE_SHIPPING' }
+]
 
 // 表格列定義
 const columns: QTableColumn[] = [

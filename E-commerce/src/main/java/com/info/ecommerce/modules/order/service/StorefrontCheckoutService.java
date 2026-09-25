@@ -1,5 +1,11 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
+import com.info.ecommerce.modules.marketing.repository.CouponRepository;
+import com.info.ecommerce.modules.marketing.service.CheckoutDiscountService;
+import com.info.ecommerce.modules.order.entity.OrderDiscount;
+import com.info.ecommerce.modules.order.repository.OrderDiscountRepository;
+
 import com.info.ecommerce.modules.order.event.OrderEmailEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.common.exception.BusinessException;
@@ -74,12 +80,38 @@ public class StorefrontCheckoutService {
     private final OrderHistoryService orderHistoryService;
     private final OrderHistoryRepository orderHistoryRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final CheckoutDiscountService checkoutDiscountService;
+    private final CurrentUserService currentUserService;
+    private final OrderDiscountRepository orderDiscountRepository;
+    private final CouponRepository couponRepository;
 
     @Value("${app.storefront-url:}")
     private String storefrontUrl;
 
     @Value("${app.admin-store-url:}")
     private String adminStoreUrl;
+
+    /**
+     * 寫入訂單折扣紀錄並扣除優惠券使用次數（次數用完時整筆訂單回滾）
+     */
+    private void recordDiscounts(Long orderId, CheckoutDiscountService.Result discount) {
+        for (CheckoutDiscountService.Applied applied : discount.applied()) {
+            orderDiscountRepository.save(OrderDiscount.builder()
+                    .orderId(orderId)
+                    .discountType(applied.type())
+                    .discountCode(applied.code())
+                    .discountAmount(applied.amount())
+                    .description(applied.name())
+                    .build());
+        }
+        if (discount.couponId() != null) {
+            if (couponRepository.incrementUsage(discount.couponId()) == 0) {
+                throw new BusinessException("此優惠券已被使用完畢");
+            }
+            orderHistoryService.recordHistory(orderId, OrderCouponService.ACTION_USED,
+                    "使用優惠券 " + discount.couponCode(), null, null, null, "顧客");
+        }
+    }
 
     /** 訂單歷程動作：前台結帳（newStatus 欄位記錄付款方式 ECPAY / COD，供逾期未付款清理判斷） */
     public static final String ACTION_STOREFRONT_CHECKOUT = "STOREFRONT_CHECKOUT";
@@ -92,6 +124,21 @@ public class StorefrontCheckoutService {
      */
     @Transactional(readOnly = true)
     public StorefrontQuoteDTO quote(List<StorefrontCheckoutRequest.Item> items, String shippingMethod) {
+        return quote(items, shippingMethod, null);
+    }
+
+    /**
+     * 結帳試算（含優惠券）：無效的優惠券不影響試算，只在 couponMessage 說明原因
+     */
+    @Transactional(readOnly = true)
+    public StorefrontQuoteDTO quote(List<StorefrontCheckoutRequest.Item> items, String shippingMethod, String couponCode) {
+        return price(items, shippingMethod, couponCode, false).quote();
+    }
+
+    /** 試算結果與折扣計算明細（下單時需要知道要扣哪張優惠券） */
+    private record Pricing(StorefrontQuoteDTO quote, CheckoutDiscountService.Result discount) {}
+
+    private Pricing price(List<StorefrontCheckoutRequest.Item> items, String shippingMethod, String couponCode, boolean strictCoupon) {
         if (items == null || items.isEmpty()) {
             throw new BusinessException("購物車是空的");
         }
@@ -185,18 +232,33 @@ public class StorefrontCheckoutService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         ShippingRule rule = resolveShippingRule(method);
-        BigDecimal shippingFee = rule.threshold() != null && subtotal.compareTo(rule.threshold()) >= 0
+        CheckoutDiscountService.Result discount = checkoutDiscountService.calculate(
+                subtotal, couponCode, currentUserService.currentMember(), strictCoupon);
+        BigDecimal shippingFee = discount.freeShipping()
+                || (rule.threshold() != null && subtotal.compareTo(rule.threshold()) >= 0)
                 ? BigDecimal.ZERO
                 : rule.baseFee();
 
-        return StorefrontQuoteDTO.builder()
+        StorefrontQuoteDTO quote = StorefrontQuoteDTO.builder()
                 .lines(lines)
                 .subtotalAmount(subtotal)
                 .shippingFee(shippingFee)
                 .freeShippingThreshold(rule.threshold())
-                .totalAmount(subtotal.add(shippingFee))
+                .discountAmount(discount.discountAmount())
+                .discounts(discount.applied().stream()
+                        .map(applied -> StorefrontQuoteDTO.Discount.builder()
+                                .type(applied.type())
+                                .name(applied.name())
+                                .code(applied.code())
+                                .amount(applied.amount())
+                                .build())
+                        .collect(Collectors.toList()))
+                .couponCode(discount.couponCode())
+                .couponMessage(discount.couponMessage())
+                .totalAmount(subtotal.subtract(discount.discountAmount()).add(shippingFee))
                 .shippingMethod(method)
                 .build();
+        return new Pricing(quote, discount);
     }
 
     /**
@@ -211,7 +273,8 @@ public class StorefrontCheckoutService {
             throw new BusinessException("宅配到府請填寫收件地址");
         }
 
-        StorefrontQuoteDTO quote = quote(request.getItems(), shippingMethod);
+        Pricing pricing = price(request.getItems(), shippingMethod, request.getCouponCode(), true);
+        StorefrontQuoteDTO quote = pricing.quote();
         Member member = findOrCreateMember(request);
 
         OrderDTO orderDTO = OrderDTO.builder()
@@ -222,7 +285,7 @@ public class StorefrontCheckoutService {
                 .status(OrderStatus.PENDING_PAYMENT)
                 .pickupType(SHIPPING_STORE_PICKUP.equals(shippingMethod) ? PickupType.STORE_PICKUP : PickupType.DELIVERY)
                 .subtotalAmount(quote.getSubtotalAmount())
-                .discountAmount(BigDecimal.ZERO)
+                .discountAmount(quote.getDiscountAmount())
                 .shippingFee(quote.getShippingFee())
                 .totalAmount(quote.getTotalAmount())
                 .shippingAddress(SHIPPING_STORE_PICKUP.equals(shippingMethod) ? null : request.getShippingAddress().trim())
@@ -240,6 +303,7 @@ public class StorefrontCheckoutService {
                 .build();
 
         OrderDTO order = orderService.createOrder(orderDTO);
+        recordDiscounts(order.getId(), pricing.discount());
         // 扣庫存：庫存不足時丟出例外，整筆訂單回滾
         orderStockService.reserve(order.getId(), order.getOrderNumber());
         orderHistoryService.recordHistory(order.getId(), ACTION_STOREFRONT_CHECKOUT,

@@ -289,6 +289,49 @@
                   </span>
                 </div>
 
+                <div v-for="discount in amountDiscounts" :key="discount.type + discount.name" class="summary-row discount">
+                  <span class="label">
+                    {{ discountLabel(discount) }}
+                  </span>
+                  <span class="value">-NT$ {{ Number(discount.amount).toLocaleString() }}</span>
+                </div>
+                <div v-if="freeShippingDiscount && shippingMethod === 'HOME_DELIVERY'" class="summary-row discount">
+                  <span class="label">{{ discountLabel(freeShippingDiscount) }}</span>
+                  <span class="value">免運</span>
+                </div>
+
+                <!-- 優惠券 -->
+                <div class="coupon-box">
+                  <div class="coupon-input-row">
+                    <q-input
+                      v-model="couponInput"
+                      dense
+                      outlined
+                      placeholder="輸入優惠券代碼"
+                      class="coupon-input"
+                      maxlength="50"
+                      :disable="quoting"
+                      @keyup.enter="applyCoupon"
+                    />
+                    <q-btn
+                      v-if="!requestedCoupon"
+                      unelevated
+                      color="primary"
+                      label="套用"
+                      :disable="!couponInput.trim() || quoting"
+                      @click="applyCoupon"
+                    />
+                    <q-btn v-else flat color="grey-8" label="移除" @click="removeCoupon" />
+                  </div>
+                  <div v-if="requestedCoupon && quote?.couponCode" class="coupon-ok">
+                    <q-icon name="check_circle" size="16px" /> 已套用優惠券 {{ quote.couponCode }}
+                  </div>
+                  <div v-else-if="requestedCoupon && quote?.couponMessage" class="coupon-warn">
+                    <q-icon name="info" size="16px" /> {{ quote.couponMessage }}
+                  </div>
+                  <div class="coupon-hint">促銷活動、優惠券與會員折扣會自動套用折抵最多的一項；免運可與折扣併用。</div>
+                </div>
+
                 <q-separator class="summary-divider" />
 
                 <!-- 總計 -->
@@ -447,6 +490,39 @@ const subtotal = computed(() => {
 // 運費
 const shippingFee = computed(() => Number(quote.value?.shippingFee ?? 0));
 
+// 優惠券：requestedCoupon 為顧客送出試算的代碼；實際是否套用以試算結果 quote.couponCode 為準
+const couponInput = ref('');
+const requestedCoupon = ref('');
+const amountDiscounts = computed(() =>
+  (quote.value?.discounts || []).filter(discount => Number(discount.amount) > 0)
+);
+const freeShippingDiscount = computed(() =>
+  (quote.value?.discounts || []).find(discount => discount.type === 'FREE_SHIPPING') || null
+);
+const DISCOUNT_TYPE_LABELS = {
+  PROMOTION: '活動折扣',
+  COUPON: '優惠券',
+  MEMBER_LEVEL: '會員折扣',
+  FREE_SHIPPING: '免運優惠',
+};
+const discountLabel = discount => {
+  const base = DISCOUNT_TYPE_LABELS[discount.type] || '折扣';
+  const detail = discount.code ? `${discount.name}（${discount.code}）` : discount.name;
+  return detail ? `${base}：${detail}` : base;
+};
+const applyCoupon = () => {
+  const code = couponInput.value.trim().toUpperCase();
+  if (!code) return;
+  couponInput.value = code;
+  requestedCoupon.value = code;
+  refreshQuote();
+};
+const removeCoupon = () => {
+  couponInput.value = '';
+  requestedCoupon.value = '';
+  refreshQuote();
+};
+
 // 免運門檻
 const freeShippingThreshold = computed(() =>
   quote.value?.freeShippingThreshold ? Number(quote.value.freeShippingThreshold) : null
@@ -488,6 +564,7 @@ const refreshQuote = async () => {
     const res = await quoteOrder({
       items: toOrderItems(cartItems.value),
       shippingMethod: shippingMethod.value,
+      couponCode: requestedCoupon.value || null,
     });
     if (seq !== quoteSeq) return;
     quote.value = res.data;
@@ -590,6 +667,8 @@ const submitOrder = async () => {
       notes: recipientInfo.value.note,
       shippingMethod: shippingMethod.value,
       paymentMethod: paymentMethod.value,
+      // 只送出試算確認會套用的優惠券
+      couponCode: quote.value?.couponCode || null,
       items: toOrderItems(cartItems.value),
     });
 
@@ -986,6 +1065,47 @@ onMounted(() => {
 
   .summary-divider {
     margin: 8px 0;
+  }
+
+  .summary-row.discount .value {
+    color: #c62828;
+  }
+
+  .coupon-box {
+    margin: 12px 0 4px;
+
+    .coupon-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .coupon-input {
+      flex: 1;
+    }
+
+    .coupon-ok,
+    .coupon-warn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .coupon-ok {
+      color: #2e7d32;
+    }
+
+    .coupon-warn {
+      color: #b26a00;
+    }
+
+    .coupon-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #888;
+    }
   }
 
   .quote-status,
