@@ -201,6 +201,11 @@ public class InventoryManagementService {
         if (email == null || !email.trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
             throw new BusinessException("請輸入正確的 Email");
         }
+        if (specificationId != null && specificationRepository.findById(specificationId)
+                .filter(spec -> productId.equals(spec.getProductId()))
+                .isEmpty()) {
+            throw new BusinessException("商品規格不存在");
+        }
         email = email.trim();
         final String normalizedEmail = email;
         boolean exists = notificationRepository.findByProductIdAndNotifiedFalse(productId).stream()
@@ -312,6 +317,20 @@ public class InventoryManagementService {
         ProductInventory inventory = inventoryRepository
                 .findByProductIdAndSpecificationId(productId, specificationId)
                 .orElse(null);
+        ProductSpecification spec = specificationId == null ? null : specificationRepository.findById(specificationId)
+                .filter(item -> productId.equals(item.getProductId()))
+                .orElseThrow(() -> new BusinessException("規格不存在"));
+        if (quantity < 0) {
+            // 未追蹤庫存（null）沒有可扣的數量；追蹤中的庫存不可扣成負數
+            Integer tracked = spec != null ? spec.getStock()
+                    : inventory != null ? inventory.getAvailableStock() : null;
+            if (tracked == null) {
+                throw new BusinessException("此商品未追蹤庫存，請先以入庫設定庫存數量");
+            }
+            if (tracked + quantity < 0) {
+                throw new BusinessException("調整後庫存不可小於 0（目前庫存 " + tracked + "）");
+            }
+        }
         int beforeStock = inventory != null && inventory.getAvailableStock() != null
                 ? inventory.getAvailableStock() : 0;
         Long resolvedWarehouseId = warehouseId != null ? warehouseId : 1L;
@@ -337,10 +356,7 @@ public class InventoryManagementService {
         int afterStock = inventory.getAvailableStock() != null ? inventory.getAvailableStock() : 0;
 
         // 有規格的商品，結帳以規格庫存為準：同步調整規格庫存
-        if (specificationId != null) {
-            ProductSpecification spec = specificationRepository.findById(specificationId)
-                    .filter(item -> productId.equals(item.getProductId()))
-                    .orElseThrow(() -> new BusinessException("規格不存在"));
+        if (spec != null) {
             int specBefore = spec.getStock() != null ? spec.getStock() : 0;
             spec.setStock(Math.max(specBefore + quantity, 0));
             specificationRepository.save(spec);

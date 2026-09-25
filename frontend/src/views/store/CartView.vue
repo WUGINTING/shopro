@@ -180,6 +180,10 @@ const goCheckout = async () => {
   stockErrors.value = new Map()
 
   try {
+    // 以目前開放的第一個配送方式試算（宅配可能暫停服務）；取不到時交由後端預設
+    const shippingMethod = await orderApi.storefrontShippingOptions()
+      .then((response) => response.data?.[0]?.method as 'HOME_DELIVERY' | 'STORE_PICKUP' | undefined)
+      .catch(() => undefined)
     try {
       await orderApi.storefrontQuote({
         items: items.value.map((item) => ({
@@ -187,7 +191,7 @@ const goCheckout = async () => {
           specificationId: item.specificationId ?? null,
           quantity: item.quantity
         })),
-        shippingMethod: 'HOME_DELIVERY'
+        shippingMethod
       })
     } catch (err: any) {
       // 錯誤訊息（例如「商品「xxx」庫存不足，目前剩餘 2 件」）已由系統通知顯示

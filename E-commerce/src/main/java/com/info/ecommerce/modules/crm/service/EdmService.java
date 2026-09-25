@@ -145,8 +145,10 @@ public class EdmService {
             throw new BusinessException("沒有符合條件的收件人：EDM 只會寄給狀態正常且同意接收優惠通知的會員");
         }
 
+        if (edmCampaignRepository.claimForSending(id) == 0) {
+            throw new BusinessException("EDM 活動正在發送、已發送或已取消");
+        }
         edmCampaign.setStatus(EdmStatus.SENDING);
-        edmCampaign = edmCampaignRepository.save(edmCampaign);
 
         int successCount = 0;
         int failureCount = 0;

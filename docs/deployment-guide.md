@@ -56,6 +56,7 @@ set -a; source .env; set +a
 | `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
 | `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
 | `ADMIN_STORE_URL` | prod 必填 | 後台 App 網址：在後台 App 顧客商城下單的訂單付款後導回 `/order/success`，會員 Email 驗證信的連結也指向 `/verify-email` |
+| `FORWARD_HEADERS_STRATEGY` | 否 | 預設 `native`：後端位於內網反向代理（Nginx 等，IP 在 10.x / 172.16-31.x / 192.168.x / 127.x）後方時，依 `X-Forwarded-For` 取得顧客真實 IP，供聯絡表單、忘記密碼、訂單查詢等的頻率限制使用。代理不在內網時設為 `framework` 並確認代理會覆寫此標頭；直接對外時設為 `none` |
 | `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
 | `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | 建議 | SMTP 設定；設定後才會寄送：訂單通知（成立、付款、出貨、取消、退款）、會員 Email 驗證、重設密碼、到貨通知、EDM 電子報。未設定時以上都不會寄出（EDM 會拒絕發送、到貨通知保留待寄） |
 | `MAIL_FROM` / `STORE_NAME` | 建議 | 通知信寄件地址與顯示名稱（預設「遇日小舖」）；前台「聯絡我們」的留言也會轉寄到 `MAIL_FROM`（可直接回覆顧客） |

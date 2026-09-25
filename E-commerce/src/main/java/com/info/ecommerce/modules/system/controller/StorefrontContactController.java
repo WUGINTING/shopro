@@ -24,11 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.time.Duration;
 
 /**
  * 顧客聯絡表單：留言會出現在後台通知，並在設定寄信時寄到商店信箱（MAIL_FROM，可直接回覆顧客）
@@ -40,12 +36,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Tag(name = "聯絡表單", description = "顧客留言")
 public class StorefrontContactController {
 
-    private static final int MAX_PER_WINDOW = 5;
-    private static final long WINDOW_SECONDS = 600;
-
     private final AdminNotificationService adminNotificationService;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-    private final Map<String, Deque<Instant>> recentByClient = new ConcurrentHashMap<>();
+    private final com.info.ecommerce.common.RateLimiter rateLimiter;
 
     @Value("${app.mail.from:}")
     private String mailFrom;
@@ -78,7 +71,8 @@ public class StorefrontContactController {
     @PostMapping
     @Operation(summary = "送出聯絡表單")
     public ApiResponse<Void> submit(@Valid @RequestBody ContactRequest request, HttpServletRequest http) {
-        throttle(clientKey(http));
+        // 同一來源 10 分鐘內最多 5 則，避免灌水
+        rateLimiter.check("contact", http.getRemoteAddr(), 5, Duration.ofMinutes(10), "留言次數過多，請稍後再試或直接來電");
 
         String subject = request.getSubject() == null || request.getSubject().isBlank() ? "一般詢問" : request.getSubject().trim();
         String contact = request.getEmail().trim() + (request.getPhone() == null || request.getPhone().isBlank() ? "" : " / " + request.getPhone().trim());
@@ -104,26 +98,5 @@ public class StorefrontContactController {
             }
         }
         return ApiResponse.success("已收到您的留言，我們會盡快與您聯繫", null);
-    }
-
-    private static String clientKey(HttpServletRequest http) {
-        String forwarded = http.getHeader("X-Forwarded-For");
-        return forwarded != null && !forwarded.isBlank() ? forwarded.split(",")[0].trim() : http.getRemoteAddr();
-    }
-
-    /** 同一來源 10 分鐘內最多 5 則，避免灌水 */
-    private void throttle(String key) {
-        Instant now = Instant.now();
-        Deque<Instant> recent = recentByClient.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>());
-        while (!recent.isEmpty() && recent.peekFirst().isBefore(now.minusSeconds(WINDOW_SECONDS))) {
-            recent.pollFirst();
-        }
-        if (recent.size() >= MAX_PER_WINDOW) {
-            throw new BusinessException("留言次數過多，請稍後再試或直接來電");
-        }
-        recent.addLast(now);
-        if (recentByClient.size() > 10_000) {
-            recentByClient.clear();
-        }
     }
 }

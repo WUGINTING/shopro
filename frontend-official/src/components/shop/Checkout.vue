@@ -413,7 +413,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { getCartItems, clearCart, removeFromCart } from 'src/utils/cart.js';
-import { quoteOrder, checkoutOrder, toOrderItems } from 'src/api/order.js';
+import { quoteOrder, checkoutOrder, toOrderItems, getShippingOptions } from 'src/api/order.js';
 import {
   getCheckoutDraft,
   saveCheckoutDraft,
@@ -440,10 +440,26 @@ const recipientInfo = ref({
 
 // 配送方式
 const shippingMethod = ref('HOME_DELIVERY');
-const shippingOptions = [
+const ALL_SHIPPING_OPTIONS = [
   { label: '宅配到府', value: 'HOME_DELIVERY', icon: 'local_shipping' },
   { label: '門市自取', value: 'STORE_PICKUP', icon: 'storefront' },
 ];
+const shippingOptions = ref(ALL_SHIPPING_OPTIONS);
+
+// 只顯示後台目前開放的配送方式；目前選擇的方式暫停服務時改用第一個可用的方式
+const loadShippingOptions = async () => {
+  try {
+    const res = await getShippingOptions();
+    const available = (res?.data || []).map(option => option.method);
+    if (!available.length) return;
+    shippingOptions.value = ALL_SHIPPING_OPTIONS.filter(option => available.includes(option.value));
+    if (!available.includes(shippingMethod.value)) {
+      shippingMethod.value = available[0];
+    }
+  } catch {
+    // 取不到時保留全部選項，由後端試算告知是否暫停服務
+  }
+};
 
 // 付款方式
 const paymentMethod = ref('ECPAY');
@@ -756,6 +772,7 @@ onMounted(() => {
 
   loadCartData();
   refreshQuote();
+  loadShippingOptions();
   window.addEventListener('cart-updated', handleCartUpdated);
 });
 </script>

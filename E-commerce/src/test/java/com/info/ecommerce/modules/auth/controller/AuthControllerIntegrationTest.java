@@ -101,4 +101,32 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.data.token").doesNotExist());
     }
+
+    @Test
+    void passwordChange_invalidatesOldTokens_andReturnsNewToken() throws Exception {
+        RegisterRequest registerRequest = RegisterRequest.builder()
+                .username("pwduser").email("pwd@example.com").password("password123").role(Role.CUSTOMER).build();
+        String oldToken = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).path("data").path("token").asText();
+
+        String body = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/profile")
+                        .header("Authorization", "Bearer " + oldToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"password123\",\"newPassword\":\"newpassword456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andReturn().getResponse().getContentAsString();
+        String newToken = objectMapper.readTree(body).path("data").path("token").asText();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/profile")
+                        .header("Authorization", "Bearer " + oldToken))
+                .andExpect(status().is4xxClientError());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/profile")
+                        .header("Authorization", "Bearer " + newToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value("pwduser"));
+    }
 }

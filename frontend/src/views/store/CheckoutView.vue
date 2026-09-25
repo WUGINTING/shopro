@@ -316,10 +316,26 @@ const paymentOptions = [
   { label: '貨到付款', value: 'COD' }
 ]
 
-const shippingOptions = [
-  { label: '宅配到府', value: 'DELIVERY' },
-  { label: '門市自取', value: 'STORE_PICKUP' }
+const allShippingOptions = [
+  { label: '宅配到府', value: 'DELIVERY', method: 'HOME_DELIVERY' },
+  { label: '門市自取', value: 'STORE_PICKUP', method: 'STORE_PICKUP' }
 ]
+const shippingOptions = ref(allShippingOptions)
+
+// 只顯示後台目前開放的配送方式；目前選擇的方式暫停服務時改用第一個可用的方式
+const loadShippingOptions = async () => {
+  try {
+    const response = await orderApi.storefrontShippingOptions()
+    const available = (response.data || []).map((option) => option.method)
+    if (!available.length) return
+    shippingOptions.value = allShippingOptions.filter((option) => available.includes(option.method))
+    if (!shippingOptions.value.some((option) => option.value === form.value.shippingMethod)) {
+      form.value.shippingMethod = shippingOptions.value[0]?.value ?? form.value.shippingMethod
+    }
+  } catch {
+    // 取不到時保留全部選項，由後端試算告知是否暫停服務
+  }
+}
 
 const form = ref({
   customerName: '',
@@ -443,6 +459,7 @@ watch(() => form.value.shippingMethod, () => refreshQuote())
 onMounted(async () => {
   trackEvent('view_checkout')
   refreshQuote()
+  loadShippingOptions()
   const draft = getCheckoutDraft()
   form.value.customerName = draft.customerName || authStore.user?.username || ''
   form.value.customerPhone = draft.customerPhone || ''

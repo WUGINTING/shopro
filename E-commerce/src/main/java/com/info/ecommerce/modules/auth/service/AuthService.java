@@ -136,6 +136,7 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException("使用者不存在"));
 
         boolean usernameChanged = false;
+        boolean passwordChanged = false;
         // Update username if provided and different
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             usernameChanged = true;
@@ -166,6 +167,7 @@ public class AuthService {
                 throw new BusinessException("目前密碼不正確");
             }
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            passwordChanged = true;
         }
 
         User updatedUser = userRepository.save(user);
@@ -179,7 +181,8 @@ public class AuthService {
                 .emailVerified(updatedUser.isEmailConfirmed())
                 .createdAt(updatedUser.getCreatedAt())
                 .updatedAt(updatedUser.getUpdatedAt())
-                .token(usernameChanged ? jwtService.generateToken(updatedUser) : null)
+                // 帳號名稱或密碼變更後舊 token 失效，回傳新 token 讓目前裝置保持登入
+                .token(usernameChanged || passwordChanged ? jwtService.generateToken(updatedUser) : null)
                 .build();
     }
 

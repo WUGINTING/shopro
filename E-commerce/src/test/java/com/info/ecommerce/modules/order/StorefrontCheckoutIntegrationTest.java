@@ -430,4 +430,21 @@ class StorefrontCheckoutIntegrationTest {
                 .andExpect(status().isBadRequest());
         assertEquals(3, coneStock());
     }
+
+    @Test
+    void orderLookup_isRateLimitedPerClient() throws Exception {
+        for (int i = 0; i < 30; i++) {
+            mockMvc.perform(get("/api/storefront/orders/lookup").with(request -> { request.setRemoteAddr("10.77.0.1"); return request; })
+                            .param("orderNumber", "ORD-NOPE-" + i).param("email", "guess@example.com"))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(get("/api/storefront/orders/lookup").with(request -> { request.setRemoteAddr("10.77.0.1"); return request; })
+                        .param("orderNumber", "ORD-NOPE-X").param("email", "guess@example.com"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("次數過多")));
+        // 其他來源不受影響
+        mockMvc.perform(get("/api/storefront/orders/lookup").with(request -> { request.setRemoteAddr("10.77.0.2"); return request; })
+                        .param("orderNumber", "ORD-NOPE-X").param("email", "guess@example.com"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("次數過多"))));
+    }
 }

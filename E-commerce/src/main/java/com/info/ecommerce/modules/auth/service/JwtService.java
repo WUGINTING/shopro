@@ -74,7 +74,28 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        return buildToken(extraClaims, userDetails, jwtExpiration);
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+        if (userDetails instanceof com.info.ecommerce.modules.auth.entity.User user && user.getId() != null) {
+            claims.put(USER_ID_CLAIM, user.getId());
+        }
+        claims.put(PASSWORD_VERSION_CLAIM, passwordVersion(userDetails.getPassword()));
+        return buildToken(claims, userDetails, jwtExpiration);
+    }
+
+    /** 帳號 ID：帳號被刪除後有人以相同帳號名稱註冊時，舊 token 不可沿用 */
+    private static final String USER_ID_CLAIM = "uid";
+    /** 密碼版本：變更 / 重設密碼後，先前發出的登入 token 全部失效 */
+    private static final String PASSWORD_VERSION_CLAIM = "pwv";
+
+    private String passwordVersion(String passwordHash) {
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(new javax.crypto.spec.SecretKeySpec(Decoders.BASE64.decode(secretKey), "HmacSHA256"));
+            byte[] digest = mac.doFinal((passwordHash == null ? "" : passwordHash).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.util.Arrays.copyOf(digest, 12));
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private String buildToken(
@@ -93,10 +114,20 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
+        final Claims claims = extractAllClaims(token);
         // 用途型 token（例如 Email 驗證連結）不可當作登入憑證
-        return extractClaim(token, claims -> claims.get(PURPOSE_CLAIM)) == null
-                && (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        if (claims.get(PURPOSE_CLAIM) != null || !userDetails.getUsername().equals(claims.getSubject())
+                || claims.getExpiration() == null || claims.getExpiration().before(new Date())) {
+            return false;
+        }
+        // 舊版 token 沒有以下宣告時略過檢查（到期後自然淘汰）
+        Object userId = claims.get(USER_ID_CLAIM);
+        if (userId != null && userDetails instanceof com.info.ecommerce.modules.auth.entity.User user
+                && !(userId instanceof Number number && user.getId() != null && number.longValue() == user.getId())) {
+            return false;
+        }
+        Object version = claims.get(PASSWORD_VERSION_CLAIM);
+        return version == null || version.equals(passwordVersion(userDetails.getPassword()));
     }
 
     private static final String PURPOSE_CLAIM = "purpose";

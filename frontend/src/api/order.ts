@@ -15,7 +15,7 @@ export interface StorefrontCheckoutRequest {
   customerEmail: string
   shippingAddress?: string | null
   notes?: string
-  shippingMethod: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  shippingMethod?: 'HOME_DELIVERY' | 'STORE_PICKUP'
   paymentMethod: 'ECPAY' | 'COD'
   /** 下單來源，決定付款完成後導回的頁面 */
   channel?: 'STOREFRONT' | 'ADMIN_STORE'
@@ -45,7 +45,7 @@ export interface StorefrontOrderLookup {
 /** 結帳試算請求 */
 export interface StorefrontQuoteRequest {
   items: StorefrontCheckoutRequest['items']
-  shippingMethod: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  shippingMethod?: 'HOME_DELIVERY' | 'STORE_PICKUP'
   couponCode?: string | null
 }
 

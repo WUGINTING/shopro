@@ -9,7 +9,6 @@ import com.info.ecommerce.modules.order.entity.OrderItem;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.OrderHistoryRepository;
 import com.info.ecommerce.modules.order.repository.OrderItemRepository;
-import com.info.ecommerce.modules.order.repository.OrderPaymentRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.order.service.StorefrontCheckoutService;
 import com.info.ecommerce.modules.product.entity.Product;
@@ -41,7 +40,6 @@ public class StatisticsService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderHistoryRepository orderHistoryRepository;
-    private final OrderPaymentRepository orderPaymentRepository;
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final MemberRepository memberRepository;
@@ -159,7 +157,7 @@ public class StatisticsService {
                 .totalCustomers(customers)
                 .newCustomers(memberRepository.countByCreatedAtBetween(from, to))
                 .averageOrderValue(average)
-                .refundAmount(orderPaymentRepository.sumRefundsBetween(from, to))
+                .refundAmount(orderHistoryRepository.refundAmountsBetween(from, to).stream().reduce(BigDecimal.ZERO, BigDecimal::add))
                 .topProducts(topProducts)
                 .topCategories(topCategories)
                 .salesTrend(trend)

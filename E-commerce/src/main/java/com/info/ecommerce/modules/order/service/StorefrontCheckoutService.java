@@ -111,7 +111,7 @@ public class StorefrontCheckoutService {
                 throw new BusinessException("此優惠券已被使用完畢");
             }
             orderHistoryService.recordHistory(orderId, OrderCouponService.ACTION_USED,
-                    "使用優惠券 " + discount.couponCode(), null, null, null, "顧客");
+                    "使用優惠券 " + discount.couponCode(), null, discount.couponCode(), null, "顧客");
         }
     }
 

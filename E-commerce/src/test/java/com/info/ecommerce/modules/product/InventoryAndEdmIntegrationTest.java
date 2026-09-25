@@ -77,6 +77,17 @@ class InventoryAndEdmIntegrationTest {
         mockMvc.perform(post("/api/storefront/products/" + tea.getId() + "/restock-notification")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"nope\"}"))
                 .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/storefront/products/" + tea.getId() + "/restock-notification")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fan@example.com\",\"specificationId\":\"abc\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/storefront/products/" + tea.getId() + "/restock-notification")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fan@example.com\",\"specificationId\":999999}"))
+                .andExpect(status().isBadRequest());
+        // 庫存不可扣成負數
+        mockMvc.perform(put("/api/inventory/update").header("Authorization", "Bearer " + adminToken)
+                        .param("productId", tea.getId().toString()).param("specificationId", green.getId().toString())
+                        .param("warehouseId", "1").param("quantity", "-5"))
+                .andExpect(status().isBadRequest());
 
         mockMvc.perform(put("/api/inventory/update").header("Authorization", "Bearer " + adminToken)
                         .param("productId", tea.getId().toString()).param("specificationId", green.getId().toString())

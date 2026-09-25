@@ -32,7 +32,7 @@ public class PaymentManagementService {
 
     private final PaymentGatewayTransactionRepository transactionRepository;
     private final PaymentSettingRepository settingRepository;
-    private final com.info.ecommerce.modules.order.repository.OrderPaymentRepository orderPaymentRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderHistoryRepository orderHistoryRepository;
 
     /**
      * 取得支付統計資料
@@ -62,9 +62,12 @@ public class PaymentManagementService {
             ? (todaySuccessCount.doubleValue() / todayTotalCount.doubleValue() * 100) 
             : 0.0;
         
-        // 退款統計：以訂單退款登記（付款紀錄的退款金額與時間）計算
-        Long todayRefundCount = orderPaymentRepository.countRefundsSince(todayStart);
-        Long monthRefundCount = orderPaymentRepository.countRefundsSince(monthStart);
+        // 退款統計：以每一筆退款登記（訂單歷程 REFUND）計算，部分退款多次時分別計入
+        LocalDateTime refundUntil = LocalDateTime.now().plusMinutes(1);
+        List<BigDecimal> todayRefunds = orderHistoryRepository.refundAmountsBetween(todayStart, refundUntil);
+        List<BigDecimal> monthRefunds = orderHistoryRepository.refundAmountsBetween(monthStart, refundUntil);
+        Long todayRefundCount = (long) todayRefunds.size();
+        Long monthRefundCount = (long) monthRefunds.size();
         
         // 各閘道佔比
         List<Object[]> gatewayStats = transactionRepository.getGatewayStatistics(monthStart);
@@ -99,9 +102,9 @@ public class PaymentManagementService {
             .monthCount(monthSuccessCount)
             .refundStatistics(PaymentStatisticsDTO.RefundStatistics.builder()
                 .todayRefundCount(todayRefundCount)
-                .todayRefundAmount(orderPaymentRepository.sumRefundsSince(todayStart))
+                .todayRefundAmount(todayRefunds.stream().reduce(BigDecimal.ZERO, BigDecimal::add))
                 .monthRefundCount(monthRefundCount)
-                .monthRefundAmount(orderPaymentRepository.sumRefundsSince(monthStart))
+                .monthRefundAmount(monthRefunds.stream().reduce(BigDecimal.ZERO, BigDecimal::add))
                 .build())
             .gatewayShares(gatewayShares)
             .build();

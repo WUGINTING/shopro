@@ -28,6 +28,7 @@ public class AuthController {
     private final com.info.ecommerce.modules.auth.service.EmailVerificationService emailVerificationService;
     private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
     private final com.info.ecommerce.modules.auth.service.PasswordResetService passwordResetService;
+    private final com.info.ecommerce.common.RateLimiter rateLimiter;
 
     @PostMapping("/register")
     @Operation(summary = "註冊新用戶", description = "創建新用戶帳戶並返回JWT令牌")
@@ -76,7 +77,11 @@ public class AuthController {
 
     @PostMapping("/password-reset")
     @Operation(summary = "申請重設密碼", description = "寄送重設密碼連結到 Email（不透露 Email 是否已註冊）")
-    public ApiResponse<Void> requestPasswordReset(@RequestBody java.util.Map<String, String> body) {
+    public ApiResponse<Void> requestPasswordReset(@RequestBody java.util.Map<String, String> body,
+                                                  jakarta.servlet.http.HttpServletRequest http) {
+        String tooMany = "申請次數過多，請稍後再試";
+        rateLimiter.check("password-reset-ip", http.getRemoteAddr(), 10, java.time.Duration.ofMinutes(10), tooMany);
+        rateLimiter.check("password-reset-email", body.get("email"), 3, java.time.Duration.ofMinutes(30), tooMany);
         passwordResetService.requestReset(body.get("email"));
         return ApiResponse.success("若此 Email 已註冊，重設密碼連結會在幾分鐘內寄達，請於 1 小時內使用", null);
     }

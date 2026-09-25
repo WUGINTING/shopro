@@ -363,6 +363,10 @@ const handleChangePassword = async () => {
 
     const response = await authApi.updateProfile(updateData)
     if (response.success) {
+      // 變更密碼後舊 token 失效，改用後端回傳的新 token
+      if (response.data?.token) {
+        authStore.setAuth(response.data.token, response.data)
+      }
       $q.notify({
         type: 'positive',
         message: '密碼變更成功'

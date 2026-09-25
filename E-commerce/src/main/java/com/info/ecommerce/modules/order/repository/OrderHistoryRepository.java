@@ -28,4 +28,21 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     List<com.info.ecommerce.modules.order.entity.OrderHistory> findByOrderIdInAndActionType(java.util.Collection<Long> orderIds, String actionType);
 
     boolean existsByOrderIdAndNewStatus(Long orderId, String newStatus);
+
+    List<OrderHistory> findByActionTypeAndCreatedAtBetween(String actionType, java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /** 期間內每一筆退款登記（REFUND 歷程，new_status 欄位記錄該次退款金額）；部分退款多次時逐筆計入各自的時間 */
+    default List<java.math.BigDecimal> refundAmountsBetween(java.time.LocalDateTime from, java.time.LocalDateTime to) {
+        return findByActionTypeAndCreatedAtBetween("REFUND", from, to).stream()
+                .map(OrderHistory::getNewStatus)
+                .map(value -> {
+                    try {
+                        return value == null ? null : new java.math.BigDecimal(value.trim());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
 }

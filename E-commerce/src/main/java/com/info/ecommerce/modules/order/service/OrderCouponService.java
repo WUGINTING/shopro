@@ -35,7 +35,7 @@ public class OrderCouponService {
             return;
         }
         couponRepository.findByCode(code).ifPresent(coupon -> couponRepository.decrementUsage(coupon.getId()));
-        orderHistoryService.recordHistory(orderId, ACTION_RELEASED, "訂單取消，歸還優惠券 " + code, null, null, null, "系統");
+        orderHistoryService.recordHistory(orderId, ACTION_RELEASED, "訂單取消，歸還優惠券 " + code, null, code, null, "系統");
     }
 
     /** 已取消的訂單被還原：重新計入優惠券使用次數 */
@@ -47,7 +47,7 @@ public class OrderCouponService {
             return;
         }
         couponRepository.findByCode(code).ifPresent(coupon -> couponRepository.forceIncrementUsage(coupon.getId()));
-        orderHistoryService.recordHistory(orderId, ACTION_USED, "訂單恢復，重新使用優惠券 " + code, null, null, null, "系統");
+        orderHistoryService.recordHistory(orderId, ACTION_USED, "訂單恢復，重新使用優惠券 " + code, null, code, null, "系統");
     }
 
     private boolean holdsCoupon(Long orderId) {
@@ -55,7 +55,16 @@ public class OrderCouponService {
                 > orderHistoryRepository.countByOrderIdAndActionType(orderId, ACTION_RELEASED);
     }
 
+    /** 優惠券代碼以使用記錄為準（後台修改折扣明細後仍找得到）；舊資料沒有記錄代碼時改看折扣明細 */
     private String couponCode(Long orderId) {
+        String recorded = orderHistoryRepository.findByOrderIdAndActionType(orderId, ACTION_USED).stream()
+                .map(com.info.ecommerce.modules.order.entity.OrderHistory::getNewStatus)
+                .filter(code -> code != null && !code.isBlank())
+                .findFirst()
+                .orElse(null);
+        if (recorded != null) {
+            return recorded;
+        }
         return orderDiscountRepository.findByOrderId(orderId).stream()
                 .filter(discount -> discount.getDiscountCode() != null
                         && (CheckoutDiscountService.TYPE_COUPON.equals(discount.getDiscountType())

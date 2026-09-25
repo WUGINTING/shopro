@@ -21,6 +21,7 @@ public class StorefrontProductController {
 
     private final ProductService productService;
     private final com.info.ecommerce.modules.product.service.InventoryManagementService inventoryManagementService;
+    private final com.info.ecommerce.common.RateLimiter rateLimiter;
 
     @GetMapping
     @Operation(summary = "前台商品列表", description = "可依分類（含子分類）、關鍵字篩選；sort = newest / price_asc / price_desc / name")
@@ -42,10 +43,18 @@ public class StorefrontProductController {
     @PostMapping("/{id}/restock-notification")
     @Operation(summary = "到貨通知登記", description = "缺貨商品補貨時寄信通知（每個 Email 同一商品 / 規格只登記一次）")
     public ApiResponse<Void> subscribeRestock(@Parameter(description = "商品 ID") @PathVariable Long id,
-                                              @RequestBody java.util.Map<String, Object> body) {
+                                              @RequestBody java.util.Map<String, Object> body,
+                                              jakarta.servlet.http.HttpServletRequest http) {
+        rateLimiter.check("restock-notification", http.getRemoteAddr(), 10, java.time.Duration.ofMinutes(10),
+                "登記次數過多，請稍後再試");
         productService.assertPubliclyVisible(id);
         Object spec = body.get("specificationId");
-        Long specificationId = spec == null || spec.toString().isBlank() ? null : Long.valueOf(spec.toString());
+        Long specificationId;
+        try {
+            specificationId = spec == null || spec.toString().isBlank() ? null : Long.valueOf(spec.toString().trim());
+        } catch (NumberFormatException e) {
+            throw new com.info.ecommerce.common.exception.BusinessException("商品規格不存在");
+        }
         inventoryManagementService.subscribeStockNotification(id, specificationId,
                 body.get("email") == null ? null : body.get("email").toString(), null);
         return ApiResponse.success("已登記到貨通知，商品補貨時會寄信給您", null);

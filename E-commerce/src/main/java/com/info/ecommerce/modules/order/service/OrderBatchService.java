@@ -184,7 +184,7 @@ public class OrderBatchService {
             return "";
         }
         String text = value.replace("\r", " ").replace("\n", " ");
-        if (!text.isEmpty() && "=+-@".indexOf(text.charAt(0)) >= 0) {
+        if (!text.isEmpty() && "=+-@\t\r".indexOf(text.charAt(0)) >= 0) {
             text = "'" + text;
         }
         return "\"" + text.replace("\"", "\"\"") + "\"";

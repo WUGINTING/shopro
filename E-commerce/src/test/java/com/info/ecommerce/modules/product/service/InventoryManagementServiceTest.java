@@ -191,7 +191,15 @@ class InventoryManagementServiceTest {
         service.subscribeStockNotification(1L, null, "a@example.com", null);
         verify(notificationRepository, never()).save(any());
 
+        when(specificationRepository.findById(10L)).thenReturn(java.util.Optional.of(
+                ProductSpecification.builder().id(10L).productId(1L).build()));
         service.subscribeStockNotification(1L, 10L, "a@example.com", null);
         verify(notificationRepository).save(any());
+
+        // 規格不屬於此商品
+        when(specificationRepository.findById(11L)).thenReturn(java.util.Optional.of(
+                ProductSpecification.builder().id(11L).productId(2L).build()));
+        assertThatThrownBy(() -> service.subscribeStockNotification(1L, 11L, "b@example.com", null))
+                .isInstanceOf(BusinessException.class);
     }
 }

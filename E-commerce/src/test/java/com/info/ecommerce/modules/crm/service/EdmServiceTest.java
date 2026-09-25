@@ -97,6 +97,7 @@ class EdmServiceTest {
         org.mockito.Mockito.lenient().when(mailSender.createMimeMessage())
                 .thenAnswer(invocation -> new jakarta.mail.internet.MimeMessage((jakarta.mail.Session) null));
         org.mockito.Mockito.lenient().when(jwtService.generatePurposeToken(any(), any(), any(), anyLong())).thenReturn("token");
+        org.mockito.Mockito.lenient().when(edmCampaignRepository.claimForSending(anyLong())).thenReturn(1);
     }
 
     @Test
@@ -294,7 +295,8 @@ class EdmServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(edmCampaignRepository, times(1)).findById(1L);
-        verify(edmCampaignRepository, times(2)).save(any(EdmCampaign.class));
+        verify(edmCampaignRepository, times(1)).claimForSending(1L);
+        verify(edmCampaignRepository, times(1)).save(any(EdmCampaign.class));
         verify(memberRepository, times(1)).findAll();
         verify(edmSendLogRepository, atLeastOnce()).save(any(EdmSendLog.class));
     }
@@ -311,6 +313,18 @@ class EdmServiceTest {
                 .hasMessage("EDM 活動已發送");
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(memberRepository, never()).findAll();
+    }
+
+    @Test
+    void should_NotSendTwice_When_AnotherSendAlreadyClaimedTheCampaign() {
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(memberRepository.findAll()).thenReturn(List.of(member));
+        when(edmCampaignRepository.claimForSending(1L)).thenReturn(0);
+
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("正在發送");
+        verify(mailSender, never()).send(any(jakarta.mail.internet.MimeMessage.class));
     }
 
     @Test

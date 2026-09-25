@@ -30,10 +30,7 @@ public class EdmScheduledTask {
                 log.info("Scheduled EDM campaign {} sent", campaign.getId());
             } catch (Exception e) {
                 log.warn("Scheduled EDM campaign {} could not be sent: {}", campaign.getId(), e.getMessage());
-                edmCampaignRepository.findById(campaign.getId()).ifPresent(failed -> {
-                    failed.setStatus(EdmStatus.FAILED);
-                    edmCampaignRepository.save(failed);
-                });
+                edmCampaignRepository.markFailedIfScheduled(campaign.getId());
             }
         }
     }

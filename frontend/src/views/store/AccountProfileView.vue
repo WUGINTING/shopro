@@ -79,7 +79,7 @@ const savingProfile = ref(false)
 const savingPassword = ref(false)
 
 const applyUser = (user: NonNullable<typeof authStore.user>) => {
-  // 變更帳號時後端會回傳新的登入 token
+  // 變更帳號或密碼時後端會回傳新的登入 token
   const { token, ...userData } = user
   const nextToken = token || authStore.token
   if (nextToken) authStore.setAuth(nextToken, userData)
@@ -104,7 +104,9 @@ const saveProfile = async () => {
 const savePassword = async () => {
   savingPassword.value = true
   try {
-    await authApi.updateProfile({ currentPassword: passwords.value.current, newPassword: passwords.value.next })
+    const response = await authApi.updateProfile({ currentPassword: passwords.value.current, newPassword: passwords.value.next })
+    // 變更密碼後舊 token 失效，改用後端回傳的新 token
+    if (response.data) applyUser(response.data)
     passwords.value = { current: '', next: '', confirm: '' }
     passwordFormRef.value?.resetValidation()
     $q.notify({ type: 'positive', message: '密碼已變更' })

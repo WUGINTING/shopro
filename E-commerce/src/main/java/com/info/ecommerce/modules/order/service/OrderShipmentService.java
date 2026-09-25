@@ -85,6 +85,13 @@ public class OrderShipmentService {
         if (oldStatus == status) {
             return convertToDTO(shipment);
         }
+        if (status == ShippingStatus.SHIPPED || status == ShippingStatus.DELIVERED) {
+            OrderStatus orderStatus = orderRepository.findById(shipment.getOrderId())
+                .map(Order::getStatus).orElse(null);
+            if (orderStatus == OrderStatus.CANCELLED || orderStatus == OrderStatus.REFUNDED) {
+                throw new BusinessException("訂單已取消或已退款，無法更新為出貨 / 送達");
+            }
+        }
         shipment.setShippingStatus(status);
 
         if ((status == ShippingStatus.SHIPPED || status == ShippingStatus.DELIVERED) && shipment.getShippedAt() == null) {
