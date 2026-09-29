@@ -32,3 +32,24 @@ export interface PageResponse<T> {
   first: boolean
   empty: boolean
 }
+
+/**
+ * 相容舊格式的分頁介面
+ * @description 部分舊版回應以 total 表示總筆數，前端會以 totalElements || total 作為後備
+ * @template T - 資料類型
+ */
+export type LegacyPageResponse<T> = PageResponse<T> & { total?: number }
+
+/**
+ * 前端轉換後的簡化分頁介面
+ * @description 部分 API 會將 Spring Data Page 轉換成此扁平格式（currentPage / pageSize）
+ * @interface SimplePageResponse
+ * @template T - 資料類型
+ */
+export interface SimplePageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  currentPage: number
+  pageSize: number
+}

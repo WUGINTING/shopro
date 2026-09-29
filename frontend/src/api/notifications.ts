@@ -14,6 +14,7 @@ export type AdminNotificationType =
   | 'ORDER_CANCELLED'    // 訂單取消
   | 'ORDER_QA'           // 訂單問答
   | 'STOCK_LOW'          // 商品庫存不足
+  | 'CONTACT_MESSAGE'    // 顧客聯絡表單留言
 
 /**
  * 管理通知 DTO

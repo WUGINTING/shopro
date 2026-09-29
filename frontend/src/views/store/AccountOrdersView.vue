@@ -6,6 +6,8 @@
       <p class="sf-page-lead">集中查看訂單編號、狀態、金額與建立時間。若有問題可提供訂單編號聯繫客服。</p>
     </section>
 
+    <EmailVerifyBanner />
+
     <q-card bordered class="sf-card">
       <q-card-section>
         <div v-if="loading" class="q-pa-md">
@@ -71,17 +73,16 @@
 </template>
 
 <script setup lang="ts">
+import EmailVerifyBanner from '@/components/store/EmailVerifyBanner.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from '@/stores/auth'
 import { orderApi, type Order } from '@/api/order'
 import { trackEvent } from '@/utils/tracking'
 import { getOrderStatusColor, getOrderStatusLabel, getOrderStatusTextColor } from '@/utils/orderStatus'
 
 const $q = useQuasar()
 const router = useRouter()
-const authStore = useAuthStore()
 const orders = ref<Order[]>([])
 const loading = ref(false)
 
@@ -101,10 +102,8 @@ const normalizeOrders = (payload: unknown): Order[] => {
 onMounted(async () => {
   loading.value = true
   try {
-    const customerId = authStore.user?.id
-    const response = typeof customerId === 'number'
-      ? await orderApi.getOrdersByCustomerId(customerId, { page: 0, size: 20 })
-      : await orderApi.getMyOrders({ page: 0, size: 20 })
+    // 以登入身分查詢自己的訂單（登入帳號 ID 與會員 ID 不同，不可直接用於 /orders/customer/{id}）
+    const response = await orderApi.getMyOrders({ page: 0, size: 20 })
     orders.value = normalizeOrders(response.data)
   } catch {
     $q.notify({ type: 'negative', message: '載入訂單紀錄失敗，請稍後再試。' })

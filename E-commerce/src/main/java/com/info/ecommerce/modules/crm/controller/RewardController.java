@@ -24,12 +24,14 @@ public class RewardController {
 
     private final RewardService rewardService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建獎勵設定")
     public ApiResponse<RewardConfigDTO> createRewardConfig(@Valid @RequestBody RewardConfigDTO dto) {
         return ApiResponse.success("獎勵設定已創建", rewardService.createRewardConfig(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新獎勵設定")
     public ApiResponse<RewardConfigDTO> updateRewardConfig(
@@ -45,6 +47,7 @@ public class RewardController {
         return ApiResponse.success(rewardService.getRewardConfig(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除獎勵設定")
     public ApiResponse<Void> deleteRewardConfig(
@@ -68,6 +71,7 @@ public class RewardController {
         return ApiResponse.success(rewardService.listEnabledRewardConfigs());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/claim/welcome/{memberId}")
     @Operation(summary = "領取入會禮")
     public ApiResponse<Void> claimWelcomeReward(
@@ -76,6 +80,7 @@ public class RewardController {
         return ApiResponse.success("入會禮已領取", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/claim/birthday/{memberId}")
     @Operation(summary = "領取生日禮")
     public ApiResponse<Void> claimBirthdayReward(

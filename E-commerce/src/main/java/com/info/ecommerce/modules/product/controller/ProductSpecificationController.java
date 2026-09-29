@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.product.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.product.dto.ProductSpecificationDTO;
 import com.info.ecommerce.modules.product.service.ProductSpecificationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,16 @@ import java.util.List;
 public class ProductSpecificationController {
 
     private final ProductSpecificationService specificationService;
+    private final CurrentUserService currentUserService;
+    private final com.info.ecommerce.modules.product.service.ProductService productService;
+
+    /** 前台（非員工）不回傳成本價 */
+    private ProductSpecificationDTO forCaller(ProductSpecificationDTO dto) {
+        if (dto != null && !currentUserService.isStaff()) {
+            dto.setCost(null);
+        }
+        return dto;
+    }
 
     @PostMapping
     @Operation(summary = "添加商品規格")
@@ -42,6 +53,14 @@ public class ProductSpecificationController {
     public ApiResponse<ProductSpecificationDTO> updateSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id,
             @Valid @RequestBody ProductSpecificationDTO dto) {
+        // 員工可更新規格名稱、庫存等，但價格與成本只能由經理或管理員修改
+        if (!currentUserService.isManagerOrAdmin()) {
+            ProductSpecificationDTO existing = specificationService.getSpecification(id);
+            if (ProductController.priceChanged(existing.getPrice(), dto.getPrice())
+                    || ProductController.priceChanged(existing.getCost(), dto.getCost())) {
+                throw new org.springframework.security.access.AccessDeniedException("規格價格只能由經理或管理員修改");
+            }
+        }
         return ApiResponse.success("規格已更新", specificationService.updateSpecification(id, dto));
     }
 
@@ -58,13 +77,26 @@ public class ProductSpecificationController {
     @Operation(summary = "取得規格詳情")
     public ApiResponse<ProductSpecificationDTO> getSpecification(
             @Parameter(description = "規格 ID") @PathVariable Long id) {
-        return ApiResponse.success(specificationService.getSpecification(id));
+        ProductSpecificationDTO spec = specificationService.getSpecification(id);
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(spec.getProductId());
+        }
+        return ApiResponse.success(forCaller(spec));
     }
 
     @GetMapping("/product/{productId}")
     @Operation(summary = "取得商品的所有規格")
     public ApiResponse<List<ProductSpecificationDTO>> listProductSpecifications(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
-        return ApiResponse.success(specificationService.listProductSpecifications(productId));
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(productId);
+        }
+        List<ProductSpecificationDTO> specs = specificationService.listProductSpecifications(productId);
+        if (!currentUserService.isStaff()) {
+            // 顧客只看得到啟用中的規格
+            specs = specs.stream().filter(spec -> !Boolean.FALSE.equals(spec.getEnabled())).toList();
+        }
+        specs.forEach(this::forCaller);
+        return ApiResponse.success(specs);
     }
 }

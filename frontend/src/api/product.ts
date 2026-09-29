@@ -7,9 +7,16 @@ import axios from './axios'
 import type { ApiResponse, PageResponse } from './types'
 
 /**
- * 商品介面
- * @interface Product
+ * 商品狀態（對應後端 ProductStatus 列舉）
  */
+export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK'
+
+/**
+ * 管理後台顯示用的商品狀態
+ * @description 後端 ACTIVE / INACTIVE 在前端顯示為 PUBLISHED / UNPUBLISHED，其餘值（DRAFT、OUT_OF_STOCK）沿用原值
+ */
+export type ProductDisplayStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'OUT_OF_STOCK'
+
 /**
  * 商品介面
  * @interface Product
@@ -32,11 +39,15 @@ export interface Product {
   /** 成本價格 */
   costPrice?: number
   /** 商品狀態 */
-  status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+  status?: ProductStatus
   /** 銷售模式 */
   salesMode?: 'NORMAL' | 'PRE_ORDER' | 'TICKET' | 'SUBSCRIPTION' | 'STORE_ONLY'
   /** 分類 ID */
   categoryId?: number | null
+  /** 每筆訂單最少購買數量 */
+  minPurchaseQuantity?: number | null
+  /** 每筆訂單最多購買數量 */
+  maxPurchaseQuantity?: number | null
   /** 商品圖片 */
   images?: Array<{ imageUrl: string; albumImageId?: number }> | string[]
   /** 商品規格 */
@@ -131,6 +142,11 @@ export interface ProductCategory {
  * @namespace productApi
  */
 export const productApi = {
+  /** 批次上架 */
+  batchActivate: (ids: number[]) => axios.put<any, ApiResponse<void>>('/products/batch/activate', ids),
+  /** 批次下架 */
+  batchDeactivate: (ids: number[]) => axios.put<any, ApiResponse<void>>('/products/batch/deactivate', ids),
+
   /**
    * 分頁查詢商品
    * @description 支援分頁查詢商品列表，可依狀態篩選
@@ -145,6 +161,23 @@ export const productApi = {
    */
   getProducts: (params?: any) => {
     return axios.get<any, ApiResponse<Product[]>>('/products', { params })
+  },
+
+  /**
+   * 取得全部商品（後台列表、訂單選商品用）：逐頁載入直到最後一頁，不受單頁 20 筆限制
+   */
+  getAllProducts: async (): Promise<Product[]> => {
+    const all: Product[] = []
+    const size = 200
+    for (let page = 0; page < 100; page++) {
+      const response = await axios.get<any, ApiResponse<PageResponse<Product> | Product[]>>('/products', { params: { page, size } })
+      const data = response.data
+      if (Array.isArray(data)) return data
+      const content = data?.content || []
+      all.push(...content)
+      if (content.length < size || (data?.totalPages !== undefined && page + 1 >= data.totalPages)) break
+    }
+    return all
   },
 
   /**
@@ -397,6 +430,18 @@ export const productDescriptionBlockApi = {
  * 分類 API 服務
  * @namespace categoryApi
  */
+/**
+ * 顧客商城商品 API（只回傳上架 / 缺貨商品，不含成本等內部資料）
+ */
+export const storefrontProductApi = {
+  list: (params: { categoryId?: number | null; keyword?: string; sort?: 'newest' | 'price_asc' | 'price_desc' | 'name'; page?: number; size?: number }) => {
+    return axios.get<any, ApiResponse<{ content: Product[]; totalElements: number; totalPages: number; number: number }>>('/storefront/products', { params })
+  },
+  get: (id: number) => {
+    return axios.get<any, ApiResponse<Product>>(`/storefront/products/${id}`)
+  }
+}
+
 export const categoryApi = {
   /**
    * 取得所有分類

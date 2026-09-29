@@ -1,6 +1,7 @@
 package com.info.ecommerce.modules.product.controller;
 
 import com.info.ecommerce.common.ApiResponse;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.product.dto.ProductDTO;
 import com.info.ecommerce.modules.product.enums.ProductStatus;
 import com.info.ecommerce.modules.product.service.ProductService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final CurrentUserService currentUserService;
 
     @PostMapping
     @Operation(summary = "創建商品")
@@ -36,6 +38,15 @@ public class ProductController {
     public ApiResponse<ProductDTO> updateProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Valid @RequestBody ProductDTO dto) {
+        // 員工可更新商品資料與庫存，但價格（定價 / 特價 / 成本）只能由經理或管理員修改
+        if (!currentUserService.isManagerOrAdmin()) {
+            ProductDTO existing = productService.getProduct(id);
+            if (priceChanged(existing.getBasePrice(), dto.getBasePrice())
+                    || priceChanged(existing.getSalePrice(), dto.getSalePrice())
+                    || priceChanged(existing.getCostPrice(), dto.getCostPrice())) {
+                throw new org.springframework.security.access.AccessDeniedException("商品價格只能由經理或管理員修改");
+            }
+        }
         return ApiResponse.success("商品已更新", productService.updateProduct(id, dto));
     }
 
@@ -43,7 +54,10 @@ public class ProductController {
     @Operation(summary = "取得商品詳情")
     public ApiResponse<ProductDTO> getProduct(
             @Parameter(description = "商品 ID") @PathVariable Long id) {
-        return ApiResponse.success(productService.getProduct(id));
+        // 未上架商品只有後台可見
+        return ApiResponse.success(currentUserService.isStaff()
+                ? productService.getProduct(id)
+                : productService.getPublicProduct(id));
     }
 
     @DeleteMapping("/{id}")
@@ -60,7 +74,10 @@ public class ProductController {
     public ApiResponse<Page<ProductDTO>> listProducts(
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(null, null, null, page, size));
+        }
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProducts(pageable));
     }
 
@@ -70,7 +87,10 @@ public class ProductController {
             @Parameter(description = "分類 ID") @PathVariable Long categoryId,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(categoryId, null, null, page, size));
+        }
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProductsByCategory(categoryId, pageable));
     }
 
@@ -80,7 +100,10 @@ public class ProductController {
             @Parameter(description = "商品狀態") @PathVariable ProductStatus status,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProductsByStatus(status, page, size));
+        }
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.listProductsByStatus(status, pageable));
     }
 
@@ -90,7 +113,10 @@ public class ProductController {
             @Parameter(description = "關鍵字") @RequestParam String keyword,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        if (!currentUserService.isStaff()) {
+            return ApiResponse.success(productService.listPublicProducts(null, keyword, null, page, size));
+        }
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id")); // 固定排序，逐頁載入才不會重複或漏掉
         return ApiResponse.success(productService.searchProducts(keyword, pageable));
     }
 
@@ -117,5 +143,12 @@ public class ProductController {
             @Parameter(description = "商品 ID") @PathVariable Long id,
             @Parameter(description = "相冊圖片 ID 列表") @RequestBody java.util.List<Long> albumImageIds) {
         return ApiResponse.success("圖片已添加", productService.addAlbumImagesToProduct(id, albumImageIds));
+    }
+
+    /** 價格是否變更（空白與 0 視為相同） */
+    static boolean priceChanged(java.math.BigDecimal current, java.math.BigDecimal requested) {
+        java.math.BigDecimal before = current == null ? java.math.BigDecimal.ZERO : current;
+        java.math.BigDecimal after = requested == null ? java.math.BigDecimal.ZERO : requested;
+        return before.compareTo(after) != 0;
     }
 }

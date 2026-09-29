@@ -1,8 +1,8 @@
-import Shepherd from 'shepherd.js'
+import { createShepherdTour, type ShepherdTour, type ShepherdStepOptions } from './tour'
 import 'shepherd.js/dist/css/shepherd.css'
 
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過部落格管理導覽
 const TOUR_STORAGE_KEY = 'shopro-blog-tour-completed'
@@ -20,34 +20,15 @@ export const resetBlogTour = (): void => {
 }
 
 // 初始化導覽
-export const initBlogTour = (): Shepherd.Tour => {
+export const initBlogTour = (): ShepherdTour => {
   // 每次都創建新實例，避免重用舊的步驟
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建部落格管理導覽步驟
-export const createBlogTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createBlogTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',
@@ -141,12 +122,13 @@ export const createBlogTourSteps = (): Shepherd.Step.StepOptions[] => {
         element: () => {
           // 查找包含標籤的卡片
           const tabs = document.querySelectorAll('.q-tabs')
-          if (tabs.length > 0) {
-            const tabCard = tabs[0].closest('.q-card')
+          const firstTab = tabs[0]
+          if (firstTab) {
+            const tabCard = firstTab.closest('.q-card')
             if (tabCard) {
               return tabCard as HTMLElement
             }
-            return tabs[0] as HTMLElement
+            return firstTab as HTMLElement
           }
           // 如果找不到，返回第一個卡片作為後備
           const firstCard = document.querySelector('.q-card')

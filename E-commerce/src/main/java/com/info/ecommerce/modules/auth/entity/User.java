@@ -45,6 +45,18 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean enabled = true;
 
+    /**
+     * Email 是否已驗證。null 表示此欄位加入前就存在的帳號（視為已驗證）；
+     * 新註冊的會員為 false，完成驗證或以 Google 登入後為 true。
+     * 會員必須驗證 Email 後，才能以 Email 對應查看訂單等個人資料。
+     */
+    @Column(name = "email_verified")
+    private Boolean emailVerified;
+
+    public boolean isEmailConfirmed() {
+        return !Boolean.FALSE.equals(emailVerified);
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

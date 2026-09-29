@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class ProductCategoryService {
 
     private final ProductCategoryRepository categoryRepository;
+    private final com.info.ecommerce.modules.product.repository.ProductRepository productRepository;
 
     /**
      * 創建分類
@@ -58,6 +59,14 @@ public class ProductCategoryService {
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new BusinessException("分類不存在");
+        }
+        // 刪除後這些商品會無法儲存、前台也找不到分類：先請使用者移動商品與子分類
+        if (!categoryRepository.findByParentId(id).isEmpty()) {
+            throw new BusinessException("此分類下還有子分類，請先刪除或移動子分類");
+        }
+        long products = productRepository.countByCategoryId(id);
+        if (products > 0) {
+            throw new BusinessException("此分類下還有 " + products + " 個商品，請先將商品移到其他分類");
         }
         categoryRepository.deleteById(id);
     }

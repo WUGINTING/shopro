@@ -25,12 +25,14 @@ public class BlogController {
 
     private final BlogService blogService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建部落格文章")
     public ApiResponse<BlogPostDTO> createBlogPost(@Valid @RequestBody BlogPostDTO dto) {
         return ApiResponse.success("部落格文章已創建", blogService.createBlogPost(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新部落格文章")
     public ApiResponse<BlogPostDTO> updateBlogPost(
@@ -53,6 +55,7 @@ public class BlogController {
         return ApiResponse.success(blogService.getBlogPostBySlug(slug));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除部落格文章")
     public ApiResponse<Void> deleteBlogPost(
@@ -76,7 +79,10 @@ public class BlogController {
             @Parameter(description = "文章狀態") @PathVariable BlogStatus status,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        // 最新發布的文章在前（發布時間相同時依 ID）
+        Pageable pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("publishedAt"),
+                        org.springframework.data.domain.Sort.Order.desc("id")));
         return ApiResponse.success(blogService.listBlogPostsByStatus(status, pageable));
     }
 
@@ -100,6 +106,7 @@ public class BlogController {
         return ApiResponse.success(blogService.listBlogPostsByTag(tag, pageable));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/publish")
     @Operation(summary = "發布部落格文章")
     public ApiResponse<BlogPostDTO> publishBlogPost(
@@ -107,6 +114,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已發布", blogService.publishBlogPost(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/schedule")
     @Operation(summary = "排程發布部落格文章")
     public ApiResponse<BlogPostDTO> scheduleBlogPost(
@@ -116,6 +124,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已排程", blogService.scheduleBlogPost(id, scheduledAt));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/archive")
     @Operation(summary = "封存部落格文章")
     public ApiResponse<BlogPostDTO> archiveBlogPost(
@@ -123,6 +132,7 @@ public class BlogController {
         return ApiResponse.success("部落格文章已封存", blogService.archiveBlogPost(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/schedule-unpublish")
     @Operation(summary = "排程下架部落格文章")
     public ApiResponse<BlogPostDTO> scheduleUnpublishBlogPost(

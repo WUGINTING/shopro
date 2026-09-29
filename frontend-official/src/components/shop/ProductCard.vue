@@ -1,52 +1,60 @@
 <template>
-  <q-card class="product-card" flat bordered>
+  <q-card
+    class="product-card cursor-pointer"
+    flat
+    bordered
+    tabindex="0"
+    role="link"
+    :aria-label="product.name"
+    @click="emit('select', product)"
+    @keydown.enter="emit('select', product)"
+  >
     <!-- 商品標籤 -->
-    <div v-if="tag" :class="['shop-tag', tagClass]">
+    <div v-if="product.soldOut" class="shop-tag sold-out">售完</div>
+    <div v-else-if="tag" :class="['shop-tag', tagClass]">
       {{ tagText }}
     </div>
 
     <!-- 商品圖片 -->
     <div class="product-image-box">
       <q-img
-        :src="
-          product.image || 'https://via.placeholder.com/250x200?text=Product'
-        "
+        :src="product.image || PRODUCT_PLACEHOLDER"
         :alt="product.name"
         ratio="1"
+        loading="lazy"
         spinner-color="primary"
       >
         <template v-slot:error>
-          <div class="absolute-full flex flex-center bg-grey-3 text-grey-6">
-            <q-icon name="broken_image" size="50px" />
-          </div>
+          <img :src="PRODUCT_PLACEHOLDER" :alt="product.name" class="fallback-img" />
         </template>
       </q-img>
     </div>
 
     <!-- 商品詳情 -->
     <q-card-section class="product-details">
-      <div class="product-name text-subtitle1 q-mb-sm ellipsis">
+      <div class="product-name text-subtitle1 q-mb-sm">
         {{ product.name }}
       </div>
 
       <!-- 價格 -->
       <div class="product-price">
         <span v-if="product.originalPrice" class="original-price">
-          ${{ product.originalPrice.toLocaleString() }}
+          {{ formatCurrency(product.originalPrice) }}
         </span>
         <span class="current-price">
-          ${{ product.price.toLocaleString() }}
+          {{ formatCurrency(product.price) }}
         </span>
       </div>
 
-      <!-- 加入購物車按鈕 -->
+      <!-- 加入購物車按鈕（有規格的商品前往選擇規格） -->
       <q-btn
         unelevated
         color="dark"
         text-color="white"
         class="full-width q-mt-sm add-cart-btn"
-        label="加入購物車"
-        @click="handleAddToCart"
+        :label="buttonLabel"
+        :disable="product.soldOut"
+        @click.stop="emit('add-to-cart', product)"
       />
     </q-card-section>
   </q-card>
@@ -54,6 +62,8 @@
 
 <script setup>
 import { computed } from 'vue';
+import { formatCurrency } from 'src/utils/format.js';
+import { PRODUCT_PLACEHOLDER } from 'src/utils/product.js';
 
 const props = defineProps({
   product: {
@@ -62,7 +72,12 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['add-to-cart']);
+const emit = defineEmits(['add-to-cart', 'select']);
+
+const buttonLabel = computed(() => {
+  if (props.product.soldOut) return '已售完';
+  return props.product.hasSpecs ? '選擇規格' : '加入購物車';
+});
 
 // 計算商品標籤
 const tag = computed(() => props.product.tag);
@@ -84,10 +99,6 @@ const tagText = computed(() => {
   };
   return textMap[tag.value] || '';
 });
-
-const handleAddToCart = () => {
-  emit('add-to-cart', props.product);
-};
 </script>
 
 <style lang="scss" scoped>
@@ -105,9 +116,15 @@ const handleAddToCart = () => {
   background: white;
   border: 1px solid #eee;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     transform: translateY(-5px);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $shop-primary;
+    outline-offset: 2px;
   }
 }
 
@@ -135,6 +152,16 @@ const handleAddToCart = () => {
   &.pre-order {
     background: #9b59b6;
   }
+
+  &.sold-out {
+    background: #757575;
+  }
+}
+
+.fallback-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 // 商品圖片容器

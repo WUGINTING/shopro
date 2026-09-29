@@ -1,12 +1,14 @@
 package com.info.ecommerce.modules.order.controller;
 
 import com.info.ecommerce.common.ApiResponse;
-import com.info.ecommerce.modules.auth.repository.UserRepository;
+import com.info.ecommerce.modules.auth.service.CurrentUserService;
 import com.info.ecommerce.modules.crm.entity.Member;
-import com.info.ecommerce.modules.crm.repository.MemberRepository;
 import com.info.ecommerce.modules.order.dto.OrderDTO;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
+import com.info.ecommerce.modules.order.dto.OrderRefundRequest;
+import com.info.ecommerce.modules.order.service.OrderRefundService;
 import com.info.ecommerce.modules.order.service.OrderService;
+import com.info.ecommerce.modules.order.service.OrderStatusRules;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,10 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 /**
  * 訂單控制器 - 基礎 CRUD 操作
@@ -31,12 +30,12 @@ import java.util.Optional;
 public class OrderController {
 
     private final OrderService orderService;
-    private final UserRepository userRepository;
-    private final MemberRepository memberRepository;
+    private final CurrentUserService currentUserService;
+    private final OrderRefundService orderRefundService;
 
     @PostMapping
-    @Operation(summary = "創建訂單", description = "手動建立新訂單，包含選擇客戶、商品、金額")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
+    @Operation(summary = "創建訂單", description = "後台手動建立新訂單（顧客下單請使用 /api/storefront/orders/checkout，價格由後端計算）")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ApiResponse<OrderDTO> createOrder(@Valid @RequestBody OrderDTO dto) {
         return ApiResponse.success("訂單已建立", orderService.createOrder(dto));
     }
@@ -47,6 +46,9 @@ public class OrderController {
     public ApiResponse<OrderDTO> updateOrder(
             @Parameter(description = "訂單 ID") @PathVariable Long id,
             @Valid @RequestBody OrderDTO dto) {
+        if (dto.getStatus() == OrderStatus.PAID || dto.getStatus() == OrderStatus.REFUNDED) {
+            currentUserService.assertManagerOrAdmin("標記已付款 / 已退款只能由經理或管理員操作");
+        }
         return ApiResponse.success("訂單已更新", orderService.updateOrder(id, dto));
     }
 
@@ -55,7 +57,9 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     public ApiResponse<OrderDTO> getOrder(
             @Parameter(description = "訂單 ID") @PathVariable Long id) {
-        return ApiResponse.success(orderService.getOrder(id));
+        OrderDTO order = orderService.getOrder(id);
+        currentUserService.assertCanAccessOrder(order.getCustomerId(), order.getCustomerEmail());
+        return ApiResponse.success(order);
     }
 
     @DeleteMapping("/{id}")
@@ -89,32 +93,14 @@ public class OrderController {
     @Operation(summary = "取得我的訂單", description = "取得當前登入用戶的訂單列表（CUSTOMER 專用）")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<Page<OrderDTO>> getMyOrders(
-            Authentication authentication,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
-        // 從認證信息中獲取當前用戶名
-        String username = authentication.getName();
-        // 查找用戶以獲取用戶 ID
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用戶不存在: " + username));
-        Optional<Member> userOpt = memberRepository.findByEmail(user.getEmail()).stream().findFirst();
-
-        if(!userOpt.isPresent()) {
-            throw new RuntimeException("會員資料不存在: " + username);
-        }
-        Member member = userOpt.get();
-        Long customerId = member.getId();
-
-        // 注意：這裡假設 User.id == Order.customerId
-        // 如果系統中 User 和 Customer/Member 是分開的實體，可能需要通過 email 或其他方式匹配
+        // 會員與 CRM 會員資料以 Email 對應；尚未下過單的會員沒有 CRM 資料，回傳空清單
         Pageable pageable = PageRequest.of(page, size);
-        Page<OrderDTO> orders = orderService.listOrdersByCustomerId(customerId, pageable);
-
-        // 調試日誌（可在生產環境中移除）
-        System.out.println("User ID: " + customerId + ", Username: " + username);
-        System.out.println("Found orders count: " + orders.getTotalElements());
-
-        return ApiResponse.success(orders);
+        return ApiResponse.success(currentUserService.currentMember()
+                .map(Member::getId)
+                .map(customerId -> orderService.listOrdersByCustomerId(customerId, pageable))
+                .orElse(Page.empty(pageable)));
     }
 
     @GetMapping("/customer/{customerId}")
@@ -124,6 +110,7 @@ public class OrderController {
             @Parameter(description = "客戶 ID") @PathVariable Long customerId,
             @Parameter(description = "頁碼") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每頁數量") @RequestParam(defaultValue = "20") int size) {
+        currentUserService.assertCanAccessCustomer(customerId);
         Pageable pageable = PageRequest.of(page, size);
         return ApiResponse.success(orderService.listOrdersByCustomerId(customerId, pageable));
     }
@@ -158,7 +145,33 @@ public class OrderController {
             @Parameter(description = "新狀態") @RequestParam OrderStatus status,
             @Parameter(description = "操作者 ID") @RequestParam(required = false) Long operatorId,
             @Parameter(description = "操作者名稱") @RequestParam(required = false) String operatorName) {
+        // 手動標記已付款（未經金流）會觸發付款通知與會員累積消費，限經理或管理員
+        if (status == OrderStatus.PAID || status == OrderStatus.REFUNDED) {
+            currentUserService.assertManagerOrAdmin("標記已付款 / 已退款只能由經理或管理員操作");
+        }
         return ApiResponse.success("訂單狀態已更新",
             orderService.updateOrderStatus(id, status, operatorId, operatorName));
+    }
+
+    @PostMapping("/{id}/refund")
+    @Operation(summary = "登記退款", description = "於綠界後台或以匯款完成退款後登記；全額退款時訂單改為已退款並寄送通知")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<OrderDTO> refund(@Parameter(description = "訂單 ID") @PathVariable Long id,
+                                        @Valid @RequestBody OrderRefundRequest request) {
+        var operator = currentUserService.currentUser();
+        return ApiResponse.success("退款已登記", orderRefundService.refund(id, request,
+                operator.map(user -> user.getId()).orElse(null),
+                operator.map(user -> user.getUsername()).orElse(null)));
+    }
+
+    @GetMapping("/status-transitions")
+    @Operation(summary = "訂單狀態可變更方向", description = "各狀態可以改成哪些狀態（後台下拉選單使用）")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ApiResponse<java.util.Map<OrderStatus, java.util.Set<OrderStatus>>> statusTransitions() {
+        java.util.Map<OrderStatus, java.util.Set<OrderStatus>> transitions = new java.util.EnumMap<>(OrderStatus.class);
+        for (OrderStatus status : OrderStatus.values()) {
+            transitions.put(status, OrderStatusRules.nextStatuses(status));
+        }
+        return ApiResponse.success(transitions);
     }
 }

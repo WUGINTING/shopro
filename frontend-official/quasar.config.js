@@ -76,7 +76,7 @@ export default configure(function (ctx) {
           warning: '#f2c037',
         },
       },
-      plugins: ['Notify', 'Dialog', 'Loading'],
+      plugins: ['Notify', 'Dialog', 'Loading', 'Meta'],
     },
 
     animations: 'all',

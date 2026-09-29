@@ -34,8 +34,12 @@ const routes = [
         component: () => import('pages/shop/news/list.vue'),
       },
       {
-        path: '/shop/news/:id',
+        path: '/shop/news/:slug',
         component: () => import('pages/shop/news/detail.vue'),
+      },
+      {
+        path: '/shop/page/:slug',
+        component: () => import('pages/shop/page.vue'),
       },
       {
         path: '/shop/product/list',
@@ -48,6 +52,23 @@ const routes = [
       {
         path: '/shop/checkout',
         component: () => import('pages/shop/CheckoutPage.vue'),
+      },
+      {
+        path: '/shop/order/success',
+        component: () => import('pages/shop/order/success.vue'),
+      },
+      {
+        path: '/shop/order/lookup',
+        component: () => import('pages/shop/order/lookup.vue'),
+      },
+      {
+        path: '/shop/unsubscribe',
+        component: () => import('pages/shop/unsubscribe.vue'),
+      },
+      // 商店內找不到的網址顯示商店版 404
+      {
+        path: '/shop/:catchAll(.*)*',
+        component: () => import('pages/shop/NotFound.vue'),
       },
     ],
   },

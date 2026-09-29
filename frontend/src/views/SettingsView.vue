@@ -1,656 +1,241 @@
 <template>
   <q-page padding>
-    <div class="profile-container">
-      <!-- Header -->
-      <div class="text-h4 q-mb-md">系統設置</div>
+    <div class="settings-page">
+      <div class="text-h5 text-weight-bold q-mb-md">系統設定</div>
 
-      <!-- 頁籤導航 -->
-      <q-tabs v-model="activeTab" class="q-mb-md">
-        <q-tab name="system" label="系統設置" icon="settings" />
-        <q-tab name="email" label="郵件設置" icon="email" />
-        <q-tab name="notification" label="通知設置" icon="notifications" />
-        <q-tab name="security" label="安全設置" icon="security" />
+      <q-tabs v-model="tab" dense align="left" active-color="primary" indicator-color="primary" class="text-grey-8">
+        <q-tab name="shipping" label="運費設定" icon="local_shipping" no-caps />
+        <q-tab name="status" label="上線檢查" icon="fact_check" no-caps />
       </q-tabs>
+      <q-separator class="q-mb-md" />
 
-      <!-- 系統設置 -->
-      <q-tab-panels v-model="activeTab" animated>
-        <!-- System Settings Panel -->
-        <q-tab-panel name="system">
-          <q-card>
-            <q-card-section>
-              <q-form @submit="saveSystemSettings" class="q-gutter-md">
-                <div class="row q-col-gutter-md">
-                  <div class="col-12">
-                    <q-input
-                      v-model="systemSettings.storeName"
-                      label="商店名稱 *"
-                      outlined
-                      :rules="[val => !!val || '請輸入商店名稱']"
-                    />
-                  </div>
+      <q-tab-panels v-model="tab" animated class="bg-transparent">
+        <q-tab-panel name="shipping" class="q-pa-none">
+          <q-banner rounded class="bg-blue-1 text-blue-10 q-mb-md">
+            結帳運費依此設定計算：每種配送方式使用「啟用」且排序最前面的一筆。
+            沒有任何設定時，宅配運費 NT$100、滿 NT$1,000 免運，門市自取免運；某配送方式的設定全部停用時，前台不提供該配送方式。
+          </q-banner>
 
-                  <div class="col-12">
-                    <q-input
-                      v-model="systemSettings.storeDescription"
-                      label="商店描述"
-                      outlined
-                      type="textarea"
-                      rows="3"
-                    />
-                  </div>
+          <div class="row justify-end q-mb-sm">
+            <q-btn color="primary" unelevated no-caps icon="add" label="新增運費設定" @click="openEditor()" />
+          </div>
 
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model="systemSettings.storeEmail"
-                      label="商店郵箱 *"
-                      outlined
-                      type="email"
-                      :rules="[
-                        val => !!val || '請輸入商店郵箱',
-                        val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || '郵箱格式不正確'
-                      ]"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model="systemSettings.storePhone"
-                      label="商店電話 *"
-                      outlined
-                      :rules="[val => !!val || '請輸入商店電話']"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="systemSettings.storeAddress"
-                      label="商店地址"
-                      outlined
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-4">
-                    <q-select
-                      v-model="systemSettings.currency"
-                      label="貨幣 *"
-                      :options="['TWD', 'USD', 'CNY', 'JPY']"
-                      outlined
-                      :rules="[val => !!val || '請選擇貨幣']"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-4">
-                    <q-select
-                      v-model="systemSettings.timezone"
-                      label="時區 *"
-                      :options="['Asia/Taipei', 'Asia/Shanghai', 'Asia/Tokyo', 'UTC']"
-                      outlined
-                      :rules="[val => !!val || '請選擇時區']"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-4">
-                    <q-select
-                      v-model="systemSettings.language"
-                      label="語言 *"
-                      :options="['zh-TW', 'zh-CN', 'en-US', 'ja-JP']"
-                      outlined
-                      :rules="[val => !!val || '請選擇語言']"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model.number="systemSettings.taxRate"
-                      label="稅率 (%)"
-                      outlined
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model.number="systemSettings.shippingFeeRate"
-                      label="運費費率 (%)"
-                      outlined
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="systemSettings.enableNotification"
-                      label="啟用通知"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="systemSettings.enableEmail"
-                      label="啟用郵件"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="systemSettings.enableSMS"
-                      label="啟用簡訊"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="systemSettings.maintenanceMode"
-                      label="維護模式"
-                      color="warning"
-                    />
-                  </div>
-                </div>
-
-                <div class="row justify-end q-gutter-sm q-mt-md">
-                  <q-btn
-                    color="negative"
-                    label="重置為預設值"
-                    @click="resetToDefaults"
-                    flat
-                  />
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    label="保存設置"
-                    :loading="saving"
-                  />
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
+          <q-table :rows="configs" :columns="columns" row-key="id" flat bordered :loading="loading" :pagination="{ rowsPerPage: 0 }" hide-bottom>
+            <template #body-cell-enabled="props">
+              <q-td :props="props">
+                <q-toggle :model-value="props.row.enabled" @update:model-value="(value: boolean) => toggle(props.row, value)" />
+              </q-td>
+            </template>
+            <template #body-cell-actions="props">
+              <q-td :props="props">
+                <q-btn flat dense round icon="edit" color="primary" @click="openEditor(props.row)"><q-tooltip>編輯</q-tooltip></q-btn>
+                <q-btn flat dense round icon="delete" color="negative" @click="remove(props.row)"><q-tooltip>刪除</q-tooltip></q-btn>
+              </q-td>
+            </template>
+            <template #no-data>
+              <div class="full-width text-center text-grey-7 q-pa-md">尚未設定，目前使用預設運費（宅配 NT$100、滿 NT$1,000 免運；門市自取免運）。</div>
+            </template>
+          </q-table>
         </q-tab-panel>
 
-        <!-- Email Settings Panel -->
-        <q-tab-panel name="email">
-          <q-card>
-            <q-card-section>
-              <q-form @submit="saveEmailSettings" class="q-gutter-md">
-                <div class="row q-col-gutter-md">
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model="emailSettings.smtpServer"
-                      label="SMTP 伺服器 *"
-                      outlined
-                      :rules="[val => !!val || '請輸入 SMTP 伺服器']"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model.number="emailSettings.smtpPort"
-                      label="SMTP 端口 *"
-                      outlined
-                      type="number"
-                      :rules="[val => !!val || '請輸入 SMTP 端口']"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="emailSettings.smtpUsername"
-                      label="SMTP 使用者名稱"
-                      outlined
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="emailSettings.smtpPassword"
-                      label="SMTP 密碼"
-                      outlined
-                      type="password"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="emailSettings.emailFrom"
-                      label="寄件人地址 *"
-                      outlined
-                      type="email"
-                      :rules="[
-                        val => !!val || '請輸入寄件人地址',
-                        val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || '郵箱格式不正確'
-                      ]"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="emailSettings.emailReplyTo"
-                      label="回覆地址"
-                      outlined
-                      type="email"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-toggle
-                      v-model="emailSettings.enableTLS"
-                      label="啟用 TLS"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-toggle
-                      v-model="emailSettings.enableSSL"
-                      label="啟用 SSL"
-                      color="positive"
-                    />
-                  </div>
-                </div>
-
-                <div class="row justify-end q-gutter-sm q-mt-md">
-                  <q-btn
-                    color="info"
-                    label="測試郵件設置"
-                    @click="testEmailSettings"
-                    flat
-                  />
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    label="保存郵件設置"
-                    :loading="saving"
-                  />
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
-        </q-tab-panel>
-
-        <!-- Notification Settings Panel -->
-        <q-tab-panel name="notification">
-          <q-card>
-            <q-card-section>
-              <q-form @submit="saveNotificationSettings" class="q-gutter-md">
-                <div class="row q-col-gutter-md">
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="notificationSettings.orderNotification"
-                      label="訂單通知"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="notificationSettings.paymentNotification"
-                      label="支付通知"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="notificationSettings.userRegistrationNotification"
-                      label="使用者註冊通知"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="notificationSettings.lowStockNotification"
-                      label="低庫存通知"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="notificationSettings.notificationEmail"
-                      label="通知郵箱"
-                      outlined
-                      type="email"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model="notificationSettings.notificationPhone"
-                      label="通知電話"
-                      outlined
-                    />
-                  </div>
-                </div>
-
-                <div class="row justify-end q-gutter-sm q-mt-md">
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    label="保存通知設置"
-                    :loading="saving"
-                  />
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
-        </q-tab-panel>
-
-        <!-- Security Settings Panel -->
-        <q-tab-panel name="security">
-          <q-card>
-            <q-card-section>
-              <q-form @submit="saveSecuritySettings" class="q-gutter-md">
-                <div class="row q-col-gutter-md">
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model.number="securitySettings.passwordMinLength"
-                      label="密碼最小長度"
-                      outlined
-                      type="number"
-                      min="1"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model.number="securitySettings.passwordMaxLength"
-                      label="密碼最大長度"
-                      outlined
-                      type="number"
-                      min="1"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="securitySettings.requireUppercase"
-                      label="密碼需要大寫字母"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="securitySettings.requireLowercase"
-                      label="密碼需要小寫字母"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="securitySettings.requireNumbers"
-                      label="密碼需要數字"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="securitySettings.requireSpecialChars"
-                      label="密碼需要特殊字符"
-                      color="positive"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-input
-                      v-model.number="securitySettings.sessionTimeout"
-                      label="會話超時 (分鐘)"
-                      outlined
-                      type="number"
-                      min="1"
-                    />
-                  </div>
-
-                  <div class="col-12">
-                    <q-toggle
-                      v-model="securitySettings.twoFactorAuthEnabled"
-                      label="啟用雙因素驗證"
-                      color="positive"
-                    />
-                  </div>
-                </div>
-
-                <div class="row justify-end q-gutter-sm q-mt-md">
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    label="保存安全設置"
-                    :loading="saving"
-                  />
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
+        <q-tab-panel name="status" class="q-pa-none">
+          <q-banner rounded class="bg-grey-2 q-mb-md">
+            以下項目透過伺服器環境變數設定（見部署文件 docs/deployment-guide.md），修改後需重新啟動後端。
+          </q-banner>
+          <q-list bordered separator class="rounded-borders bg-white">
+            <q-item v-for="check in checks" :key="check.key">
+              <q-item-section avatar>
+                <q-icon :name="check.ok ? 'check_circle' : 'warning'" :color="check.ok ? 'positive' : 'orange-8'" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{ check.label }}</q-item-label>
+                <q-item-label caption>{{ check.detail }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item v-if="statusInfo">
+              <q-item-section avatar><q-icon name="schedule" color="primary" /></q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">未付款訂單處理</q-item-label>
+                <q-item-label caption>
+                  綠界 ATM / 超商代碼繳費期限 {{ statusInfo.ecpayExpireDays }} 天；線上付款訂單
+                  {{ statusInfo.unpaidTimeoutHours > 0 ? `${statusInfo.unpaidTimeoutHours} 小時未付款自動取消並歸還庫存` : '不會自動取消' }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
         </q-tab-panel>
       </q-tab-panels>
     </div>
+
+    <q-dialog v-model="showEditor">
+      <q-card style="width: 520px; max-width: 95vw">
+        <q-card-section class="text-h6">{{ editing.id ? '編輯運費設定' : '新增運費設定' }}</q-card-section>
+        <q-card-section class="q-gutter-md">
+          <q-select
+            v-model="editing.shippingMethod"
+            outlined
+            dense
+            emit-value
+            map-options
+            label="配送方式 *"
+            :options="[{ label: '宅配到府', value: 'HOME_DELIVERY' }, { label: '門市自取', value: 'STORE_PICKUP' }]"
+          />
+          <q-input v-model="editing.providerName" outlined dense label="物流商 / 名稱 *" hint="例如：黑貓宅急便、門市自取" />
+          <div class="row q-col-gutter-md">
+            <div class="col-6">
+              <q-input v-model.number="editing.baseShippingFee" outlined dense type="number" prefix="NT$" label="運費 *" />
+            </div>
+            <div class="col-6">
+              <q-input v-model.number="editing.freeShippingThreshold" outlined dense type="number" prefix="NT$" label="免運門檻" hint="空白或 0 表示沒有免運" clearable />
+            </div>
+          </div>
+          <div class="row q-col-gutter-md">
+            <div class="col-6">
+              <q-input v-model.number="editing.estimatedDeliveryDays" outlined dense type="number" label="預計到貨天數" />
+            </div>
+            <div class="col-6">
+              <q-input v-model.number="editing.sortOrder" outlined dense type="number" label="排序（小的優先）" />
+            </div>
+          </div>
+          <q-toggle v-model="editing.enabled" label="啟用" />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="取消" v-close-popup />
+          <q-btn color="primary" unelevated label="儲存" :loading="saving" @click="save" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import systemSettingsApi, { 
-  type SystemSettings, 
-  type EmailSettings, 
-  type NotificationSettings, 
-  type SecuritySettings 
-} from '@/api/settings'
+import { onMounted, ref, watch } from 'vue'
+import { useQuasar, type QTableColumn } from 'quasar'
+import { shippingConfigApi, systemStatusApi, type ShippingConfig, type SystemCheck } from '@/api/shippingConfig'
 
 const $q = useQuasar()
-
-const activeTab = ref('system')
+const tab = ref<'shipping' | 'status'>('shipping')
+const configs = ref<ShippingConfig[]>([])
+const loading = ref(false)
+const showEditor = ref(false)
 const saving = ref(false)
+const checks = ref<SystemCheck[]>([])
+const statusInfo = ref<{ unpaidTimeoutHours: number; ecpayExpireDays: number } | null>(null)
 
-const systemSettings = ref<Partial<SystemSettings>>({
-  storeName: '',
-  storeDescription: '',
-  storeEmail: '',
-  storePhone: '',
-  storeAddress: '',
-  currency: 'TWD',
-  timezone: 'Asia/Taipei',
-  language: 'zh-TW',
-  taxRate: 0,
-  shippingFeeRate: 0,
-  enableNotification: true,
-  enableEmail: true,
-  enableSMS: false,
-  maintenanceMode: false
+const emptyConfig = (): ShippingConfig => ({
+  providerName: '',
+  enabled: true,
+  shippingMethod: 'HOME_DELIVERY',
+  baseShippingFee: 100,
+  freeShippingThreshold: 1000,
+  estimatedDeliveryDays: 3,
+  sortOrder: 1,
+  testMode: false
+})
+const editing = ref<ShippingConfig>(emptyConfig())
+
+const methodLabel = (method: string) => (method === 'STORE_PICKUP' ? '門市自取' : '宅配到府')
+const money = (value?: number | null) => (value == null || Number(value) === 0 ? '—' : `NT$ ${Number(value).toLocaleString()}`)
+
+const columns: QTableColumn<ShippingConfig>[] = [
+  { name: 'shippingMethod', label: '配送方式', field: 'shippingMethod', align: 'left', format: methodLabel },
+  { name: 'providerName', label: '名稱', field: 'providerName', align: 'left' },
+  { name: 'baseShippingFee', label: '運費', field: 'baseShippingFee', align: 'right', format: (value: number) => `NT$ ${Number(value || 0).toLocaleString()}` },
+  { name: 'freeShippingThreshold', label: '免運門檻', field: 'freeShippingThreshold', align: 'right', format: money },
+  { name: 'sortOrder', label: '排序', field: 'sortOrder', align: 'center' },
+  { name: 'enabled', label: '啟用', field: 'enabled', align: 'center' },
+  { name: 'actions', label: '操作', field: 'id', align: 'center' }
+]
+
+const loadConfigs = async () => {
+  loading.value = true
+  try {
+    const response = await shippingConfigApi.list()
+    configs.value = response.data?.content ?? []
+  } catch {
+    configs.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadStatus = async () => {
+  try {
+    const response = await systemStatusApi.get()
+    checks.value = response.data?.checks ?? []
+    statusInfo.value = response.data ? { unpaidTimeoutHours: response.data.unpaidTimeoutHours, ecpayExpireDays: response.data.ecpayExpireDays } : null
+  } catch {
+    checks.value = []
+  }
+}
+
+const openEditor = (config?: ShippingConfig) => {
+  editing.value = config ? { ...config } : emptyConfig()
+  showEditor.value = true
+}
+
+const payloadOf = (config: ShippingConfig): ShippingConfig => ({
+  ...config,
+  shippingMethodName: methodLabel(config.shippingMethod),
+  freeShippingThreshold: config.freeShippingThreshold ? Number(config.freeShippingThreshold) : null,
+  testMode: config.testMode ?? false
 })
 
-const emailSettings = ref<Partial<EmailSettings>>({
-  smtpServer: '',
-  smtpPort: 587,
-  smtpUsername: '',
-  smtpPassword: '',
-  emailFrom: '',
-  emailReplyTo: '',
-  enableTLS: true,
-  enableSSL: false
-})
-
-const notificationSettings = ref<Partial<NotificationSettings>>({
-  orderNotification: true,
-  paymentNotification: true,
-  userRegistrationNotification: false,
-  lowStockNotification: true,
-  notificationEmail: '',
-  notificationPhone: ''
-})
-
-const securitySettings = ref<Partial<SecuritySettings>>({
-  passwordMinLength: 6,
-  passwordMaxLength: 32,
-  requireUppercase: true,
-  requireLowercase: true,
-  requireNumbers: true,
-  requireSpecialChars: false,
-  sessionTimeout: 30,
-  twoFactorAuthEnabled: false
-})
-
-const saveSystemSettings = async () => {
+const save = async () => {
+  if (!editing.value.providerName?.trim() || editing.value.baseShippingFee == null || Number(editing.value.baseShippingFee) < 0) {
+    $q.notify({ type: 'warning', message: '請填寫名稱與運費' })
+    return
+  }
   saving.value = true
   try {
-    await systemSettingsApi.updateSystemSettings(systemSettings.value)
-    $q.notify({
-      type: 'positive',
-      message: '系統設置已保存',
-      position: 'top'
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '保存系統設置失敗',
-      position: 'top'
-    })
+    const payload = payloadOf(editing.value)
+    if (editing.value.id) {
+      await shippingConfigApi.update(editing.value.id, payload)
+    } else {
+      await shippingConfigApi.create(payload)
+    }
+    $q.notify({ type: 'positive', message: '運費設定已儲存' })
+    showEditor.value = false
+    loadConfigs()
+  } catch {
+    // 錯誤訊息由系統通知顯示
   } finally {
     saving.value = false
   }
 }
 
-const saveEmailSettings = async () => {
-  saving.value = true
+const toggle = async (config: ShippingConfig, enabled: boolean) => {
+  if (!config.id) return
   try {
-    await systemSettingsApi.updateEmailSettings(emailSettings.value)
-    $q.notify({
-      type: 'positive',
-      message: '郵件設置已保存',
-      position: 'top'
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '保存郵件設置失敗',
-      position: 'top'
-    })
-  } finally {
-    saving.value = false
+    await shippingConfigApi.update(config.id, payloadOf({ ...config, enabled }))
+    loadConfigs()
+  } catch {
+    // 錯誤訊息由系統通知顯示
   }
 }
 
-const saveNotificationSettings = async () => {
-  saving.value = true
-  try {
-    await systemSettingsApi.updateNotificationSettings(notificationSettings.value)
-    $q.notify({
-      type: 'positive',
-      message: '通知設置已保存',
-      position: 'top'
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '保存通知設置失敗',
-      position: 'top'
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-const saveSecuritySettings = async () => {
-  saving.value = true
-  try {
-    await systemSettingsApi.updateSecuritySettings(securitySettings.value)
-    $q.notify({
-      type: 'positive',
-      message: '安全設置已保存',
-      position: 'top'
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '保存安全設置失敗',
-      position: 'top'
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-const resetToDefaults = () => {
-  $q.dialog({
-    title: '確認重置',
-    message: '確定要重置為預設值嗎？此操作無法撤銷。',
-    cancel: true,
-    persistent: true
-  }).onOk(async () => {
+const remove = (config: ShippingConfig) => {
+  if (!config.id) return
+  $q.dialog({ title: '刪除運費設定', message: `確定刪除「${config.providerName}」？`, cancel: true }).onOk(async () => {
     try {
-      await systemSettingsApi.resetToDefaults()
-      $q.notify({
-        type: 'positive',
-        message: '已重置為預設值',
-        position: 'top'
-      })
-      // Reload settings
-      loadAllSettings()
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: '重置失敗',
-        position: 'top'
-      })
+      await shippingConfigApi.remove(config.id!)
+      loadConfigs()
+    } catch {
+      // 錯誤訊息由系統通知顯示
     }
   })
 }
 
-const testEmailSettings = async () => {
-  const testEmail = $q.dialog({
-    title: '測試郵件設置',
-    message: '請輸入測試郵箱地址：',
-    prompt: {
-      model: '',
-      type: 'email',
-      outlined: true
-    },
-    cancel: true,
-    persistent: true
-  }).onOk(async (data) => {
-    try {
-      await systemSettingsApi.testEmailSettings(data)
-      $q.notify({
-        type: 'positive',
-        message: '測試郵件已發送',
-        position: 'top'
-      })
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: '測試郵件發送失敗',
-        position: 'top'
-      })
-    }
-  })
-}
-
-const loadAllSettings = async () => {
-  try {
-    const settings = await systemSettingsApi.getAllSettings()
-    // Update settings from response
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: '加載設置失敗',
-      position: 'top'
-    })
-  }
-}
-
-onMounted(() => {
-  loadAllSettings()
+watch(tab, (value) => {
+  if (value === 'status') loadStatus()
 })
+
+onMounted(loadConfigs)
 </script>
 
+<style scoped>
+.settings-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+</style>

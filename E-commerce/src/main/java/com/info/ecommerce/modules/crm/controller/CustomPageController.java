@@ -23,12 +23,14 @@ public class CustomPageController {
 
     private final CustomPageService customPageService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建自訂頁面")
     public ApiResponse<CustomPageDTO> createCustomPage(@Valid @RequestBody CustomPageDTO dto) {
         return ApiResponse.success("自訂頁面已創建", customPageService.createCustomPage(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新自訂頁面")
     public ApiResponse<CustomPageDTO> updateCustomPage(
@@ -51,6 +53,7 @@ public class CustomPageController {
         return ApiResponse.success(customPageService.getCustomPageBySlug(slug));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除自訂頁面")
     public ApiResponse<Void> deleteCustomPage(
@@ -80,6 +83,7 @@ public class CustomPageController {
         return ApiResponse.success(customPageService.listEnabledCustomPages());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}/toggle-enabled")
     @Operation(summary = "切換自訂頁面啟用狀態")
     public ApiResponse<CustomPageDTO> toggleEnabled(

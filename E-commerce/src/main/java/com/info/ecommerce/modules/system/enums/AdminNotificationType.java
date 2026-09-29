@@ -5,5 +5,6 @@ public enum AdminNotificationType {
     PAYMENT_COMPLETED,
     ORDER_CANCELLED,
     ORDER_QA,
-    STOCK_LOW
+    STOCK_LOW,
+    CONTACT_MESSAGE
 }

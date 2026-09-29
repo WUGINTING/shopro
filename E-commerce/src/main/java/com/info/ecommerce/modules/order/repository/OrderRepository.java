@@ -15,9 +15,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long> {
+public interface OrderRepository extends JpaRepository<Order, Long>, OrderRepositoryCustom {
     
     Optional<Order> findByOrderNumber(String orderNumber);
+
+    List<Order> findByOrderNumberStartingWith(String orderNumberPrefix);
+
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdBefore);
     
     Page<Order> findByCustomerId(Long customerId, Pageable pageable);
     
@@ -67,4 +71,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     );
     
     boolean existsByOrderNumber(String orderNumber);
+
+    /** 會員在指定狀態下的訂單總金額（用於計算累計消費） */
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.customerId = :customerId AND o.status IN :statuses")
+    BigDecimal sumTotalAmountByCustomerIdAndStatusIn(@Param("customerId") Long customerId,
+                                                     @Param("statuses") java.util.Collection<OrderStatus> statuses);
 }

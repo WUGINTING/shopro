@@ -144,7 +144,15 @@
 
       <!-- Products Table -->
       <q-card class="table-shell-card">
+        <div v-if="selectedProducts.length > 0" class="row items-center q-gutter-sm q-pa-sm bg-blue-1">
+          <div class="text-body2">已選 {{ selectedProducts.length }} 項商品</div>
+          <q-btn dense unelevated color="positive" no-caps icon="publish" label="批次上架" @click="batchSetStatus(true)" />
+          <q-btn dense unelevated color="grey-7" no-caps icon="unpublished" label="批次下架" @click="batchSetStatus(false)" />
+          <q-btn dense flat no-caps label="取消選取" @click="selectedProducts = []" />
+        </div>
         <q-table
+          v-model:selected="selectedProducts"
+          selection="multiple"
           :rows="products"
           :columns="columns"
           row-key="id"
@@ -161,7 +169,7 @@
               <q-card flat bordered class="mobile-product-card">
                 <q-card-section class="row items-center">
                   <q-avatar v-if="getProductImageUrl(props.row)" rounded size="60px" class="q-mr-md">
-                    <q-img :src="getProductImageUrl(props.row)" :ratio="1" loading="lazy" @error="handleImageError($event, props.row)">
+                    <q-img :src="getProductImageUrl(props.row) || undefined" :ratio="1" loading="lazy" @error="handleImageError($event, props.row)">
                       <template v-slot:error>
                         <div class="absolute-full flex flex-center bg-grey-3">
                           <q-icon name="broken_image" color="grey-6" size="24px" />
@@ -178,8 +186,8 @@
                     <div class="row items-center q-gutter-xs q-mt-xs">
                       <q-badge :color="getStatusColor(props.row.status)" :label="getStatusLabel(props.row.status)" />
                       <q-badge
-                        :color="props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
-                        :label="'庫存: ' + props.row.stock"
+                        :color="props.row.stock == null || props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                        :label="props.row.stock == null ? '庫存: 不限量' : '庫存: ' + props.row.stock"
                       />
                     </div>
                   </div>
@@ -210,7 +218,7 @@
             <q-td :props="props">
               <q-avatar v-if="getProductImageUrl(props.row)" rounded size="50px">
                 <q-img
-                  :src="getProductImageUrl(props.row)"
+                  :src="getProductImageUrl(props.row) || undefined"
                   :ratio="1"
                   loading="lazy"
                   @error="handleImageError($event, props.row)"
@@ -249,11 +257,11 @@
             <q-td :props="props">
               <div class="row items-center no-wrap q-gutter-xs">
                 <q-badge
-                  :color="(props.row.stock ?? 0) > 10 ? 'positive' : (props.row.stock ?? 0) > 0 ? 'warning' : 'negative'"
-                  :label="props.row.stock ?? 0"
+                  :color="props.row.stock == null || props.row.stock > 10 ? 'positive' : props.row.stock > 0 ? 'warning' : 'negative'"
+                  :label="props.row.stock == null ? '不限量' : props.row.stock"
                 />
                 <q-icon
-                  v-if="(props.row.stock ?? 0) <= 10"
+                  v-if="props.row.stock != null && props.row.stock <= 10"
                   name="warning"
                   :color="(props.row.stock ?? 0) === 0 ? 'negative' : 'warning'"
                   size="16px"
@@ -261,7 +269,7 @@
                   <q-tooltip>{{ (props.row.stock ?? 0) === 0 ? '已缺貨' : '庫存不足' }}</q-tooltip>
                 </q-icon>
                 <q-btn
-                  v-if="(props.row.stock ?? 0) <= 10"
+                  v-if="props.row.stock == null || props.row.stock <= 10"
                   flat
                   dense
                   round
@@ -352,22 +360,52 @@
               />
 
               <div class="row q-col-gutter-md q-mb-md">
-                <div class="col-6">
+                <div class="col-12 col-sm-4">
                   <q-input
                     v-model.number="form.price"
-                    label="價格 *"
+                    label="定價 *"
                     outlined
                     type="number"
                     prefix="$"
                     :rules="[val => val >= 0 || '價格不可小於 0']"
                   />
                 </div>
-                <div class="col-6">
+                <div class="col-12 col-sm-4">
+                  <q-input
+                    v-model.number="form.salePrice"
+                    label="特價（選填）"
+                    outlined
+                    clearable
+                    type="number"
+                    prefix="$"
+                    hint="有填寫且低於定價時，前台以特價銷售"
+                    :rules="[val => val === null || val === undefined || val === '' || (val >= 0 && val < (form.price ?? 0)) || '特價須低於定價']"
+                  />
+                </div>
+                <div class="col-12 col-sm-4">
+                  <q-input
+                    v-model.number="form.costPrice"
+                    label="成本（選填）"
+                    outlined
+                    clearable
+                    type="number"
+                    prefix="$"
+                    hint="僅後台可見，用於毛利計算"
+                  />
+                </div>
+              </div>
+
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12 col-sm-6">
                   <q-input
                     v-model.number="form.stock"
                     label="庫存 *"
                     outlined
                     type="number"
+                    :disable="specifications.length > 0"
+                    :hint="specifications.length > 0
+                      ? '此商品有規格，庫存請在「規格」分頁逐一設定'
+                      : (form.id ? '不修改就不會變動；修改後會直接設定為此數量（期間賣出的數量會被覆寫）' : '')"
                     :rules="[val => val >= 0 || '庫存不可小於 0']"
                   />
                 </div>
@@ -512,7 +550,7 @@
                     <div v-if="form.id && selectedAlbumImages.length > 0" class="row q-col-gutter-sm">
                       <div
                         v-for="(img, index) in selectedAlbumImages"
-                        :key="img.id"
+                        :key="img.id ?? img.imageUrl"
                         class="col-12 col-sm-6 col-md-4 col-lg-3"
                       >
                         <div class="selected-image-card" :class="{ 'selected-image-card--primary': isPrimarySelectedImage(index) }">
@@ -535,7 +573,7 @@
                                 color="white"
                                 icon="close"
                                 size="sm"
-                                @click="removeSelectedImage(img.id)"
+                                @click="removeSelectedImage(index)"
                                 aria-label="移除圖片"
                               >
                                 <q-tooltip>移除圖片</q-tooltip>
@@ -875,19 +913,19 @@
                   <!-- 手動區塊（區塊1~3） -->
                   <div class="q-mb-lg">
                     <div class="text-subtitle1 q-mb-md text-weight-bold">手動區塊（區塊1~3）</div>
-                    <div v-for="blockNum in 3" :key="`manual-${blockNum}`" class="q-mb-md">
+                    <div v-for="(block, blockIndex) in manualBlocks" :key="`manual-${blockIndex + 1}`" class="q-mb-md">
                       <q-card flat bordered>
                         <q-card-section>
-                          <div class="text-subtitle2 q-mb-sm">區塊 {{ blockNum }}</div>
+                          <div class="text-subtitle2 q-mb-sm">區塊 {{ blockIndex + 1 }}</div>
                           <q-input
-                            v-model="manualBlocks[blockNum - 1].title"
+                            v-model="block.title"
                             label="區塊標題"
                             outlined
                             dense
                             class="q-mb-sm"
                           />
                           <q-input
-                            v-model="manualBlocks[blockNum - 1].content"
+                            v-model="block.content"
                             label="區塊內容"
                             outlined
                             type="textarea"
@@ -895,13 +933,13 @@
                             class="q-mb-sm"
                           />
                           <q-input
-                            v-model="manualBlocks[blockNum - 1].imageUrl"
+                            v-model="block.imageUrl"
                             label="區塊圖片URL"
                             outlined
                             dense
                           />
                           <q-toggle
-                            v-model="manualBlocks[blockNum - 1].enabled"
+                            v-model="block.enabled"
                             label="啟用此區塊"
                             class="q-mt-sm"
                           />
@@ -923,22 +961,22 @@
                         @click="initializeAutoBlocks"
                       />
                     </div>
-                    <div v-for="blockNum in 7" :key="`auto-${blockNum}`" class="q-mb-md">
+                    <div v-for="(block, blockIndex) in autoBlocks" :key="`auto-${blockIndex + 1}`" class="q-mb-md">
                       <q-card flat bordered>
                         <q-card-section>
                           <div class="row items-center justify-between q-mb-sm">
-                            <div class="text-subtitle2">自動區塊 {{ blockNum }}</div>
-                            <q-badge v-if="autoBlocks[blockNum - 1]?.isAutoGenerated" color="info" label="自動生成" />
+                            <div class="text-subtitle2">自動區塊 {{ blockIndex + 1 }}</div>
+                            <q-badge v-if="block.isAutoGenerated" color="info" label="自動生成" />
                           </div>
                           <q-input
-                            v-model="autoBlocks[blockNum - 1].title"
+                            v-model="block.title"
                             label="區塊標題"
                             outlined
                             dense
                             class="q-mb-sm"
                           />
                           <q-input
-                            v-model="autoBlocks[blockNum - 1].content"
+                            v-model="block.content"
                             label="區塊內容"
                             outlined
                             type="textarea"
@@ -946,13 +984,13 @@
                             class="q-mb-sm"
                           />
                           <q-input
-                            v-model="autoBlocks[blockNum - 1].imageUrl"
+                            v-model="block.imageUrl"
                             label="區塊圖片URL"
                             outlined
                             dense
                           />
                           <q-toggle
-                            v-model="autoBlocks[blockNum - 1].enabled"
+                            v-model="block.enabled"
                             label="啟用此區塊"
                             class="q-mt-sm"
                           />
@@ -1014,11 +1052,12 @@
                 <div class="col-6">
                   <q-input
                     v-model.number="specForm.price"
-                    label="規格價格 *"
+                    label="規格價格"
+                    hint="0 或空白 = 與商品售價相同"
                     outlined
                     type="number"
-                    prefix="¥"
-                    :rules="[val => val >= 0 || '價格不能為負數']"
+                    prefix="NT$"
+                    :rules="[val => val === null || val === '' || val >= 0 || '價格不能為負數']"
                   />
                 </div>
                 <div class="col-6">
@@ -1027,7 +1066,7 @@
                     label="規格成本"
                     outlined
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                   />
                 </div>
               </div>
@@ -1220,12 +1259,26 @@
               <div class="text-caption text-grey-7">
                 目前庫存：
                 <q-badge
-                  :color="(restockProduct.stock ?? 0) > 10 ? 'positive' : (restockProduct.stock ?? 0) > 0 ? 'warning' : 'negative'"
+                  v-if="restockProduct.stock != null"
+                  :color="restockProduct.stock > 10 ? 'positive' : restockProduct.stock > 0 ? 'warning' : 'negative'"
                 >
-                  {{ restockProduct.stock ?? 0 }}
+                  {{ restockProduct.stock }}
                 </q-badge>
+                <span v-else>未追蹤（不限量）</span>
               </div>
             </div>
+
+            <q-select
+              v-if="restockSpecs.length > 0"
+              v-model="restockSpecId"
+              outlined
+              dense
+              emit-value
+              map-options
+              label="補貨規格 *"
+              class="q-mb-md"
+              :options="restockSpecs.map((spec) => ({ label: `${spec.specName}（目前 ${spec.stock ?? '不限量'}）`, value: spec.id }))"
+            />
 
             <q-input
               v-model.number="restockQuantity"
@@ -1269,7 +1322,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
+import { productApi, categoryApi, productDescriptionBlockApi, productSpecificationApi, type Product, type ProductDisplayStatus, type ProductCategory, type ProductDescriptionBlock, type ProductSpecification, type PageResponse } from '@/api'
 import { albumApi, type Album, type AlbumImage } from '@/api/album'
 import { inventoryApi, type InventoryAlert } from '@/api/inventory'
 import { startProductTour, isProductTourCompleted } from '@/utils/productTour'
@@ -1277,7 +1330,10 @@ import { useDebouncedRef } from '@/composables/useDebounce'
 
 const $q = useQuasar()
 
-const products = ref<Product[]>([])
+// 列表與表單中的商品狀態已轉換為前端顯示用狀態（PUBLISHED / UNPUBLISHED）
+type ProductRow = Omit<Product, 'status'> & { status?: ProductDisplayStatus }
+
+const products = ref<ProductRow[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const dialogTab = ref('basic')
@@ -1308,6 +1364,7 @@ watch(specImageFile, (file) => {
 const specifications = ref<ProductSpecification[]>([])
 const specLoading = ref(false)
 const showSpecDialog = ref(false)
+const originalSpecStock = ref<number | undefined>(undefined)
 const specForm = ref<ProductSpecification>({
   productId: undefined,
   specName: '',
@@ -1389,8 +1446,10 @@ const updateSpecificationField = async (
   specFieldSaving.value[key] = true
 
   try {
+    // 只有修改庫存欄位時才送出 stock，其他欄位不帶庫存，避免覆寫期間已賣出的數量
     await productSpecificationApi.updateSpecification(spec.id, {
       ...spec,
+      stock: undefined,
       [field]: normalizedValue
     })
 
@@ -1442,7 +1501,7 @@ const specImagePreviewObjectUrl = ref('')
 // 庫存管理相關狀態
 const inventoryAlerts = ref<InventoryAlert[]>([])
 const showRestockDialog = ref(false)
-const restockProduct = ref<Product | null>(null)
+const restockProduct = ref<ProductRow | null>(null)
 const restockQuantity = ref(0)
 const restockLoading = ref(false)
 const selectedProductImageFileName = computed(() => {
@@ -1457,7 +1516,29 @@ const selectedImageCount = computed(() => {
 })
 const specImagePreviewUrl = computed(() => specImagePreviewObjectUrl.value || specForm.value.image || '')
 
-const form = ref<Product>({
+// 批次上架 / 下架
+const selectedProducts = ref<ProductRow[]>([])
+const batchSetStatus = async (activate: boolean) => {
+  const ids = selectedProducts.value.map((product) => product.id).filter((id): id is number => typeof id === 'number')
+  if (ids.length === 0) return
+  try {
+    if (activate) {
+      await productApi.batchActivate(ids)
+    } else {
+      await productApi.batchDeactivate(ids)
+    }
+    $q.notify({ type: 'positive', message: `已${activate ? '上架' : '下架'} ${ids.length} 項商品`, position: 'top' })
+    selectedProducts.value = []
+    loadProducts()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+}
+
+// 開啟編輯時的庫存；送出時未修改就不送 stock，避免覆寫期間已賣出的庫存
+const originalStock = ref<number | undefined>(undefined)
+
+const form = ref<ProductRow>({
   name: '',
   description: '',
   price: 0,
@@ -1510,22 +1591,14 @@ const productMetrics = computed(() => {
     total: list.length,
     published: list.filter((p) => p.status === 'PUBLISHED').length,
     draft: list.filter((p) => p.status === 'DRAFT').length,
-    lowStock: list.filter((p) => Number(p.stock || 0) <= 10).length
+    lowStock: list.filter((p) => p.stock != null && Number(p.stock) <= 10).length
   }
 })
 
 const loadProducts = async () => {
   loading.value = true
   try {
-    const response = await productApi.getProducts()
-    console.log('[loadProducts] API 回應:', response)
-    const data = response.data as PageResponse<Product> | Product[]
-    let productList: Product[] = []
-    if (Array.isArray(data)) {
-      productList = data
-    } else if (data && 'content' in data) {
-      productList = data.content
-    }
+    const productList: Product[] = await productApi.getAllProducts()
 
     // 調試：輸出有圖片的商品
     const productsWithImages = productList.filter(p => p.images && p.images.length > 0)
@@ -1534,7 +1607,7 @@ const loadProducts = async () => {
     // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
     // 並將後端狀態值轉換為前端狀態值
     products.value = productList.map(product => {
-      let status = product.status
+      let status: Product['status'] | ProductDisplayStatus = product.status
       // 後端狀態值轉換為前端狀態值
       if (status === 'ACTIVE') {
         status = 'PUBLISHED'
@@ -1545,8 +1618,11 @@ const loadProducts = async () => {
 
       return {
         ...product,
-        status: status as 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED',
-        price: product.salePrice ?? product.basePrice ?? 0
+        status,
+        // 列表顯示實際售價：有效特價（大於 0 且低於定價）優先，否則為定價
+        price: product.salePrice && product.salePrice > 0 && (!product.basePrice || product.salePrice < product.basePrice)
+          ? product.salePrice
+          : (product.basePrice ?? product.salePrice ?? 0)
       }
     })
   } catch (error) {
@@ -1581,27 +1657,69 @@ const getProductAlertLevel = (productId: number): string | null => {
 }
 
 // 開啟快速補貨對話框
-const openRestockDialog = (product: Product) => {
+// 有規格的商品需選擇補貨規格（結帳以規格庫存為準）
+const restockSpecs = ref<ProductSpecification[]>([])
+const restockSpecId = ref<number | null>(null)
+
+const openRestockDialog = async (product: ProductRow) => {
   restockProduct.value = product
   restockQuantity.value = 100 // 預設補貨數量
+  restockSpecs.value = []
+  restockSpecId.value = null
+  if (product.id) {
+    try {
+      const response = await productSpecificationApi.getProductSpecifications(product.id)
+      restockSpecs.value = (response.data || []).filter((spec) => spec.enabled !== false)
+      // 預設選庫存最少的規格
+      const lowest = [...restockSpecs.value].sort((a, b) => (a.stock ?? Infinity) - (b.stock ?? Infinity))[0]
+      restockSpecId.value = lowest?.id ?? null
+    } catch {
+      restockSpecs.value = []
+    }
+  }
   showRestockDialog.value = true
 }
 
 // 執行快速補貨
 const handleRestock = async () => {
   if (!restockProduct.value?.id || restockQuantity.value <= 0) return
+  if (restockSpecs.value.length > 0 && !restockSpecId.value) {
+    $q.notify({ type: 'warning', message: '請選擇要補貨的規格', position: 'top' })
+    return
+  }
+
+  // 目前不限量（未追蹤庫存）：補貨後會改為追蹤庫存，只能賣出補貨的數量，先請使用者確認
+  const currentStock = restockSpecs.value.length > 0
+    ? restockSpecs.value.find((spec) => spec.id === restockSpecId.value)?.stock
+    : restockProduct.value.stock
+  if (currentStock == null) {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      $q.dialog({
+        title: '改為追蹤庫存？',
+        message: `目前為「不限量」。補貨後將改為追蹤庫存，之後只能賣出 ${restockQuantity.value} 件，售完即顯示缺貨。確定要繼續嗎？`,
+        cancel: true,
+        persistent: true
+      })
+        .onOk(() => resolve(true))
+        .onCancel(() => resolve(false))
+        .onDismiss(() => resolve(false))
+    })
+    if (!confirmed) return
+  }
 
   restockLoading.value = true
   try {
-    await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value)
+    await inventoryApi.updateInventory(restockProduct.value.id, restockQuantity.value, restockSpecId.value ?? undefined)
+    const specName = restockSpecs.value.find((spec) => spec.id === restockSpecId.value)?.specName
     $q.notify({
       type: 'positive',
-      message: `已為「${restockProduct.value.name}」補貨 ${restockQuantity.value} 件`,
+      message: `已為「${restockProduct.value.name}${specName ? `（${specName}）` : ''}」補貨 ${restockQuantity.value} 件`,
       position: 'top'
     })
     showRestockDialog.value = false
-    // 重新載入庫存警示
-    await loadInventoryAlerts()
+    // 重新載入商品與庫存警示（警示於背景更新）
+    loadProducts()
+    setTimeout(loadInventoryAlerts, 1000)
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -1614,10 +1732,26 @@ const handleRestock = async () => {
   }
 }
 
-const handleEdit = async (product: Product) => {
+// 編輯對話框的載入序號：關閉後又開啟其他商品時，忽略前一次較晚回來的資料
+let editSeq = 0
+// 圖片清單是否已從後端載入完成；未完成前儲存不送出圖片，避免以空清單或別的商品的圖片覆蓋
+const imagesLoaded = ref(true)
+
+// 關閉對話框（包含改為新增商品）時作廢尚未完成的載入
+watch(showDialog, (open) => {
+  if (!open) {
+    editSeq++
+    imagesLoaded.value = true
+  }
+})
+
+const handleEdit = async (product: Product | ProductRow) => {
+  const seq = ++editSeq
+  imagesLoaded.value = false
+  selectedAlbumImages.value = []
   // 將 basePrice/salePrice 轉換為 price（優先使用 salePrice，如果沒有則使用 basePrice）
   // 並將後端狀態值轉換為前端狀態值
-  let status = product.status
+  let status: Product['status'] | ProductDisplayStatus = product.status
   if (status === 'ACTIVE') {
     status = 'PUBLISHED'
   } else if (status === 'INACTIVE') {
@@ -1627,9 +1761,10 @@ const handleEdit = async (product: Product) => {
   
   form.value = {
     ...product,
-    status: status as 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED',
-    price: product.salePrice ?? product.basePrice ?? 0
+    status,
+    price: product.basePrice ?? product.salePrice ?? 0
   }
+  originalStock.value = product.stock
   showDialog.value = true
   dialogTab.value = 'basic'
   
@@ -1638,57 +1773,32 @@ const handleEdit = async (product: Product) => {
     await loadSpecifications(product.id)
     await loadDescriptionBlocks(product.id)
   }
+  if (seq !== editSeq) return
 
-  // Load existing album images for this product if it has images
-  if (product.id && product.images && product.images.length > 0) {
+  // 依商品目前的圖片順序載入（第一張為主圖）；移除 / 排序 / 設主圖在儲存時以完整清單取代。
+  // 從後端重新讀取，避免列表資料過時（例如剛上傳或其他人新增的圖片）在儲存時被刪掉
+  let images = product.images
+  if (product.id) {
     try {
-      // Try to match product images with album images
-      // This is a best-effort approach since we need to query albums for matching URLs
-      selectedAlbumImages.value = []
-
-      // 先提取所有商品圖片的 URL
-      const productImageUrls: string[] = product.images.map(img => {
-        if (typeof img === 'string') {
-          return img
-        } else if (img && typeof img === 'object' && 'imageUrl' in img) {
-          return img.imageUrl
-        }
-        return ''
-      }).filter(url => url !== '')
-
-      // Load all albums and their images to find matches
-      const albumsResponse = await albumApi.getAlbums({ page: 0, size: 100 })
-      if (albumsResponse.success && albumsResponse.data) {
-        const allAlbums = albumsResponse.data.content || []
-
-        // For each album, load images and check if they match product images
-        for (const album of allAlbums) {
-          if (album.id) {
-            const imagesResponse = await albumApi.getAlbumImages(album.id)
-            if (imagesResponse.success && imagesResponse.data) {
-              const albumImages = imagesResponse.data
-              // Check if any product images match album images
-              for (const productImageUrl of productImageUrls) {
-                const matchingAlbumImage = albumImages.find(
-                  (albumImg) => albumImg.imageUrl === productImageUrl
-                )
-                if (matchingAlbumImage && !selectedAlbumImages.value.some(img => img.id === matchingAlbumImage.id)) {
-                  selectedAlbumImages.value.push(matchingAlbumImage)
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load existing album images:', error)
+      const fresh = await productApi.getProduct(product.id)
+      if (fresh.data) images = fresh.data.images
+    } catch {
+      // 讀取失敗時使用列表資料
     }
+  }
+  if (seq !== editSeq) return
+  if (product.id && images && images.length > 0) {
+    selectedAlbumImages.value = images
+      .map((img) => (typeof img === 'string' ? img : img && typeof img === 'object' && 'imageUrl' in img ? img.imageUrl : ''))
+      .filter((url): url is string => !!url)
+      .map((imageUrl) => ({ albumId: 0, imageUrl, fileName: imageUrl.split('/').pop() || imageUrl }))
   } else {
     selectedAlbumImages.value = []
   }
+  imagesLoaded.value = true
 }
 
-const handlePublishToggle = async (product: Product) => {
+const handlePublishToggle = async (product: ProductRow) => {
   try {
     if (product.status === 'PUBLISHED') {
       await productApi.deactivateProduct(product.id!)
@@ -1750,8 +1860,19 @@ const handleSubmit = async () => {
     // 2. --- 關鍵修改：欄位轉換 ---
     // 將前端的 'price' 填入後端需要的價格欄位
     payload.basePrice = form.value.price
-    payload.salePrice = form.value.price
-    payload.costPrice = 0 // 必須給個預設值，否則後端 @DecimalMin 檢查可能會擋
+    const salePrice = form.value.salePrice as number | string | null | undefined
+    payload.salePrice = salePrice === '' || salePrice === null || salePrice === undefined ? null : Number(salePrice)
+    if (payload.salePrice !== null && payload.salePrice >= payload.basePrice) {
+      $q.notify({ type: 'warning', message: '特價須低於定價；不需要特價請清空欄位', position: 'top' })
+      return
+    }
+    const costPrice = form.value.costPrice as number | string | null | undefined
+    payload.costPrice = costPrice === '' || costPrice === null || costPrice === undefined ? null : Number(costPrice)
+
+    // 有規格的商品庫存由各規格管理；編輯時庫存未修改就不送出，避免覆寫期間已賣出的庫存
+    if (specifications.value.length > 0 || (form.value.id && payload.stock === originalStock.value)) {
+      delete payload.stock
+    }
 
     // 3. 狀態值轉換：將前端狀態值轉換為後端可接受的狀態值
     // 前端: PUBLISHED/UNPUBLISHED  -> 後端: ACTIVE/INACTIVE
@@ -1765,12 +1886,20 @@ const handleSubmit = async () => {
     // 4. 移除後端不認識的欄位
     delete payload.price // 後端沒有 'price' 欄位，刪掉避免報錯
 
+    // 編輯時以畫面上的圖片清單（含順序）取代商品圖片，移除 / 排序 / 設主圖才會生效
+    if (form.value.id && imagesLoaded.value) {
+      payload.images = selectedAlbumImages.value.map((img) => ({ imageUrl: img.imageUrl }))
+    } else {
+      delete payload.images
+    }
+
     // !!! 注意 !!!
     // 如果您還沒在 Java DTO 加入 'stock' 欄位，請把下面這行取消註解，否則後端會報錯
     // delete payload.stock
 
     // 5. 先創建或更新商品（需要先有商品ID才能添加圖片）
     let productId = form.value.id
+    const isNewProduct = !productId
     if (!productId) {
       const response = await productApi.createProduct(payload)
       // 更新 form ID 以便後續操作
@@ -1823,12 +1952,13 @@ const handleSubmit = async () => {
       imageIdsToAdd.push(uploadedImageId)
     }
     
-    // 添加已選中的相冊圖片ID
-    const selectedImageIds = selectedAlbumImages.value
-      .map(img => img.id)
-      .filter((id): id is number => id !== undefined && id !== uploadedImageId) // 避免重複添加
-    
-    imageIdsToAdd.push(...selectedImageIds)
+    // 新建商品：加入已選中的相冊圖片（編輯時已在上方以完整清單更新）
+    if (isNewProduct) {
+      const selectedImageIds = selectedAlbumImages.value
+        .map(img => img.id)
+        .filter((id): id is number => id !== undefined && id !== uploadedImageId) // 避免重複添加
+      imageIdsToAdd.push(...selectedImageIds)
+    }
 
     // 8. 將所有圖片添加到商品
     if (productId && imageIdsToAdd.length > 0) {
@@ -1878,6 +2008,7 @@ const closeDialog = async () => {
   showDialog.value = false
   dialogTab.value = 'basic'
   form.value = { name: '', description: '', price: 0, stock: 0, status: 'DRAFT', salesMode: 'NORMAL', categoryId: null }
+  originalStock.value = undefined
   selectedAlbumImages.value = []
   productImage.value = null
   // 重置規格和描述區塊
@@ -1970,7 +2101,12 @@ const saveSpecification = async () => {
 
     if (specForm.value.id) {
       // 更新規格
-      await productSpecificationApi.updateSpecification(specForm.value.id, specForm.value)
+      const specPayload = { ...specForm.value }
+      if (specPayload.stock === originalSpecStock.value) {
+        // 庫存沒改就不送，避免覆寫期間已賣出的數量
+        specPayload.stock = undefined
+      }
+      await productSpecificationApi.updateSpecification(specForm.value.id, specPayload)
       $q.notify({
         type: 'positive',
         message: '規格已更新',
@@ -2020,6 +2156,7 @@ const editSpecification = (spec: ProductSpecification) => {
   specImageFile.value = null
   selectedSpecAlbumImage.value = null
   specForm.value = { ...spec }
+  originalSpecStock.value = spec.stock
   showSpecDialog.value = true
 }
 
@@ -2056,7 +2193,7 @@ const deleteSpecification = (specId?: number) => {
 // 切換規格啟用狀態
 const toggleSpecEnabled = async (spec: ProductSpecification, enabled: boolean) => {
   try {
-    await productSpecificationApi.updateSpecification(spec.id!, { ...spec, enabled })
+    await productSpecificationApi.updateSpecification(spec.id!, { ...spec, stock: undefined, enabled })
     if (form.value.id) {
       await loadSpecifications(form.value.id)
     }
@@ -2287,7 +2424,8 @@ const addSelectedImagesToProduct = async () => {
 
     // Add only new images to avoid duplicates
     tempSelectedImages.value.forEach(img => {
-      if (!selectedAlbumImages.value.some(existing => existing.id === img.id)) {
+      // 以網址判斷：重新開啟商品時已有的圖片沒有相冊 ID
+      if (!selectedAlbumImages.value.some(existing => existing.imageUrl === img.imageUrl)) {
         selectedAlbumImages.value.push(img)
       }
     })
@@ -2336,11 +2474,9 @@ const clearSpecImageSelection = () => {
   specForm.value.image = ''
 }
 
-const removeSelectedImage = (imageId?: number) => {
-  // Remove from local preview
-  // The actual backend update happens when user clicks "保存" or "完成"
-  const index = selectedAlbumImages.value.findIndex(img => img.id === imageId)
-  if (index > -1) {
+const removeSelectedImage = (index: number) => {
+  // 只移除預覽，按「保存」或「完成」時才寫回商品
+  if (index > -1 && index < selectedAlbumImages.value.length) {
     selectedAlbumImages.value.splice(index, 1)
   }
 }
@@ -2357,7 +2493,11 @@ const moveSelectedImage = (index: number, direction: -1 | 1) => {
   const nextIndex = index + direction
   if (index < 0 || nextIndex < 0 || nextIndex >= selectedAlbumImages.value.length) return
   const list = [...selectedAlbumImages.value]
-  ;[list[index], list[nextIndex]] = [list[nextIndex], list[index]]
+  const current = list[index]
+  const next = list[nextIndex]
+  if (!current || !next) return
+  list[index] = next
+  list[nextIndex] = current
   selectedAlbumImages.value = list
 }
 
@@ -2384,13 +2524,13 @@ const getStatusLabel = (status: string) => {
 }
 
 // 處理圖片載入錯誤
-const handleImageError = (event: Event, product: Product) => {
+const handleImageError = (event: Event, product: ProductRow) => {
   const imageUrl = getProductImageUrl(product)
   console.warn(`圖片載入失敗: ${imageUrl}`, { productId: product.id, productName: product.name })
 }
 
 // 獲取商品圖片 URL（獲取第一張圖片）
-const getProductImageUrl = (product: Product): string | null => {
+const getProductImageUrl = (product: ProductRow): string | null => {
   // 調試：輸出商品圖片數據
   if (product.images) {
     console.log(`[getProductImageUrl] 商品 ${product.id} (${product.name}) 的 images:`, product.images)

@@ -4,7 +4,7 @@
  */
 
 import axiosInstance from './axios'
-import type { ApiResponse, PageResponse } from './types'
+import type { ApiResponse, SimplePageResponse } from './types'
 
 // 會員等級相關接口
 export interface MemberLevel {
@@ -95,7 +95,7 @@ export const memberLevelApi = {
    * @description 分頁查詢所有會員等級
    * @param {number} [page=0] - 頁碼（從 0 開始）
    * @param {number} [size=20] - 每頁數量
-   * @returns {Promise<PageResponse<MemberLevel>>} 分頁等級資料
+   * @returns {Promise<SimplePageResponse<MemberLevel>>} 分頁等級資料
    * @swagger GET /api/crm/member-levels
    * @example
    * const page = await memberLevelApi.listMemberLevels(0, 10)
@@ -113,9 +113,9 @@ export const memberLevelApi = {
         totalPages: pageData.totalPages || 0,
         currentPage: pageData.pageable?.pageNumber ?? pageData.number ?? page,
         pageSize: pageData.pageable?.pageSize ?? pageData.size ?? size
-      } as PageResponse<MemberLevel>
+      } as SimplePageResponse<MemberLevel>
     }
-    return pageData as PageResponse<MemberLevel>
+    return pageData as SimplePageResponse<MemberLevel>
   },
   
   /**

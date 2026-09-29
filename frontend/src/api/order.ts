@@ -4,7 +4,90 @@
  */
 
 import axios from './axios'
-import type { ApiResponse } from './types'
+import type { ApiResponse, PageResponse } from './types'
+
+/**
+ * 顧客結帳請求（不含價格，價格由後端計算）
+ */
+export interface StorefrontCheckoutRequest {
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  shippingAddress?: string | null
+  notes?: string
+  shippingMethod?: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  paymentMethod: 'ECPAY' | 'COD'
+  /** 下單來源，決定付款完成後導回的頁面 */
+  channel?: 'STOREFRONT' | 'ADMIN_STORE'
+  /** 優惠券代碼（只送試算確認會套用的代碼） */
+  couponCode?: string | null
+  /** 同意接收優惠與新品通知 Email */
+  marketingOptIn?: boolean
+  items: Array<{ productId: number; specificationId?: number | null; quantity: number }>
+}
+
+/** 以訂單編號 + Email 查詢的結果 */
+export interface StorefrontOrderLookup {
+  order: Order
+  paymentMethod?: 'ECPAY' | 'COD' | null
+  canPayOnline: boolean
+  canCancel: boolean
+  shipments?: Array<{
+    shippingCompany?: string
+    trackingNumber?: string
+    status?: string
+    statusLabel?: string
+    shippedAt?: string
+    deliveredAt?: string
+  }>
+}
+
+/** 結帳試算請求 */
+export interface StorefrontQuoteRequest {
+  items: StorefrontCheckoutRequest['items']
+  shippingMethod?: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  couponCode?: string | null
+}
+
+/** 套用的折扣（促銷 / 優惠券 / 會員等級 / 免運） */
+export interface StorefrontQuoteDiscount {
+  type: 'PROMOTION' | 'COUPON' | 'MEMBER_LEVEL' | 'FREE_SHIPPING'
+  name?: string
+  code?: string | null
+  amount: number
+}
+
+/** 結帳試算結果（金額以後端計算為準） */
+export interface StorefrontQuote {
+  lines: Array<{
+    productId: number
+    specificationId?: number | null
+    productName: string
+    specName?: string | null
+    unitPrice: number
+    quantity: number
+    subtotalAmount: number
+  }>
+  subtotalAmount: number
+  shippingFee: number
+  freeShippingThreshold?: number | null
+  discountAmount: number
+  discounts: StorefrontQuoteDiscount[]
+  couponCode?: string | null
+  couponMessage?: string | null
+  totalAmount: number
+  shippingMethod: string
+}
+
+/**
+ * 顧客結帳結果
+ */
+export interface StorefrontCheckoutResult {
+  order: Order & { id: number; orderNumber: string; totalAmount: number }
+  paymentMethod: 'ECPAY' | 'COD'
+  paymentUrl?: string | null
+  paymentError?: string | null
+}
 
 /**
  * 訂單介面
@@ -25,16 +108,34 @@ export interface Order {
   customerEmail?: string
   /** 訂單總金額 */
   totalAmount: number
-  /** 訂單狀態 */
-  status: 'PENDING' | 'PENDING_PAYMENT' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
+  /** 訂單狀態（對應後端 OrderStatus 列舉） */
+  status: 'PENDING_PAYMENT' | 'PAID' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
+  /** 取貨方式（對應後端 PickupType 列舉） */
+  pickupType?: 'DELIVERY' | 'STORE_PICKUP' | 'CROSS_STORE_PICKUP'
+  /** 取貨門市 ID */
+  storeId?: number
+  /** 商品小計 */
+  subtotalAmount?: number
+  /** 折扣金額 */
+  discountAmount?: number
+  /** 運費 */
+  shippingFee?: number
+  /** 備註 */
+  notes?: string
   /** 配送地址 */
   shippingAddress?: string
-  /** 訂單項目 */
+  /** 是否為草稿 */
+  isDraft?: boolean
+  /** 訂單項目（後端 OrderDTO 欄位） */
+  items?: OrderItem[]
+  /** 訂單項目（兼容舊版） */
   orderItems?: OrderItem[]
   /** 創建時間 */
   createdAt?: string
   /** 更新時間 */
   updatedAt?: string
+  /** 完成時間 */
+  completedAt?: string
 }
 
 /**
@@ -123,6 +224,13 @@ export const orderApi = {
    * const response = await orderApi.getOrder(123)
    * console.log(response.data.orderNumber) // 訂單編號
    */
+  /** 訂單的付款記錄（含已登記的退款金額） */
+  getOrderPayments: (orderId: number) => {
+    return axios.get<any, ApiResponse<Array<{ id: number; paymentStatus: string; paymentAmount?: number; refundAmount?: number | null }>>>(
+      `/orders/payments/order/${orderId}`
+    )
+  },
+
   getOrder: (id: number) => {
     return axios.get<any, ApiResponse<Order>>(`/orders/${id}`)
   },
@@ -144,6 +252,50 @@ export const orderApi = {
    *   orderItems: [{ productId: 1, quantity: 2, price: 500 }]
    * })
    */
+  /**
+   * 顧客結帳（價格、運費由後端計算，ECPAY 時一併回傳綠界付款網址）
+   * @swagger POST /api/storefront/orders/checkout
+   */
+  storefrontQuote: (data: StorefrontQuoteRequest) => {
+    return axios.post<any, ApiResponse<StorefrontQuote>>('/storefront/orders/quote', data)
+  },
+
+  /** 以訂單編號 + 下單 Email 查詢訂單（含是否可線上付款） */
+  storefrontLookup: (orderNumber: string, email: string) => {
+    return axios.get<any, ApiResponse<StorefrontOrderLookup>>(
+      '/storefront/orders/lookup',
+      { params: { orderNumber, email } }
+    )
+  },
+
+  /** 目前開放的配送方式與運費 */
+  /** 目前可用的付款方式（線上付款依後台金流設定的啟用 / 維護狀態） */
+  storefrontPaymentOptions: () => {
+    return axios.get<any, ApiResponse<Array<{ method: string; available: boolean; message?: string | null }>>>(
+      '/storefront/orders/payment-options'
+    )
+  },
+
+  storefrontShippingOptions: () => {
+    return axios.get<any, ApiResponse<Array<{ method: string; name: string; fee: number; freeShippingThreshold?: number | null }>>>(
+      '/storefront/orders/shipping-options'
+    )
+  },
+
+  /** 顧客自行取消訂單（待付款且尚未出貨） */
+  storefrontCancel: (data: { orderNumber: string; email: string }) => {
+    return axios.post<any, ApiResponse<StorefrontOrderLookup>>('/storefront/orders/cancel', data)
+  },
+
+  /** 待付款的線上付款訂單重新取得付款網址 */
+  storefrontPay: (data: { orderNumber: string; email: string; channel?: 'STOREFRONT' | 'ADMIN_STORE' }) => {
+    return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/pay', data)
+  },
+
+  storefrontCheckout: (data: StorefrontCheckoutRequest) => {
+    return axios.post<any, ApiResponse<StorefrontCheckoutResult>>('/storefront/orders/checkout', data)
+  },
+
   createOrder: (data: Order) => {
     return axios.post<any, ApiResponse<Order>>('/orders', data)
   },
@@ -178,6 +330,34 @@ export const orderApi = {
    * const updated = await orderApi.updateOrderStatus(123, 'PROCESSING')
    * console.log(updated.data.status) // 'PROCESSING'
    */
+  /** 訂單歷程（狀態變更、付款、出貨、退款、折扣等紀錄） */
+  getOrderHistory: (orderId: number) => {
+    return axios.get<any, ApiResponse<Array<{
+      id: number
+      actionType: string
+      actionDescription?: string
+      oldStatus?: string
+      newStatus?: string
+      operatorName?: string
+      createdAt: string
+    }>>>(`/orders/history/order/${orderId}`)
+  },
+
+  /** 匯出訂單 CSV（依建立日期與狀態） */
+  exportOrdersCsv: (params: { startDate?: string; endDate?: string; status?: string }) => {
+    return axios.get<any, Blob>('/orders/batch/export.csv', { params, responseType: 'blob' })
+  },
+
+  /** 各狀態可變更的方向（依後端規則） */
+  getStatusTransitions: () => {
+    return axios.get<any, ApiResponse<Record<string, string[]>>>('/orders/status-transitions')
+  },
+
+  /** 登記退款（全額退款時訂單改為已退款） */
+  refundOrder: (id: number, data: { amount?: number | null; reason: string; restock: boolean }) => {
+    return axios.post<any, ApiResponse<Order>>(`/orders/${id}/refund`, data)
+  },
+
   updateOrderStatus: (id: number, status: Order['status']) => {
     return axios.patch<any, ApiResponse<Order>>(`/orders/${id}/status`, null, {
       params: { status }

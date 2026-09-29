@@ -45,11 +45,11 @@
                 <q-icon name="shopping_bag" size="40px" color="orange" />
                 <div>
                   <div class="text-h4 text-weight-bold">{{ formatNumber(stats.pendingOrders) }}</div>
-                  <div class="text-caption text-grey-7">待處理訂單</div>
+                  <div class="text-caption text-grey-7">待出貨訂單（已付款）</div>
                 </div>
               </div>
               <q-badge 
-                v-if="stats.pendingOrdersChange !== undefined"
+                v-if="stats.pendingOrdersChange != null"
                 :color="stats.pendingOrdersChange >= 0 ? 'warning' : 'positive'" 
                 class="q-mt-sm"
               >
@@ -161,7 +161,7 @@
           <q-card>
             <q-card-section>
               <div class="row items-center justify-between">
-                <div class="text-h6 text-weight-bold">熱門商品</div>
+                <div class="text-h6 text-weight-bold">熱銷商品（近 30 天）</div>
                 <q-btn flat dense color="primary" label="查看全部" @click="$router.push('/admin/products')" />
               </div>
             </q-card-section>
@@ -175,7 +175,7 @@
                   </q-item-section>
                   <q-item-section>
                     <q-item-label>{{ product.name }}</q-item-label>
-                    <q-item-label caption>銷售 {{ product.salesCount }} 件</q-item-label>
+                    <q-item-label caption>近 30 天售出 {{ product.salesCount }} 件</q-item-label>
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label class="text-primary text-weight-bold">

@@ -26,7 +26,7 @@
         <q-card flat bordered class="promo-meta-card">
           <q-card-section>
             <div class="promo-meta-title">省錢策略</div>
-            <div class="promo-meta-text">可同時搭配折扣碼與活動折扣時，系統會自動套用最優惠方案。</div>
+            <div class="promo-meta-text">活動折扣、折扣碼與會員折扣不累加，結帳時自動套用折抵最多的一項；免運可以併用。</div>
           </q-card-section>
         </q-card>
       </div>
@@ -159,7 +159,7 @@
         <template #avatar>
         <q-icon name="tips_and_updates" size="28px" aria-hidden="true" />
       </template>
-      結帳時自動比對活動與折扣碼，系統會選擇最划算的方案。若想鎖定優惠，建議先把商品加入購物車。
+      結帳時自動比對活動、折扣碼與會員折扣，套用折抵最多的一項，免運可併用。折扣碼請在結帳頁的「優惠券代碼」欄位輸入。
     </q-banner>
   </section>
 </q-page>
@@ -267,9 +267,8 @@ const loadData = async () => {
     const promotionResult = await promotionApi.getPromotions(0, 50)
     promotions.value = promotionResult.content || []
 
-    // 折扣碼功能尚未實現，暫時顯示空列表
-    // TODO: 後端實現 /api/marketing/coupons 端點後再啟用
-    coupons.value = []
+    // 公開的折扣碼（後台設定「公開顯示」且目前可使用）
+    coupons.value = await couponApi.getPublicCoupons()
   } catch (error) {
     console.error('載入促銷資訊失敗:', error)
     promotions.value = []

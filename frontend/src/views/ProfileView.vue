@@ -136,6 +136,17 @@
                 ]"
               />
 
+              <q-input
+                v-model="editForm.currentPassword"
+                label="目前密碼 *"
+                hint="變更帳號或 Email 需要輸入目前密碼"
+                outlined
+                type="password"
+                autocomplete="current-password"
+                class="q-mb-md"
+                :rules="[val => !!val || '請輸入目前密碼']"
+              />
+
               <div class="row justify-end q-gutter-sm">
                 <q-btn label="取消" flat color="grey" v-close-popup />
                 <q-btn
@@ -256,7 +267,8 @@ const showConfirmPassword = ref(false)
 
 const editForm = ref({
   username: '',
-  email: ''
+  email: '',
+  currentPassword: ''
 })
 
 const passwordForm = ref({
@@ -299,7 +311,8 @@ const loadProfile = async () => {
       profile.value = response.data
       editForm.value = {
         username: response.data.username,
-        email: response.data.email
+        email: response.data.email,
+        currentPassword: ''
       }
       // Update auth store with latest profile data
       authStore.setAuth(authStore.token!, response.data)
@@ -322,11 +335,16 @@ const handleUpdateProfile = async () => {
   try {
     const updateData: UpdateProfileRequest = {
       username: editForm.value.username,
-      email: editForm.value.email
+      email: editForm.value.email,
+      currentPassword: editForm.value.currentPassword
     }
 
     const response = await authApi.updateProfile(updateData)
     if (response.success) {
+      // 變更帳號時後端會回傳新的登入 token（舊 token 以舊帳號識別，會失效）
+      if (response.data?.token) {
+        authStore.setAuth(response.data.token, response.data)
+      }
       $q.notify({
         type: 'positive',
         message: '個人資料更新成功'
@@ -359,6 +377,10 @@ const handleChangePassword = async () => {
 
     const response = await authApi.updateProfile(updateData)
     if (response.success) {
+      // 變更密碼後舊 token 失效，改用後端回傳的新 token
+      if (response.data?.token) {
+        authStore.setAuth(response.data.token, response.data)
+      }
       $q.notify({
         type: 'positive',
         message: '密碼變更成功'

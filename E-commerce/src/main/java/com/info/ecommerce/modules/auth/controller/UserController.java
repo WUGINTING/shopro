@@ -26,14 +26,14 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "取得所有使用者", description = "取得系統中所有使用者列表")
     public ApiResponse<List<UserDTO>> getAllUsers() {
         return ApiResponse.success("成功取得使用者列表", userService.getAllUsers());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "取得使用者詳情", description = "根據 ID 取得特定使用者的詳細資訊")
     public ApiResponse<UserDTO> getUserById(@PathVariable Long id) {
         return ApiResponse.success("成功取得使用者資訊", userService.getUserById(id));
@@ -47,7 +47,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "更新使用者", description = "更新現有使用者的資訊")
     public ApiResponse<UserDTO> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO userDTO) {
         return ApiResponse.success("使用者更新成功", userService.updateUser(id, userDTO));

@@ -50,6 +50,7 @@ public class MemberController {
         return ApiResponse.success(memberService.getMemberByEmail(email));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除會員")
     public ApiResponse<Void> deleteMember(
@@ -105,6 +106,7 @@ public class MemberController {
         return ApiResponse.success("會員狀態已更新", memberService.updateMemberStatus(id, status));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}/level")
     @Operation(summary = "更新會員等級")
     public ApiResponse<MemberDTO> updateMemberLevel(
@@ -113,6 +115,7 @@ public class MemberController {
         return ApiResponse.success("會員等級已更新", memberService.updateMemberLevel(id, levelId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/points/add")
     @Operation(summary = "增加會員積點")
     public ApiResponse<MemberDTO> addPoints(
@@ -121,6 +124,7 @@ public class MemberController {
         return ApiResponse.success("積點已增加", memberService.addPoints(id, points));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/points/deduct")
     @Operation(summary = "扣除會員積點")
     public ApiResponse<MemberDTO> deductPoints(
@@ -129,6 +133,7 @@ public class MemberController {
         return ApiResponse.success("積點已扣除", memberService.deductPoints(id, points));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/recalculate-total-spent")
     @Operation(summary = "重新計算會員總消費", description = "從所有已付款或已完成的訂單中重新計算該會員的總消費")
     public ApiResponse<MemberDTO> recalculateTotalSpent(
@@ -137,6 +142,7 @@ public class MemberController {
         return ApiResponse.success("總消費已重新計算", memberService.getMember(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/recalculate-all-total-spent")
     @Operation(summary = "重新計算所有會員總消費", description = "從所有已付款或已完成的訂單中重新計算所有會員的總消費")
     public ApiResponse<String> recalculateAllTotalSpent() {

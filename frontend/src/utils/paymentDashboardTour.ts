@@ -1,8 +1,8 @@
-import Shepherd from 'shepherd.js'
+import { createShepherdTour, type ShepherdTour, type ShepherdStepOptions } from './tour'
 import 'shepherd.js/dist/css/shepherd.css'
 
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過金流儀表板導覽
 const TOUR_STORAGE_KEY = 'shopro-payment-dashboard-tour-completed'
@@ -20,34 +20,15 @@ export const resetPaymentDashboardTour = (): void => {
 }
 
 // 初始化導覽
-export const initPaymentDashboardTour = (): Shepherd.Tour => {
+export const initPaymentDashboardTour = (): ShepherdTour => {
   // 每次都創建新實例，避免重用舊的步驟
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建金流儀表板導覽步驟
-export const createPaymentDashboardTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createPaymentDashboardTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',
@@ -102,13 +83,14 @@ export const createPaymentDashboardTourSteps = (): Shepherd.Step.StepOptions[] =
         element: () => {
           // 查找第一個統計卡片
           const statCards = document.querySelectorAll('.stat-card')
-          if (statCards.length > 0) {
+          const firstStatCard = statCards[0]
+          if (firstStatCard) {
             // 找到包含所有統計卡片的行
-            const row = statCards[0].closest('.row')
+            const row = firstStatCard.closest('.row')
             if (row) {
               return row as HTMLElement
             }
-            return statCards[0] as HTMLElement
+            return firstStatCard as HTMLElement
           }
           // 如果找不到，返回第一個卡片作為後備
           const firstCard = document.querySelector('.q-card')

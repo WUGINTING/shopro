@@ -19,6 +19,8 @@ export interface User {
   enabled?: boolean
   createdAt?: string
   updatedAt?: string
+  /** 編輯自己的帳號名稱或密碼後，後端回傳的新登入 token */
+  token?: string | null
 }
 
 /**

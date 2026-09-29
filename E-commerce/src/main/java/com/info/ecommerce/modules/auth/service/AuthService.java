@@ -31,17 +31,19 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final MemberRepository memberRepository;
+    private final GoogleTokenVerifier googleTokenVerifier;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Check if username exists
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BusinessException("Username already exists");
+            throw new BusinessException("此帳號已被使用，請換一個帳號");
         }
 
         // Check if email exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Email already exists");
+            throw new BusinessException("此 Email 已註冊，請直接登入或使用忘記密碼");
         }
 
         // Create new user
@@ -49,11 +51,16 @@ public class AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                // 公開註冊不可自選角色，避免任何人註冊成 ADMIN
+                .role(Role.CUSTOMER)
                 .enabled(true)
+                // Email 需驗證後才會連結到該 Email 的訂單與會員資料
+                .emailVerified(false)
                 .build();
 
         User savedUser = userRepository.save(user);
+        // 寄送 Email 驗證信（未設定寄信時略過，會員可稍後在會員中心重寄）
+        emailVerificationService.sendVerificationQuietly(savedUser);
 
         // Generate JWT token
         String token = jwtService.generateToken(user);
@@ -65,7 +72,14 @@ public class AuthService {
                 .username(savedUser.getUsername())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
+                .emailVerified(savedUser.isEmailConfirmed())
                 .build();
+    }
+
+    /** 帳號是否存在（登入限流只為實際存在的帳號建立帳號層級的計數） */
+    @Transactional(readOnly = true)
+    public boolean accountExists(String username) {
+        return username != null && userRepository.existsByUsername(username);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -96,6 +110,7 @@ public class AuthService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .emailVerified(user.isEmailConfirmed())
                 .build();
     }
 
@@ -112,6 +127,7 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .enabled(user.getEnabled())
+                .emailVerified(user.isEmailConfirmed())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -125,8 +141,23 @@ public class AuthService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException("使用者不存在"));
 
+        boolean usernameChanged = false;
+        boolean passwordChanged = false;
+
+        // 變更帳號名稱或 Email 需輸入目前密碼：避免 token 外洩時被改成攻擊者的信箱，再以「忘記密碼」永久接管帳號
+        boolean identityChange = (request.getUsername() != null && !request.getUsername().equals(user.getUsername()))
+                || (request.getEmail() != null && !request.getEmail().equals(user.getEmail()));
+        if (identityChange) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+                throw new BusinessException("變更帳號名稱或 Email 請輸入目前密碼；以 Google 登入且未設定密碼的帳號，請先使用「忘記密碼」設定密碼");
+            }
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new BusinessException("目前密碼不正確");
+            }
+        }
         // Update username if provided and different
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            usernameChanged = true;
             if (userRepository.existsByUsername(request.getUsername())) {
                 throw new BusinessException("使用者名稱已存在：" + request.getUsername());
             }
@@ -139,15 +170,22 @@ public class AuthService {
                 throw new BusinessException("Email 已存在：" + request.getEmail());
             }
             user.setEmail(request.getEmail());
+            // 變更 Email 後需重新驗證
+            user.setEmailVerified(false);
         }
 
-        // Update password if both current and new passwords are provided
+        // 變更密碼必須提供目前密碼
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()
+                && (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank())) {
+            throw new BusinessException("變更密碼請輸入目前密碼；忘記目前密碼可使用「忘記密碼」重設");
+        }
         if (request.getCurrentPassword() != null && request.getNewPassword() != null) {
             // Verify current password
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
                 throw new BusinessException("目前密碼不正確");
             }
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            passwordChanged = true;
         }
 
         User updatedUser = userRepository.save(user);
@@ -158,8 +196,11 @@ public class AuthService {
                 .email(updatedUser.getEmail())
                 .role(updatedUser.getRole())
                 .enabled(updatedUser.getEnabled())
+                .emailVerified(updatedUser.isEmailConfirmed())
                 .createdAt(updatedUser.getCreatedAt())
                 .updatedAt(updatedUser.getUpdatedAt())
+                // 帳號名稱或密碼變更後舊 token 失效，回傳新 token 讓目前裝置保持登入
+                .token(usernameChanged || passwordChanged ? jwtService.generateToken(updatedUser) : null)
                 .build();
     }
 
@@ -191,15 +232,28 @@ public class AuthService {
                         .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for OAuth users
                         .role(Role.CUSTOMER) // Default role for Google OAuth users
                         .enabled(true)
+                        .emailVerified(true) // Google 已驗證此 Email
                         .build();
                 user = userRepository.save(user);
                 
                 // Create corresponding CRM member record
                 createCrmMember(googleUser, user);
             } else {
+                // 員工帳號只能用帳號密碼登入，避免以 Google 身分接管後台帳號
+                if (user.getRole() != Role.CUSTOMER) {
+                    throw new BusinessException("員工帳號請使用帳號密碼登入");
+                }
                 // Check if user account is enabled
                 if (!user.getEnabled()) {
                     throw new BusinessException("此帳號已被停用，無法登入");
+                }
+
+                // 他人可能先以此 Email 註冊（未驗證）：Google 證明了 Email 擁有權，
+                // 將帳號標記為已驗證並更換密碼，使先前設定的密碼失效
+                if (!user.isEmailConfirmed()) {
+                    user.setEmailVerified(true);
+                    user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                    user = userRepository.save(user);
                 }
                 
                 // Update last login time for existing member
@@ -216,49 +270,29 @@ public class AuthService {
                     .username(user.getUsername())
                     .email(user.getEmail())
                     .role(user.getRole())
+                    .emailVerified(user.isEmailConfirmed())
                     .build();
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             throw new BusinessException("Google 登入失敗: " + e.getMessage());
         }
     }
 
     /**
-     * Verify Google ID Token and extract user information
-     * Note: This is a simplified implementation. In production, you should use
-     * Google's official library or properly verify the token signature.
+     * 透過 Google 驗證 ID Token（簽章、有效期、aud、iss、email_verified）
      */
     private GoogleUserInfo verifyGoogleToken(String idToken) {
-        try {
-            // Decode JWT token (without verification for now)
-            // In production, you should verify the token signature using Google's public keys
-            String[] parts = idToken.split("\\.");
-            if (parts.length != 3) {
-                return null;
-            }
-
-            // Decode payload
-            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> claims = (java.util.Map<String, Object>) mapper.readValue(payload, java.util.Map.class);
-
-            // Extract user info
-            String email = (String) claims.get("email");
-            String name = (String) claims.get("name");
-            String picture = (String) claims.get("picture");
-
-            if (email == null) {
-                return null;
-            }
-
-            return GoogleUserInfo.builder()
-                    .email(email)
-                    .name(name != null ? name : email.split("@")[0])
-                    .picture(picture)
-                    .build();
-        } catch (Exception e) {
-            throw new BusinessException("無法解析 Google Token: " + e.getMessage());
+        if (!googleTokenVerifier.isEnabled()) {
+            throw new BusinessException("Google 登入尚未啟用");
         }
+        return googleTokenVerifier.verify(idToken)
+                .map(user -> GoogleUserInfo.builder()
+                        .email(user.getEmail())
+                        .name(user.getName())
+                        .picture(user.getPicture())
+                        .build())
+                .orElse(null);
     }
 
     /**

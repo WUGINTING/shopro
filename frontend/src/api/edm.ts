@@ -49,6 +49,8 @@ export interface PageResponse<T> {
   pageSize: number
 }
 
+const API_BASE = '/crm/edm'
+
 /**
  * EDM 電子報 API 服務
  * @namespace edmApi
@@ -178,19 +180,6 @@ export const edmApi = {
       `${API_BASE}/${campaignId}/logs`,
       { params: { page, size } }
     )
-  },
-
-  /**
-   * 獲取 EDM 統計資訊
-   * @description 查詢 EDM 系統的總體統計數據
-   * @returns {Promise<EdmStatistics>} EDM 統計資料
-   * @swagger GET /api/crm/edm/statistics
-   * @example
-   * const stats = await edmApi.getStatistics()
-   * console.log(stats.averageOpenRate) // 平均開信率
-   */
-  getStatistics: async () => {
-    return axiosInstance.get<any, EdmStatistics>(`${API_BASE}/statistics`)
   },
 
   /**

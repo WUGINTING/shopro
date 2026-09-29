@@ -165,6 +165,7 @@ import { ref, onMounted } from 'vue'
 import { getAllPaymentSettings, updatePaymentSetting, type PaymentSetting } from '@/api/payment'
 import { Notify } from 'quasar'
 import axiosInstance from '@/api/axios'
+import type { ApiResponse } from '@/api/types'
 import { startPaymentSettingsTour, isPaymentSettingsTourCompleted } from '@/utils/paymentSettingsTour'
 
 const settings = ref<PaymentSetting[]>([])
@@ -254,7 +255,7 @@ const saveSetting = async () => {
 const initializeSettings = async () => {
   initializing.value = true
   try {
-    const response = await axiosInstance.post('/payment-management/settings/initialize')
+    const response = await axiosInstance.post<any, ApiResponse<unknown>>('/payment-management/settings/initialize')
     if (response.success) {
       Notify.create({
         type: 'positive',

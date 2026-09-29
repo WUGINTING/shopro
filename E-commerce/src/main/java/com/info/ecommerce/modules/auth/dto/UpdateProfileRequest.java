@@ -25,6 +25,6 @@ public class UpdateProfileRequest {
     @Size(min = 6, message = "密碼長度至少需要 6 個字元")
     private String currentPassword;
 
-    @Size(min = 6, message = "新密碼長度至少需要 6 個字元")
+    @Size(min = 8, max = 100, message = "新密碼長度需為 8 到 100 個字元")
     private String newPassword;
 }

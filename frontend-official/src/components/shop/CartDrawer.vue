@@ -29,11 +29,15 @@
       <div v-if="cartItems.length > 0" class="cart-content">
         <!-- 商品列表 -->
         <div class="cart-items">
-          <div v-for="item in cartItems" :key="item.id" class="cart-item">
+          <div
+            v-for="item in cartItems"
+            :key="`${item.id}-${item.specification?.id || 'default'}`"
+            class="cart-item"
+          >
             <!-- 商品圖片 -->
             <div class="item-image">
               <q-img
-                :src="item.image"
+                :src="item.image || PRODUCT_PLACEHOLDER"
                 :alt="item.name"
                 ratio="1"
                 spinner-color="primary"
@@ -43,6 +47,9 @@
             <!-- 商品資訊 -->
             <div class="item-info">
               <div class="item-name">{{ item.name }}</div>
+              <div v-if="unavailableProducts[item.id]" class="text-negative text-caption">
+                此商品已下架，請移除後再結帳
+              </div>
               
               <!-- 規格選擇（如果有多個規格） -->
               <div 
@@ -52,9 +59,9 @@
                 <q-select
                   :model-value="item.specification?.id"
                   :options="getItemSpecifications(item).map(spec => ({
-                    label: `${spec.specName} - NT$ ${spec.price} (庫存: ${spec.stock})`,
+                    label: `${spec.specName} - ${formatCurrency(Number(spec.price) > 0 ? spec.price : (item.basePrice ?? item.price))}${isSoldOut(spec) ? '（售完）' : spec.stock != null ? `（庫存: ${spec.stock}）` : ''}`,
                     value: spec.id,
-                    disable: spec.stock === 0
+                    disable: isSoldOut(spec)
                   }))"
                   dense
                   outlined
@@ -81,7 +88,7 @@
               </div>
               
               <div class="item-price">
-                NT$ {{ (item.selectedPrice || item.price).toLocaleString() }}
+                {{ formatCurrency(item.selectedPrice ?? item.price) }}
               </div>
 
               <!-- 數量控制 -->
@@ -127,7 +134,7 @@
           </div>
           <div class="summary-row total">
             <span class="label">總計</span>
-            <span class="value">NT$ {{ totalAmount.toLocaleString() }}</span>
+            <span class="value">{{ formatCurrency(totalAmount) }}</span>
           </div>
         </div>
 
@@ -177,6 +184,10 @@ import {
   updateCartItemSpec,
 } from 'src/utils/cart.js';
 import { getProductSpecifications } from 'src/api/product.js';
+import { formatCurrency } from 'src/utils/format.js';
+import { PRODUCT_PLACEHOLDER } from 'src/utils/product.js';
+
+const isSoldOut = spec => spec?.stock !== null && spec?.stock !== undefined && spec.stock <= 0;
 
 const props = defineProps({
   modelValue: {
@@ -235,14 +246,21 @@ const refreshCart = async () => {
 };
 
 // 載入商品規格
+const unavailableProducts = ref({}); // 已下架或已刪除的商品（不再重複查詢、不跳錯誤通知）
 const loadProductSpecifications = async (productId) => {
+  if (unavailableProducts.value[productId]) return;
   try {
-    const response = await getProductSpecifications(productId);
+    const response = await getProductSpecifications(productId, { silent: true });
     if (response && response.data) {
       productSpecifications.value[productId] = response.data;
     }
   } catch (error) {
-    console.warn(`載入商品 ${productId} 規格失敗:`, error);
+    // 商品已下架或不存在：標示在購物車中，讓顧客移除；其他錯誤時仍可調整數量，結帳時由後端檢查
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || '';
+    if (status === 404 || status === 400 || message.includes('不存在') || message.includes('下架')) {
+      unavailableProducts.value[productId] = true;
+    }
   }
 };
 
@@ -261,7 +279,7 @@ const handleSpecChange = (item, newSpecId) => {
   const oldSpecId = item.specification?.id || null;
   
   // 檢查庫存
-  if (newSpec.stock === 0) {
+  if (isSoldOut(newSpec)) {
     $q.notify({
       type: 'warning',
       message: '此規格已售完',
@@ -279,7 +297,10 @@ const handleSpecChange = (item, newSpecId) => {
 // 增加數量
 const increaseQuantity = item => {
   const specId = item.specification?.id || null;
-  const maxStock = item.specification?.stock || 999;
+  // 以最新載入的規格庫存為準，未追蹤庫存時上限 999
+  const latestSpec = getItemSpecifications(item).find(spec => spec.id === item.specification?.id);
+  const stock = latestSpec?.stock ?? item.specification?.stock;
+  const maxStock = stock !== null && stock !== undefined ? stock : 999;
   
   if (item.quantity >= maxStock) {
     $q.notify({

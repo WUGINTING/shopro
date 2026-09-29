@@ -19,6 +19,8 @@ import java.util.List;
 public class ProductImageController {
 
     private final ProductImageService productImageService;
+    private final com.info.ecommerce.modules.product.service.ProductService productService;
+    private final com.info.ecommerce.modules.auth.service.CurrentUserService currentUserService;
 
     @PostMapping
     @Operation(summary = "添加商品圖片")
@@ -46,6 +48,9 @@ public class ProductImageController {
     @Operation(summary = "取得商品的所有圖片")
     public ApiResponse<List<ProductImageDTO>> listProductImages(
             @Parameter(description = "商品 ID") @PathVariable Long productId) {
+        if (!currentUserService.isStaff()) {
+            productService.assertPubliclyVisible(productId);
+        }
         return ApiResponse.success(productImageService.listProductImages(productId));
     }
 

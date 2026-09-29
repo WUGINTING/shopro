@@ -19,6 +19,7 @@ public class ProductBatchController {
 
     private final ProductBatchService batchService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping
     @Operation(summary = "批次更新商品")
     public ApiResponse<Void> batchUpdateProducts(@Valid @RequestBody BatchUpdateProductDTO dto) {
@@ -26,6 +27,7 @@ public class ProductBatchController {
         return ApiResponse.success("批次更新成功", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping
     @Operation(summary = "批次刪除商品")
     public ApiResponse<Void> batchDeleteProducts(@RequestBody List<Long> productIds) {
@@ -33,6 +35,7 @@ public class ProductBatchController {
         return ApiResponse.success("批次刪除成功", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/activate")
     @Operation(summary = "批次上架商品")
     public ApiResponse<Void> batchActivateProducts(@RequestBody List<Long> productIds) {
@@ -40,6 +43,7 @@ public class ProductBatchController {
         return ApiResponse.success("批次上架成功", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/deactivate")
     @Operation(summary = "批次下架商品")
     public ApiResponse<Void> batchDeactivateProducts(@RequestBody List<Long> productIds) {

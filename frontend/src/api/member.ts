@@ -4,7 +4,9 @@
  */
 
 import axiosInstance from './axios'
-import type { ApiResponse } from './types'
+import type { ApiResponse, PageResponse } from './types'
+
+export type { PageResponse }
 
 export interface Member {
   id?: number
@@ -15,6 +17,8 @@ export interface Member {
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
   registeredDate?: string
   totalPoints: number
+  /** 目前可用積點（扣除已使用） */
+  availablePoints?: number
   totalSpent: number
   notes?: string
   createdAt?: string
@@ -27,14 +31,6 @@ export interface MemberQueryRequest {
   status?: string
   page?: number
   size?: number
-}
-
-export interface PageResponse<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  currentPage: number
-  pageSize: number
 }
 
 /**
@@ -133,32 +129,18 @@ export const memberApi = {
   },
 
   /**
-   * 批量刪除會員
-   * @description 批量刪除多個會員帳號
-   * @param {number[]} ids - 會員 ID 陣列
-   * @returns {Promise<boolean>} 刪除是否成功
-   * @swagger DELETE /api/crm/members/batch
-   * @example
-   * const success = await memberApi.deleteMembers([123, 456, 789])
-   */
-  deleteMembers: async (ids: number[]) => {
-    const response = await axiosInstance.delete<any, ApiResponse<boolean>>('/crm/members/batch', {
-      data: { ids }
-    })
-    return response.data
-  },
-
-  /**
    * 停用會員
    * @description 將會員狀態設為 SUSPENDED
    * @param {number} id - 會員 ID
    * @returns {Promise<Member>} 更新後的會員資料
-   * @swagger PATCH /api/crm/members/{id}/suspend
+   * @swagger PUT /api/crm/members/{id}/status?status=SUSPENDED
    * @example
    * const suspended = await memberApi.suspendMember(123)
    */
   suspendMember: async (id: number) => {
-    const response = await axiosInstance.patch<any, ApiResponse<Member>>(`/crm/members/${id}/suspend`)
+    const response = await axiosInstance.put<any, ApiResponse<Member>>(`/crm/members/${id}/status`, null, {
+      params: { status: 'SUSPENDED' }
+    })
     return response.data
   },
 
@@ -167,12 +149,14 @@ export const memberApi = {
    * @description 將會員狀態設為 ACTIVE
    * @param {number} id - 會員 ID
    * @returns {Promise<Member>} 更新後的會員資料
-   * @swagger PATCH /api/crm/members/{id}/activate
+   * @swagger PUT /api/crm/members/{id}/status?status=ACTIVE
    * @example
    * const activated = await memberApi.activateMember(123)
    */
   activateMember: async (id: number) => {
-    const response = await axiosInstance.patch<any, ApiResponse<Member>>(`/crm/members/${id}/activate`)
+    const response = await axiosInstance.put<any, ApiResponse<Member>>(`/crm/members/${id}/status`, null, {
+      params: { status: 'ACTIVE' }
+    })
     return response.data
   },
 

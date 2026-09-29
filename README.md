@@ -33,7 +33,7 @@ Shopro 是一個完整的電商管理平台，提供商店管理、商品管理�
 - **Vue 3** - 漸進式 JavaScript 框架
 - **TypeScript** - 類型安全
 - **Vite** - 快速建置工具
-- **Element Plus** - UI 組件庫
+- **Quasar** - UI 組件庫（後台 App 與前台商城）
 - **Vue Router** - 路由管理
 - **Pinia** - 狀態管理
 - **Axios** - HTTP 客戶端
@@ -76,7 +76,27 @@ shopro/
 └── README.md               # 本文件
 ```
 
-## 核心功能模組
+## 已完成功能
+
+**前台商城（frontend-official，訪客結帳）與後台 App 的會員商城**
+- 商品瀏覽：分類、搜尋、排序、分頁、規格與庫存、特價、最少 / 最多購買數量、缺貨到貨通知
+- 結帳：後端計價與扣庫存、宅配 / 門市自取（運費依後台設定）、綠界線上付款（信用卡 / ATM / 超商代碼）與貨到付款
+- 折扣：促銷活動自動套用、優惠券、會員等級折扣（取最優惠）、免運
+- 訂單：Email 通知（成立、付款、出貨、取消、退款）、以訂單編號查詢、重新付款、自行取消未付款訂單、物流單號
+- 會員：註冊 / 登入 / Google 登入、Email 驗證、忘記密碼、我的訂單、會員等級與累積消費、預設收件資料
+- 內容：最新消息、自訂頁面（退換貨 / 隱私權 / 條款 / FAQ）、彈跳廣告、聯絡表單、SEO 標題與描述
+
+**後台**
+- 商品：規格、圖片、描述區塊、批次上下架、補貨（含規格）、低庫存警示、庫存異動紀錄
+- 訂單：狀態規則、出貨與物流、登記退款、訂單折扣、訂單歷程、CSV 匯出、黑名單、訂單問答
+- 行銷：促銷活動、優惠券（可公開於前台）、EDM 電子報（限同意接收的會員，含退訂）
+- 會員：會員資料、等級、積點、分群
+- 報表：儀表板、營運統計（銷售趨勢、熱銷商品 / 分類、付款方式）、金流儀表板與回呼紀錄
+- 系統：帳號與角色權限、運費設定、上線設定檢查、商店內容設定、操作日誌
+
+營運流程（出貨、退款、折扣規則等）請見[部署指南的「營運流程重點」](./docs/deployment-guide.md)。
+
+## 規劃藍圖（以下為產品規劃，部分尚未實作）
 
 ### 1. 開店支援與設計
 - 視覺設計：商店佈景、首頁設計區塊、彈跳廣告
@@ -130,14 +150,18 @@ shopro/
 
 ### 後端啟動
 
+資料庫帳密、JWT 金鑰、金流金鑰等一律由環境變數提供（不寫在設定檔中），範本見 [`E-commerce/.env.example`](./E-commerce/.env.example)，完整說明見[部署指南](./docs/deployment-guide.md)。
+
 ```bash
 cd E-commerce
+cp .env.example .env        # 填入 DB_URL / DB_USERNAME / DB_PASSWORD 等
+set -a; source .env; set +a
 ./mvnw spring-boot:run
 ```
 
-後端服務將在 `http://localhost:8080` 運行
+後端服務將在 `http://localhost:8080` 運行。使用 `SPRING_PROFILES_ACTIVE=dev` 時會在空資料庫建立 `admin / admin123` 與示範帳號。
 
-### 前端啟動
+### 後台管理前端啟動
 
 ```bash
 cd frontend
@@ -145,7 +169,27 @@ npm install
 npm run dev
 ```
 
-前端應用將在 `http://localhost:5173` 運行
+後台應用將在 `http://localhost:5173` 運行
+
+### 前台商城（遇日小舖）啟動
+
+```bash
+cd frontend-official
+npm install
+npx quasar dev
+```
+
+前台商城將在 `http://localhost:5174/shop` 運行（`/api` 代理到後端）。顧客免登入即可結帳（綠界線上付款或貨到付款），並以「訂單編號 + Email」查詢訂單。
+
+### 測試與 CI
+
+```bash
+cd E-commerce && mvn test                 # 後端單元與整合測試（H2，不需資料庫）
+cd frontend && npm run build              # 型別檢查 + 建置
+cd frontend-official && npx quasar build  # 前台建置
+```
+
+每次推送由 GitHub Actions（`.github/workflows/ci.yml`）自動執行以上三項。
 
 ### 建置生產版本
 
@@ -157,8 +201,8 @@ cd E-commerce
 
 **前端建置:**
 ```bash
-cd frontend
-npm run build
+cd frontend && npm run build              # 後台 → frontend/dist
+cd frontend-official && npx quasar build  # 前台 → frontend-official/dist/spa
 ```
 
 ## API 文檔

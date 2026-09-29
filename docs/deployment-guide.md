@@ -39,30 +39,36 @@ cp .env.example .env
 # 編輯 .env 檔案
 ```
 
-**.env 範例：**
+所有機敏設定（資料庫密碼、JWT 金鑰、金流金鑰）都只從環境變數讀取，**不得寫入 `application.properties` 或提交到 git**。
+完整清單見 [`E-commerce/.env.example`](../E-commerce/.env.example)。Spring Boot 不會自動讀取 `.env`，請先匯出：
 
-```properties
-SPRING_PROFILES_ACTIVE=dev
-
-# 資料庫
-DB_URL=jdbc:sqlserver://localhost:1433;DatabaseName=ecommerce;encrypt=true;trustServerCertificate=true
-DB_USERNAME=sa
-DB_PASSWORD=your_password
-
-# JWT
-JWT_SECRET=your-256-bit-secret-key-here
-JWT_EXPIRATION=86400000
-
-# 應用程式 URL
-APP_BASE_URL=http://localhost:8080
-APP_FRONTEND_URL=http://localhost:5173
-
-# 支付設定 (測試環境)
-ECPAY_MERCHANT_ID=2000132
-ECPAY_HASH_KEY=5294y06JbISpM5x9
-ECPAY_HASH_IV=v77hoKGq4kWxNNIS
-ECPAY_SANDBOX=true
+```bash
+set -a; source .env; set +a
 ```
+
+| 變數 | 必填 | 說明 |
+|------|------|------|
+| `SPRING_PROFILES_ACTIVE` | 建議 | `dev`（admin/admin123 + 示範帳號）或 `prod`（缺少必要變數時啟動失敗） |
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 是 | SQL Server 連線 |
+| `JWT_SECRET` | prod 必填 | base64、至少 32 bytes（`openssl rand -base64 32`）；未設定時使用暫時金鑰，重啟後需重新登入 |
+| `ADMIN_INITIAL_PASSWORD` | 建議 | 使用者資料表為空時建立的管理員密碼；未設定會產生隨機密碼並只在啟動日誌顯示一次 |
+| `DEMO_USERS` | 否 | `true` 時建立 manager/staff/customer 示範帳號（僅限開發） |
+| `CORS_ALLOWED_ORIGINS` | prod 必填 | 後台與前台網址，逗號分隔 |
+| `STOREFRONT_URL` | prod 必填 | 前台商城網址，綠界付款完成後導回 `/shop/order/success` |
+| `ADMIN_STORE_URL` | prod 必填 | 後台 App 網址：在後台 App 顧客商城下單的訂單付款後導回 `/order/success`，會員 Email 驗證信的連結也指向 `/verify-email` |
+| `APP_TIMEZONE` | 否 | 後端計算日期時間用的時區（預設 `Asia/Taipei`，空白視為預設，無效名稱會啟動失敗）：促銷 / 彈跳廣告期間、統計日期、訂單時間都以此時區計算。**升級注意**：舊版後台的部落格排程與行事曆時間是以 UTC 儲存；若先前主機時區為 UTC，既有訂單等時間也是 UTC。升級後請檢查尚未執行的部落格排程與行事曆事件（必要時重新設定），並留意升級當下的逾期未付款訂單可能提早約 8 小時取消 |
+| `FORWARD_HEADERS_STRATEGY` | 否 | 預設 `native`：後端位於內網反向代理（Nginx 等，IP 在 10.x / 172.16-31.x / 192.168.x / 127.x）後方時，依 `X-Forwarded-For` 取得顧客真實 IP，供聯絡表單、忘記密碼、訂單查詢等的頻率限制使用。代理不在內網時設為 `framework` 並確認代理會覆寫此標頭；直接對外時設為 `none` |
+| `FILE_UPLOAD_DIR` | 建議 | 上傳圖片存放目錄（預設 `./uploads/images`） |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | 建議 | SMTP 設定；設定後才會寄送：訂單通知（成立、付款、出貨、取消、退款）、會員 Email 驗證、重設密碼、到貨通知、EDM 電子報。未設定時以上都不會寄出（EDM 會拒絕發送、到貨通知保留待寄） |
+| `MAIL_FROM` / `STORE_NAME` | 建議 | 通知信寄件地址與顯示名稱（預設「遇日小舖」）；前台「聯絡我們」的留言也會轉寄到 `MAIL_FROM`（可直接回覆顧客） |
+| `LOW_STOCK_THRESHOLD` | 否 | 規格庫存低於等於此數量時產生低庫存警示（預設 5；無規格商品使用各自的安全庫存） |
+| `ORDER_UNPAID_TIMEOUT_HOURS` | 否 | 前台線上付款訂單自最後一次建立付款起，逾期未付款自動取消並歸還庫存的時數（預設 72；0 = 停用） |
+| `ECPAY_EXPIRE_DAYS` | 否 | 綠界 ATM / 超商代碼繳費期限天數（預設 2），須短於上一項期限 |
+| `ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | prod 必填 | 綠界金鑰（未設定時使用綠界公開測試商店） |
+| `ECPAY_NOTIFY_URL` | prod 必填 | 綠界伺服器付款通知網址，必須能從網際網路連線：`https://<api 網域>/api/payment-gateway/callback/ecpay` |
+| `ECPAY_RETURN_URL` | prod 必填 | 後台商城付款後的「返回商店」網址 |
+| `LINEPAY_CHANNEL_ID` / `LINEPAY_CHANNEL_SECRET` | 選用 | LINE Pay |
+| `GOOGLE_CLIENT_ID` | 選用 | Google 登入的 OAuth Client ID（與後台 `VITE_GOOGLE_CLIENT_ID` 相同）；未設定時停用 Google 登入。後端會向 Google 驗證 token 簽章與 aud |
 
 ### 3. 啟動後端
 
@@ -111,26 +117,36 @@ cd E-commerce
 
 #### 2. 設定環境變數
 
-建立 `/etc/shopro/application.env`：
+建立 `/etc/shopro/application.env`（權限設為 600，僅服務帳號可讀）：
 
 ```properties
 SPRING_PROFILES_ACTIVE=prod
 
-DB_URL=jdbc:sqlserver://db-server:1433;DatabaseName=ecommerce;encrypt=true
+DB_URL=jdbc:sqlserver://db-server:1433;DatabaseName=e-commerce;encrypt=true
 DB_USERNAME=shopro_user
 DB_PASSWORD=<secure_password>
 
-JWT_SECRET=<256-bit-secure-secret>
-JWT_EXPIRATION=86400000
+JWT_SECRET=<openssl rand -base64 32>
+ADMIN_INITIAL_PASSWORD=<首次啟動的管理員密碼，登入後請立即修改>
 
-APP_BASE_URL=https://api.yourdomain.com
-APP_FRONTEND_URL=https://yourdomain.com
+CORS_ALLOWED_ORIGINS=https://admin.yourdomain.com,https://shop.yourdomain.com
+STOREFRONT_URL=https://shop.yourdomain.com
+ADMIN_STORE_URL=https://admin.yourdomain.com
+FILE_UPLOAD_DIR=/var/lib/shopro/uploads/images
 
 ECPAY_MERCHANT_ID=<production_merchant_id>
 ECPAY_HASH_KEY=<production_hash_key>
 ECPAY_HASH_IV=<production_hash_iv>
-ECPAY_SANDBOX=false
+ECPAY_RETURN_URL=https://admin.yourdomain.com/payment/result
+ECPAY_NOTIFY_URL=https://api.yourdomain.com/api/payment-gateway/callback/ecpay
 ```
+
+`prod` profile 預設關閉 Swagger（需要時設 `API_DOCS_ENABLED=true`），並以 `ddl-auto=validate` 啟動；首次部署或升級需要變更資料表時，可暫時設 `JPA_DDL_AUTO=update`。
+
+> 本版的資料表變更：`users.email_verified`、`member.marketing_opt_in` 欄位，以及新資料表 `coupon`。從舊版升級時請以 `JPA_DDL_AUTO=update` 啟動一次，之後再改回 `validate`。
+> - 既有帳號的 `email_verified` 為 NULL，視為已驗證；新註冊的會員需點擊驗證信（或使用 Google 登入）後，才能在「我的訂單」看到以該 Email 下的訂單。
+> - 既有會員的 `marketing_opt_in` 為 NULL，視為**未同意**接收 EDM；只有之後在結帳或會員中心勾選同意的會員會收到電子報。
+> - 後台通知新增類型 `CONTACT_MESSAGE`。SQL Server 既有的 `admin_notifications.type` CHECK 約束不會被 `update` 修改，請執行 `E-commerce/database/migration/2026_09_admin_notification_contact_message.sql`，否則前台聯絡表單會送出失敗。
 
 #### 3. 建立 systemd 服務
 
@@ -228,6 +244,71 @@ server {
 }
 ```
 
+#### 3. 前台商城（frontend-official）
+
+```bash
+cd frontend-official
+npm ci
+npx quasar build          # 輸出至 dist/spa
+```
+
+前台預設呼叫同網域的 `/api`（見 `frontend-official/.env.production`），請讓網站伺服器反向代理到後端；路由為 history 模式，需要 SPA fallback：
+
+```nginx
+# 公開的結帳 / 訂單查詢 API 限流（每個 IP 每秒 2 次，允許短暫突增）
+limit_req_zone $binary_remote_addr zone=storefront_orders:10m rate=2r/s;
+
+server {
+    listen 443 ssl;
+    server_name shop.yourdomain.com;
+    root /var/www/shopro-shop;          # dist/spa 的內容
+    index index.html;
+
+    client_max_body_size 12m;           # 與後端上傳上限一致
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/storefront/orders/ {
+        limit_req zone=storefront_orders burst=10 nodelay;
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+上線前檢查：
+- 後端 `STOREFRONT_URL` 設為前台網址（綠界付款完成後導回 `/shop/order/success`），`ADMIN_STORE_URL` 設為後台 App 網址。
+- 設定 SMTP（`SPRING_MAIL_*`、`MAIL_FROM`），否則不會寄出訂單通知信與會員 Email 驗證信。
+- `ECPAY_NOTIFY_URL` 必須是綠界伺服器能連到的 HTTPS 網址，否則訂單不會變成「已付款」。
+- 後台「商店內容設定」填好聯絡 Email、電話、營業時間與地址（前台頁尾與商店介紹會顯示）。
+- 需要自訂退換貨、隱私權、服務條款、常見問題內容時，建立對應 slug（`returns`、`privacy`、`terms`、`faq`）的自訂頁面；未建立時顯示內建預設內容。
+- 後台「系統設定 → 上線檢查」會列出寄信、登入金鑰、綠界正式環境與通知網址、網址設定是否完成；「系統設定 → 運費設定」設定宅配 / 門市自取運費與免運門檻。
+
+### 營運流程重點
+
+| 情境 | 操作 |
+|------|------|
+| 線上付款訂單 | 綠界通知後自動變成「已付款」；未付款超過 `ORDER_UNPAID_TIMEOUT_HOURS` 自動取消並歸還庫存與優惠券。顧客可在訂單查詢頁重新付款或自行取消 |
+| 貨到付款訂單 | 待付款狀態即可出貨；出貨後為「處理中」，物流標記「已送達」後自動「已完成」 |
+| 出貨 | 訂單詳情「新增物流」填物流公司與單號；狀態為已出貨時寄出貨通知給顧客，顧客在訂單查詢頁可看到單號 |
+| 退款 | 系統**不會自動呼叫綠界退款**：信用卡請在綠界廠商後台退刷、ATM/超商以匯款退還，完成後在訂單「登記退款」（可部分退款、可選擇歸還庫存）。全額退款後訂單變「已退款」、扣回會員累計消費並通知顧客 |
+| 已付款訂單取消 | 不可直接取消，請使用「登記退款」 |
+| 折扣 | 促銷活動、優惠券、會員等級折扣取折抵最多的一項（不累加）；免運可併用。優惠券於下單扣次數、訂單取消歸還 |
+| 缺貨 | 顧客可登記到貨通知；補貨（含規格補貨）後自動寄信 |
+| 電子報（EDM） | 只寄給同意接收的會員，信中附退訂連結 |
+| 報表 | 後台「報表統計」依期間統計；訂單列表可匯出 CSV（經理以上） |
+
 ---
 
 ### Docker 部署
@@ -309,6 +390,20 @@ volumes:
 ```
 
 ---
+
+## 角色權限與安全注意事項
+
+| 角色 | 可以做的事 |
+|------|------------|
+| ADMIN | 全部，包含使用者帳號、系統 / 金流設定、刪除訂單 |
+| MANAGER | 商品與價格、優惠券 / 促銷 / 會員等級 / 點數、內容（部落格、自訂頁面、首頁區塊、彈跳廣告、商品描述）、EDM、退款、標記已付款、匯出訂單 |
+| STAFF | 日常作業：訂單處理（不含標記已付款 / 退款）、出貨、庫存補貨、商品資料（不含價格）、會員基本資料、訂單問答 |
+
+- 後台撰寫的 HTML（部落格、自訂頁面）儲存時會以白名單清理，前台顯示時再清理一次；商品描述區塊以純文字顯示。
+- 變更帳號名稱或 Email 需輸入目前密碼。
+- 前台下單、優惠券試算、訂單查詢、忘記密碼、登入、聯絡表單與到貨通知都有頻率限制（單機記憶體計數，多台主機時各自計算）。
+- **請務必更換**：Git 歷史中曾出現資料庫密碼與 JWT 金鑰（早期 commit），正式環境請使用新的資料庫密碼與隨機產生的 `JWT_SECRET`。
+- 建議在反向代理加上 `Content-Security-Policy` 等安全標頭。
 
 ## SSL/HTTPS 設定
 

@@ -58,6 +58,15 @@ official/
 ### 購物車網站 (MainLayoutShop)
 
 - `/shop` - 購物車首頁 (遇日小舖)
+- `/shop/introduce` - 商店介紹
+- `/shop/news`、`/shop/news/:id` - 最新消息
+- `/shop/product/list`、`/shop/product/:id` - 商品列表 / 商品詳情
+- `/shop/checkout` - 結帳（訪客結帳，呼叫 `POST /api/storefront/orders/checkout`）
+- `/shop/order/success` - 訂單完成頁
+- `/shop/order/lookup` - 訂單查詢（訂單編號 + 電子郵件）
+
+> 結帳金額、運費與庫存一律以後端 `POST /api/storefront/orders/quote` 試算結果為準；
+> 選擇「線上付款」時，後端建立綠界付款並回傳付款網址，前端以 POST 表單導向綠界。
 
 ## 🛠️ 安裝與啟動
 

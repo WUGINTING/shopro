@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class StoreController {
 
     private final StoreService storeService;
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "初始化商店設定")
     public ApiResponse<StoreDTO> createStore(@Valid @RequestBody StoreDTO dto) {
@@ -27,6 +28,7 @@ public class StoreController {
         return ApiResponse.success(storeService.getStore());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping
     @Operation(summary = "更新商店設定")
     public ApiResponse<StoreDTO> updateStore(@Valid @RequestBody StoreDTO dto) {

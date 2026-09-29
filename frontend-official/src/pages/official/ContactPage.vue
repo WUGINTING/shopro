@@ -19,6 +19,58 @@
       </div>
     </section>
 
+    <!-- 聯絡表單 -->
+    <section class="section-padding">
+      <div class="container q-mx-auto contact-form-wrap">
+        <div class="text-center q-mb-lg fade-in-up">
+          <h2 class="text-h2 text-weight-bold q-mb-md">線上留言</h2>
+          <div class="story-divider q-mx-auto q-mb-lg"></div>
+          <p class="text-body1 text-grey-4">訂位、團購、活動合作或商品問題，留下訊息我們會盡快回覆</p>
+        </div>
+
+        <q-form ref="formRef" class="contact-form" @submit.prevent="submitForm">
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.name" filled dark label="姓名 *" maxlength="50" :rules="[val => !!val?.trim() || '請輸入姓名']" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input v-model="form.phone" filled dark label="電話" maxlength="20" />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model="form.email"
+                filled
+                dark
+                type="email"
+                label="Email *"
+                maxlength="100"
+                :rules="[val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val || '') || '請輸入正確的 Email']"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-select v-model="form.eventType" filled dark emit-value map-options label="詢問類型" :options="eventTypes" />
+            </div>
+            <div class="col-12">
+              <q-input
+                v-model="form.message"
+                filled
+                dark
+                type="textarea"
+                autogrow
+                label="留言內容 *"
+                maxlength="400"
+                counter
+                :rules="[val => (val || '').trim().length >= 5 || '請輸入至少 5 個字']"
+              />
+            </div>
+          </div>
+          <div class="text-center q-mt-md">
+            <q-btn type="submit" class="btn-primary" size="lg" label="送出留言" :loading="submitting" />
+          </div>
+        </q-form>
+      </div>
+    </section>
+
     <!-- 地圖區域 -->
     <section class="section-padding">
       <div class="container q-mx-auto">
@@ -39,25 +91,24 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { Icon } from '@iconify/vue';
 import LocationMap from 'src/components/official/LocationMap.vue';
+import http from 'src/utils/request.js';
 
 const $q = useQuasar();
 const submitting = ref(false);
 
+const formRef = ref(null);
 const form = reactive({
   name: '',
   phone: '',
   email: '',
   eventType: '',
-  guests: '',
-  eventDate: '',
-  location: '',
-  budget: '',
   message: '',
 });
 
 const eventTypes = [
+  { label: '商品 / 訂單問題', value: 'order' },
+  { label: '團購 / 大量訂購', value: 'bulk' },
   { label: '企業活動', value: 'corporate' },
   { label: '婚宴慶典', value: 'wedding' },
   { label: '生日派對', value: 'birthday' },
@@ -67,30 +118,27 @@ const eventTypes = [
 
 const submitForm = async () => {
   submitting.value = true;
-
   try {
-    // 模擬提交表單
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
+    const subject = eventTypes.find(type => type.value === form.eventType)?.label || '一般詢問';
+    await http.post('/storefront/contact', {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      subject,
+      message: form.message.trim(),
+    });
     $q.notify({
-      message: '預約申請已送出！我們將在24小時內與您聯繫。',
+      message: '已收到您的留言，我們會盡快與您聯繫！',
       color: 'positive',
       position: 'top',
       timeout: 3000,
-      actions: [{ label: '關閉', color: 'white' }],
     });
-
-    // 清空表單
     Object.keys(form).forEach(key => {
       form[key] = '';
     });
+    formRef.value?.resetValidation();
   } catch (error) {
-    $q.notify({
-      message: '送出失敗，請稍後再試或直接電話聯繫。',
-      color: 'negative',
-      position: 'top',
-      timeout: 3000,
-    });
+    // 錯誤訊息已由 request 攔截器顯示
   } finally {
     submitting.value = false;
   }
@@ -104,6 +152,10 @@ const openGoogleMaps = () => {
 </script>
 
 <style lang="scss" scoped>
+.contact-form-wrap {
+  max-width: 760px;
+}
+
 .contact-icon {
   width: 60px;
   height: 60px;

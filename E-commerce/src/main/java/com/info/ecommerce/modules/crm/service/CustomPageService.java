@@ -27,7 +27,8 @@ public class CustomPageService {
         }
 
         CustomPage customPage = new CustomPage();
-        BeanUtils.copyProperties(dto, customPage, "id");
+        BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
+        customPage.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(customPage.getContent()));
         customPage = customPageRepository.save(customPage);
         return toDTO(customPage);
     }
@@ -41,7 +42,13 @@ public class CustomPageService {
             throw new BusinessException("頁面別名已存在");
         }
 
+        Boolean currentEnabled = customPage.getEnabled();
         BeanUtils.copyProperties(dto, customPage, "id", "createdAt", "updatedAt");
+        customPage.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(customPage.getContent()));
+        if (customPage.getEnabled() == null) {
+            // 未傳入時保留原本的啟用狀態
+            customPage.setEnabled(currentEnabled != null ? currentEnabled : Boolean.TRUE);
+        }
         customPage = customPageRepository.save(customPage);
         return toDTO(customPage);
     }
@@ -53,7 +60,9 @@ public class CustomPageService {
     }
 
     public CustomPageDTO getCustomPageBySlug(String slug) {
+        // 公開網址只提供已啟用的頁面
         CustomPage customPage = customPageRepository.findBySlug(slug)
+                .filter(page -> !Boolean.FALSE.equals(page.getEnabled()))
                 .orElseThrow(() -> new BusinessException("自訂頁面不存在"));
         return toDTO(customPage);
     }
@@ -67,7 +76,12 @@ public class CustomPageService {
     }
 
     public Page<CustomPageDTO> listCustomPages(Pageable pageable) {
-        return customPageRepository.findAll(pageable).map(this::toDTO);
+        // 未指定排序時依排序值、ID 排列，分頁結果才穩定
+        Pageable sorted = pageable.getSort().isSorted() ? pageable
+                : org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                        org.springframework.data.domain.Sort.by("sortOrder").ascending().and(
+                                org.springframework.data.domain.Sort.by("id").ascending()));
+        return customPageRepository.findAll(sorted).map(this::toDTO);
     }
 
     public List<CustomPageDTO> listAllCustomPages() {

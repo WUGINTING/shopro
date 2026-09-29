@@ -51,8 +51,20 @@ class EdmServiceTest {
     @Mock
     private MemberGroupService memberGroupService;
 
+    @Mock
+    private jakarta.persistence.EntityManager entityManager;
+
     @InjectMocks
     private EdmService edmService;
+
+    @Mock
+    private org.springframework.beans.factory.ObjectProvider<org.springframework.mail.javamail.JavaMailSender> mailSenderProvider;
+
+    @Mock
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
+
+    @Mock
+    private com.info.ecommerce.modules.auth.service.JwtService jwtService;
 
     private EdmCampaign edmCampaign;
     private EdmCampaignDTO edmCampaignDTO;
@@ -82,7 +94,13 @@ class EdmServiceTest {
                 .id(1L)
                 .email("test@example.com")
                 .name("Test Member")
+                .marketingOptIn(true)
                 .build();
+        org.mockito.Mockito.lenient().when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        org.mockito.Mockito.lenient().when(mailSender.createMimeMessage())
+                .thenAnswer(invocation -> new jakarta.mail.internet.MimeMessage((jakarta.mail.Session) null));
+        org.mockito.Mockito.lenient().when(jwtService.generatePurposeToken(any(), any(), any(), anyLong())).thenReturn("token");
+        org.mockito.Mockito.lenient().when(edmCampaignRepository.claimForSending(anyLong())).thenReturn(1);
     }
 
     @Test
@@ -141,7 +159,7 @@ class EdmServiceTest {
         // when & then
         assertThatThrownBy(() -> edmService.updateEdmCampaign(1L, edmCampaignDTO))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("已發送的 EDM 活動無法修改");
+                .hasMessage("已發送或發送中的 EDM 活動無法修改");
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
     }
@@ -270,7 +288,6 @@ class EdmServiceTest {
     void should_SendEdmCampaign_When_CampaignNotSent() {
         // given
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenReturn(edmCampaign);
         when(memberRepository.findAll()).thenReturn(List.of(member));
         when(edmSendLogRepository.save(any(EdmSendLog.class))).thenReturn(new EdmSendLog());
 
@@ -280,7 +297,9 @@ class EdmServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(edmCampaignRepository, times(1)).findById(1L);
-        verify(edmCampaignRepository, times(2)).save(any(EdmCampaign.class));
+        verify(edmCampaignRepository, times(1)).claimForSending(1L);
+        verify(edmCampaignRepository, times(1)).finishSending(eq(1L), eq(EdmStatus.SENT), any(), eq(1), eq(1), eq(0));
+        verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
         verify(memberRepository, times(1)).findAll();
         verify(edmSendLogRepository, atLeastOnce()).save(any(EdmSendLog.class));
     }
@@ -300,12 +319,23 @@ class EdmServiceTest {
     }
 
     @Test
+    void should_NotSendTwice_When_AnotherSendAlreadyClaimedTheCampaign() {
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(memberRepository.findAll()).thenReturn(List.of(member));
+        when(edmCampaignRepository.claimForSending(1L)).thenReturn(0);
+
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("正在發送");
+        verify(mailSender, never()).send(any(jakarta.mail.internet.MimeMessage.class));
+    }
+
+    @Test
     void should_SendEdmCampaignToTargetGroup_When_TargetGroupIdProvided() {
         // given
         edmCampaign.setTargetGroupId(1L);
         List<Long> memberIds = List.of(1L);
         when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
-        when(edmCampaignRepository.save(any(EdmCampaign.class))).thenReturn(edmCampaign);
         when(memberGroupService.getGroupMembers(1L)).thenReturn(memberIds);
         when(memberRepository.findAllById(memberIds)).thenReturn(List.of(member));
         when(edmSendLogRepository.save(any(EdmSendLog.class))).thenReturn(new EdmSendLog());
@@ -344,7 +374,7 @@ class EdmServiceTest {
         // when & then
         assertThatThrownBy(() -> edmService.cancelEdmCampaign(1L))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("已發送的 EDM 活動無法取消");
+                .hasMessage("已發送或發送中的 EDM 活動無法取消");
         verify(edmCampaignRepository, times(1)).findById(1L);
         verify(edmCampaignRepository, never()).save(any(EdmCampaign.class));
     }
@@ -363,5 +393,39 @@ class EdmServiceTest {
         // then
         assertThat(result).isNotNull();
         verify(edmSendLogRepository, times(1)).findByCampaignId(1L, pageable);
+    }
+
+    @Test
+    void should_OnlyMailOptedInActiveMembers_AndIncludeUnsubscribeLink() throws Exception {
+        Member noConsent = Member.builder().id(2L).email("no@example.com").marketingOptIn(false).build();
+        Member suspended = Member.builder().id(3L).email("s@example.com").marketingOptIn(true)
+                .status(com.info.ecommerce.modules.crm.enums.MemberStatus.SUSPENDED).build();
+        Member duplicate = Member.builder().id(4L).email("TEST@example.com").marketingOptIn(true).build();
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(memberRepository.findAll()).thenReturn(List.of(member, noConsent, suspended, duplicate));
+
+        EdmCampaignDTO result = edmService.sendEdmCampaign(1L);
+
+        org.mockito.ArgumentCaptor<jakarta.mail.internet.MimeMessage> sent =
+                org.mockito.ArgumentCaptor.forClass(jakarta.mail.internet.MimeMessage.class);
+        verify(mailSender, times(1)).send(sent.capture());
+        assertThat(sent.getValue().getAllRecipients()[0].toString()).isEqualTo("test@example.com");
+        sent.getValue().saveChanges();
+        assertThat(sent.getValue().getContent().toString()).contains("/shop/unsubscribe?token=token");
+        assertThat(result.getSuccessCount()).isEqualTo(1);
+    }
+
+    @Test
+    void should_RefuseToSend_When_MailNotConfiguredOrNoRecipients() {
+        when(edmCampaignRepository.findById(1L)).thenReturn(Optional.of(edmCampaign));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(null);
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("SMTP");
+
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        when(memberRepository.findAll()).thenReturn(List.of(Member.builder().id(9L).email("x@example.com").build()));
+        assertThatThrownBy(() -> edmService.sendEdmCampaign(1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("同意接收");
+        verify(edmCampaignRepository, never()).save(any());
     }
 }

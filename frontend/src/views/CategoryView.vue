@@ -254,7 +254,7 @@ const statusOptions = [
 ]
 
 const parentOptions = computed(() => {
-  const options = [{ label: '頂層分類', value: null }]
+  const options: { label: string; value: number | null }[] = [{ label: '頂層分類', value: null }]
   categories.value.forEach(cat => {
     if (cat.id) {
       options.push({ label: cat.name, value: cat.id })
@@ -264,7 +264,7 @@ const parentOptions = computed(() => {
 })
 
 const parentCategoryOptions = computed(() => {
-  const options = [{ label: '無（頂層分類）', value: null }]
+  const options: { label: string; value: number | null }[] = [{ label: '無（頂層分類）', value: null }]
   categories.value.forEach(cat => {
     // 編輯時，排除自己和自己的子分類（避免循環引用）
     if (cat.id && cat.id !== form.value.id) {
@@ -293,7 +293,7 @@ const loadCategories = async () => {
   }
 }
 
-const filterCategories = (rows: ProductCategory[], terms: string) => {
+const filterCategories = (rows: readonly ProductCategory[], terms: string): readonly ProductCategory[] => {
   if (!terms) return rows
 
   const lowerTerms = terms.toLowerCase()

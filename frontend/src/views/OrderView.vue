@@ -26,6 +26,14 @@
             @click="showStatusModal = true"
           />
           <q-btn
+            v-if="['ADMIN', 'MANAGER'].includes(authStore.userRole || '')"
+            color="grey-8"
+            icon="download"
+            label="匯出 CSV"
+            flat
+            @click="showExportDialog = true"
+          />
+          <q-btn
             color="primary"
             icon="add"
             label="新增訂單"
@@ -34,6 +42,40 @@
           />
         </div>
       </div>
+
+      <q-dialog v-model="showExportDialog">
+        <q-card style="width: 420px; max-width: 95vw">
+          <q-card-section class="text-h6">匯出訂單 CSV</q-card-section>
+          <q-card-section class="q-gutter-md">
+            <div class="row q-col-gutter-sm">
+              <div class="col-6"><q-input v-model="exportForm.startDate" type="date" outlined dense label="開始日期" /></div>
+              <div class="col-6"><q-input v-model="exportForm.endDate" type="date" outlined dense label="結束日期" /></div>
+            </div>
+            <q-select
+              v-model="exportForm.status"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              label="訂單狀態（空白為全部）"
+              :options="[
+                { label: '待付款', value: 'PENDING_PAYMENT' },
+                { label: '已付款', value: 'PAID' },
+                { label: '處理中', value: 'PROCESSING' },
+                { label: '已完成', value: 'COMPLETED' },
+                { label: '已取消', value: 'CANCELLED' },
+                { label: '已退款', value: 'REFUNDED' }
+              ]"
+            />
+            <div class="text-caption text-grey-7">依訂單建立日期篩選，最長一年；檔案可直接用 Excel 開啟。</div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" v-close-popup />
+            <q-btn color="primary" unelevated label="下載" :loading="exporting" @click="exportCsv" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
       <!-- Metrics -->
       <div class="row q-col-gutter-md q-mb-md">
@@ -230,7 +272,7 @@
                     dense
                     clearable
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                     step="0.01"
                     min="0"
                     inputmode="decimal"
@@ -247,7 +289,7 @@
                     dense
                     clearable
                     type="number"
-                    prefix="¥"
+                    prefix="NT$"
                     step="0.01"
                     min="0"
                     inputmode="decimal"
@@ -332,7 +374,7 @@
                     text-color="white"
                     @remove="filterForm.minAmount = null"
                   >
-                    最小金額: ¥{{ filterForm.minAmount }}
+                    最小金額: NT$ {{ filterForm.minAmount }}
                   </q-chip>
                   <q-chip
                     v-if="filterForm.maxAmount"
@@ -341,7 +383,7 @@
                     text-color="white"
                     @remove="filterForm.maxAmount = null"
                   >
-                    最大金額: ¥{{ filterForm.maxAmount }}
+                    最大金額: NT$ {{ filterForm.maxAmount }}
                   </q-chip>
                 </div>
               </div>
@@ -453,20 +495,28 @@
             <q-td :props="props" class="order-actions-cell">
               <q-btn-dropdown flat dense color="primary" label="更新狀態" size="sm" class="order-row-btn">
                 <q-list>
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'PROCESSING')">
+                  <q-item
+                    v-for="next in nextStatusOptions(props.row.status)"
+                    :key="next"
+                    clickable
+                    v-close-popup
+                    @click="handleStatusChange(props.row.id, next)"
+                  >
                     <q-item-section>
-                      <q-item-label>處理中</q-item-label>
+                      <q-item-label :class="{ 'text-negative': next === 'CANCELLED' }">{{ statusChangeLabel(next) }}</q-item-label>
                     </q-item-section>
                   </q-item>
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'COMPLETED')">
+                  <template v-if="canRefund(props.row)">
+                    <q-separator />
+                    <q-item clickable v-close-popup @click="openRefund(props.row)">
+                      <q-item-section>
+                        <q-item-label class="text-negative">登記退款…</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                  <q-item v-if="nextStatusOptions(props.row.status).length === 0 && !canRefund(props.row)">
                     <q-item-section>
-                      <q-item-label>已完成</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator />
-                  <q-item clickable v-close-popup @click="handleStatusChange(props.row.id, 'CANCELLED')">
-                    <q-item-section>
-                      <q-item-label class="text-negative">已取消</q-item-label>
+                      <q-item-label caption>此狀態無法再變更</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -487,7 +537,7 @@
               </q-btn>
 
               <q-btn
-                v-if="props.row.status === 'PAID'"
+                v-if="canShip(props.row)"
                 flat
                 dense
                 round
@@ -674,7 +724,7 @@
                               <q-item-section>
                                 <q-item-label>{{ scope.opt.specName || '無規格名稱' }}</q-item-label>
                                 <q-item-label caption v-if="scope.opt.sku">
-                                  SKU: {{ scope.opt.sku }} | 價格: ¥{{ (scope.opt.price || 0).toFixed(2) }} | 庫存: {{ scope.opt.stock || 0 }}
+                                  SKU: {{ scope.opt.sku }} | 價格: {{ Number(scope.opt.price) > 0 ? `NT$ ${Number(scope.opt.price).toFixed(2)}` : '同商品售價' }} | 庫存: {{ scope.opt.stock || 0 }}
                                 </q-item-label>
                               </q-item-section>
                             </q-item>
@@ -845,7 +895,7 @@
               >
                 <template v-slot:body-cell-discountAmount="props">
                   <q-td :props="props">
-                    <span class="text-weight-bold text-primary">¥{{ props.row.discountAmount?.toFixed(2) }}</span>
+                    <span class="text-weight-bold text-primary">NT$ {{ props.row.discountAmount?.toFixed(2) }}</span>
                   </q-td>
                 </template>
                 <template v-slot:body-cell-discountType="props">
@@ -1371,7 +1421,7 @@
                     <div class="row items-center justify-between q-mb-md">
                       <div class="text-h6">物流記錄</div>
                       <q-btn
-                        v-if="selectedOrder.status === 'PAID'"
+                        v-if="canShip(selectedOrder)"
                         flat
                         dense
                         icon="add"
@@ -1411,16 +1461,37 @@
                             </div>
                           </q-item-label>
                         </q-item-section>
-                        <q-item-section side>
+                        <q-item-section side class="q-gutter-xs">
                           <q-badge :color="getShippingStatusColor(shipment.shippingStatus)">
                             {{ getShippingStatusLabel(shipment.shippingStatus) }}
                           </q-badge>
+                          <q-btn
+                            v-if="shipment.shippingStatus === 'PENDING'"
+                            flat
+                            dense
+                            no-caps
+                            size="sm"
+                            color="primary"
+                            label="標記已出貨"
+                            @click="changeShipmentStatus(shipment, 'SHIPPED')"
+                          />
+                          <q-btn
+                            v-if="shipment.shippingStatus === 'SHIPPED'"
+                            flat
+                            dense
+                            no-caps
+                            size="sm"
+                            color="positive"
+                            label="標記已送達"
+                            @click="changeShipmentStatus(shipment, 'DELIVERED')"
+                          />
+                          <q-btn flat dense no-caps size="sm" color="grey-8" label="修改單號" @click="editTrackingNumber(shipment)" />
                         </q-item-section>
                       </q-item>
                     </q-list>
                     <div v-else class="text-grey-6 text-center q-pa-md">
                       暫無物流記錄
-                      <div v-if="selectedOrder.status === 'PAID'" class="q-mt-sm">
+                      <div v-if="canShip(selectedOrder)" class="q-mt-sm">
                         <q-btn
                           flat
                           dense
@@ -1435,11 +1506,84 @@
                   </q-card-section>
                 </q-card>
               </div>
+
+              <!-- 訂單歷程 -->
+              <div class="col-12">
+                <q-card flat bordered class="order-detail-panel-card">
+                  <q-card-section>
+                    <div class="text-h6 q-mb-sm">訂單歷程</div>
+                    <div v-if="orderHistory.length === 0" class="text-grey-6">尚無紀錄</div>
+                    <q-timeline v-else color="primary" layout="dense" class="q-mt-none">
+                      <q-timeline-entry
+                        v-for="entry in orderHistory"
+                        :key="entry.id"
+                        :subtitle="`${formatDateTime(entry.createdAt)}${entry.operatorName ? '・' + entry.operatorName : ''}`"
+                        :icon="historyIcon(entry.actionType)"
+                      >
+                        <div>{{ entry.actionDescription || entry.actionType }}</div>
+                        <div v-if="entry.oldStatus && entry.newStatus && isOrderStatus(entry.newStatus)" class="text-caption text-grey-7">
+                          {{ getStatusLabel(entry.oldStatus as Order['status']) }} → {{ getStatusLabel(entry.newStatus as Order['status']) }}
+                        </div>
+                      </q-timeline-entry>
+                    </q-timeline>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-lg q-pb-lg order-detail-dialog-card__actions">
+            <q-btn
+              v-if="selectedOrder && canRefund(selectedOrder)"
+              flat
+              no-caps
+              color="negative"
+              icon="undo"
+              label="登記退款"
+              @click="openRefund(selectedOrder)"
+            />
             <q-btn flat label="關閉" color="grey-7" v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- 退款登記 -->
+      <q-dialog v-model="showRefundDialog">
+        <q-card style="width: 520px; max-width: 95vw">
+          <q-card-section>
+            <div class="text-h6">登記退款</div>
+            <div class="text-caption text-grey-7">
+              訂單 {{ refundOrder?.orderNumber }}，訂單總額 NT$ {{ Number(refundOrder?.totalAmount || 0).toLocaleString() }}
+              <template v-if="alreadyRefunded > 0">，已退 NT$ {{ alreadyRefunded.toLocaleString() }}，尚可退 NT$ {{ refundableAmount.toLocaleString() }}</template>
+            </div>
+          </q-card-section>
+          <q-card-section class="q-gutter-md">
+            <q-banner dense rounded class="bg-orange-1 text-orange-10">
+              系統不會自動向綠界退款：信用卡請先到綠界廠商後台執行退刷，ATM / 超商代碼付款請以匯款退還，完成後再在此登記。
+            </q-banner>
+            <q-input
+              v-model.number="refundForm.amount"
+              type="number"
+              outlined
+              dense
+              label="退款金額（空白為剩餘全額）"
+              prefix="NT$"
+              clearable
+              hint="部分退款不會改變訂單狀態；全額退款後訂單改為「已退款」並寄送通知"
+            />
+            <q-input v-model="refundForm.reason" outlined dense label="退款原因 *" maxlength="500" />
+            <q-checkbox
+              v-model="refundForm.restock"
+              :disable="restockDisabled"
+              label="歸還整筆訂單的庫存（全額退款且商品已退回或尚未出貨）"
+            />
+            <div v-if="restockDisabled" class="text-caption text-grey-7">
+              {{ alreadyRefunded > 0 ? '此訂單已有部分退款' : '部分退款' }}不會自動歸還庫存；如有退回商品，請到商品頁手動補貨。
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat label="取消" v-close-popup />
+            <q-btn color="negative" unelevated label="確認登記退款" :loading="refunding" :disable="!refundForm.reason.trim()" @click="submitRefund" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -1451,7 +1595,7 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
-import { orderApi, orderQAApi, type Order, type OrderItem, type OrderQA, type PageResponse, type OrderQueryParams } from '@/api'
+import { orderApi, orderQAApi, type Order, type OrderItem, type OrderQA, type PageResponse, type LegacyPageResponse, type OrderQueryParams } from '@/api'
 import { crmApi, type Customer } from '@/api/crm'
 import { productApi, productSpecificationApi, type Product, type ProductSpecification } from '@/api/product'
 import { orderDiscountApi, type OrderDiscount } from '@/api/orderDiscount'
@@ -1649,6 +1793,9 @@ const pagination = ref({
 // 訂單表單
 const form = ref<{
   customerId: number | null
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
   status: Order['status']
   pickupType: 'DELIVERY' | 'STORE_PICKUP' | 'CROSS_STORE_PICKUP'
   items: Array<OrderItem & { tempId?: number; subtotal?: number }>
@@ -1901,7 +2048,7 @@ const loadOrders = async (useFilter = false) => {
       totalCount = data.length
     } else if (data && typeof data === 'object' && 'content' in data) {
       // 如果是分頁對象，提取 content
-      const pageData = data as PageResponse<Order>
+      const pageData = data as LegacyPageResponse<Order>
       orderList = pageData.content || []
       totalCount = pageData.totalElements || pageData.total || 0
     } else if (data && typeof data === 'object') {
@@ -2043,6 +2190,148 @@ const formatDateTime = (value?: string | null) => {
   })
 }
 
+// 匯出 CSV
+const showExportDialog = ref(false)
+const exporting = ref(false)
+// 以本地日期（台灣時間）產生預設期間，避免 toISOString 的 UTC 日期少一天
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const today = new Date()
+const exportForm = ref({
+  startDate: localDate(new Date(today.getTime() - 30 * 864e5)),
+  endDate: localDate(today),
+  status: null as string | null
+})
+const exportCsv = async () => {
+  exporting.value = true
+  try {
+    const blob = await orderApi.exportOrdersCsv({
+      startDate: exportForm.value.startDate || undefined,
+      endDate: exportForm.value.endDate || undefined,
+      status: exportForm.value.status || undefined
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `orders-${exportForm.value.startDate}-${exportForm.value.endDate}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    showExportDialog.value = false
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  } finally {
+    exporting.value = false
+  }
+}
+
+// 訂單狀態可變更方向（後端規則）；退款走「登記退款」
+const statusTransitions = ref<Record<string, string[]>>({})
+const loadStatusTransitions = async () => {
+  try {
+    const response = await orderApi.getStatusTransitions()
+    statusTransitions.value = response.data || {}
+  } catch {
+    statusTransitions.value = {}
+  }
+}
+const STATUS_CHANGE_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: '還原為待付款',
+  PAID: '已付款',
+  PROCESSING: '處理中（已出貨）',
+  COMPLETED: '已完成',
+  CANCELLED: '取消訂單'
+}
+const nextStatusOptions = (status?: string) =>
+  ((status && statusTransitions.value[status]) || []).filter((next) => next !== 'REFUNDED') as Order['status'][]
+const statusChangeLabel = (status: string) => STATUS_CHANGE_LABELS[status] || status
+const canRefund = (order: Order) =>
+  ['PAID', 'PROCESSING', 'COMPLETED'].includes(order.status || '') && ['ADMIN', 'MANAGER'].includes(authStore.userRole || '')
+// 已付款可出貨；待付款只有貨到付款或後台建立的訂單可出貨（線上付款需先付款）
+const canShip = (order: Order) =>
+  order.status === 'PAID' ||
+  order.status === 'PROCESSING' ||
+  (order.status === 'PENDING_PAYMENT' && !(order.notes || '').includes('線上付款'))
+
+const showRefundDialog = ref(false)
+const refundOrder = ref<Order | null>(null)
+const refundForm = ref<{ amount: number | null; reason: string; restock: boolean }>({ amount: null, reason: '', restock: true })
+const refunding = ref(false)
+const alreadyRefunded = ref(0)
+const refundableAmount = computed(() => Math.max(Number(refundOrder.value?.totalAmount || 0) - alreadyRefunded.value, 0))
+// 先前已有部分退款時，不能自動歸還整筆庫存（與後端規則一致）
+const restockDisabled = computed(() => isPartialRefund.value || alreadyRefunded.value > 0)
+const isPartialRefund = computed(() => {
+  const amount = refundForm.value.amount as unknown
+  if (amount === null || amount === '' || amount === undefined) return false
+  return Number(amount) < refundableAmount.value
+})
+const openRefund = async (order: Order) => {
+  refundOrder.value = order
+  alreadyRefunded.value = 0
+  refundForm.value = { amount: null, reason: '', restock: false }
+  showRefundDialog.value = true
+  if (!order.id) return
+  try {
+    const response = await orderApi.getOrderPayments(order.id)
+    alreadyRefunded.value = (response.data || []).reduce((sum, payment) => sum + Number(payment.refundAmount || 0), 0)
+  } catch {
+    // 取不到時以後端檢查為準
+  }
+}
+const submitRefund = async () => {
+  if (!refundOrder.value?.id) return
+  refunding.value = true
+  try {
+    await orderApi.refundOrder(refundOrder.value.id, {
+      // 空白為全額；其他數字原樣送出（0 或負數由後端拒絕）
+      amount: refundForm.value.amount === null || (refundForm.value.amount as unknown) === '' ? null : Number(refundForm.value.amount),
+      reason: refundForm.value.reason.trim(),
+      restock: refundForm.value.restock && !restockDisabled.value
+    })
+    $q.notify({ type: 'positive', message: '退款已登記', position: 'top' })
+    showRefundDialog.value = false
+    showDetailDialog.value = false
+    loadOrders()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  } finally {
+    refunding.value = false
+  }
+}
+
+const changeShipmentStatus = async (shipment: OrderShipment, status: OrderShipment['shippingStatus']) => {
+  if (!shipment.id) return
+  try {
+    await shipmentApi.updateShippingStatus(shipment.id, status)
+    $q.notify({ type: 'positive', message: status === 'DELIVERED' ? '已標記送達' : '已標記出貨，已通知顧客', position: 'top' })
+    if (selectedOrder.value?.id) {
+      await loadShipments(selectedOrder.value.id)
+      const response = await orderApi.getOrder(selectedOrder.value.id)
+      if (response.data) selectedOrder.value = { ...selectedOrder.value, ...response.data }
+    }
+    loadOrders()
+  } catch {
+    // 錯誤訊息由系統通知顯示
+  }
+}
+
+const editTrackingNumber = (shipment: OrderShipment) => {
+  if (!shipment.id) return
+  $q.dialog({
+    title: '修改物流單號',
+    prompt: { model: shipment.trackingNumber || '', type: 'text' },
+    cancel: true
+  }).onOk(async (value: string) => {
+    try {
+      await shipmentApi.updateTrackingNumber(shipment.id!, value.trim())
+      if (selectedOrder.value?.id) await loadShipments(selectedOrder.value.id)
+      $q.notify({ type: 'positive', message: '物流單號已更新', position: 'top' })
+    } catch {
+      // 錯誤訊息由系統通知顯示
+    }
+  })
+}
+
 const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (!id || !status) return
 
@@ -2050,7 +2339,7 @@ const handleStatusChange = async (id?: number, status?: Order['status']) => {
   if (status === 'CANCELLED') {
     $q.dialog({
       title: '警告',
-      message: '確定要取消此訂單嗎？此操作無法復原。',
+      message: '確定要取消此訂單嗎？取消後會歸還庫存與優惠券，並寄送取消通知給顧客。',
       cancel: true,
       persistent: true
     }).onOk(async () => {
@@ -2098,13 +2387,7 @@ const loadCustomers = async () => {
 
 const loadProducts = async () => {
   try {
-    const response = await productApi.getProducts()
-    const data = response.data as PageResponse<Product> | Product[]
-    if (Array.isArray(data)) {
-      products.value = data
-    } else if (data && 'content' in data) {
-      products.value = data.content
-    }
+    products.value = await productApi.getAllProducts()
   } catch (error) {
     console.error('Failed to load products:', error)
   }
@@ -2263,8 +2546,8 @@ const handleViewDetail = async (order: Order) => {
       selectedOrder.value = order
     }
 
-    // 載入物流記錄
-    await loadShipments(order.id)
+    // 載入物流記錄與歷程
+    await Promise.all([loadShipments(order.id), loadOrderHistory(order.id)])
 
     showDetailDialog.value = true
   } catch (error: any) {
@@ -2273,6 +2556,28 @@ const handleViewDetail = async (order: Order) => {
     await loadShipments(order.id)
     showDetailDialog.value = true
   }
+}
+
+// 訂單歷程（新到舊）
+const orderHistory = ref<Array<{ id: number; actionType: string; actionDescription?: string; oldStatus?: string; newStatus?: string; operatorName?: string; createdAt: string }>>([])
+const loadOrderHistory = async (orderId: number) => {
+  try {
+    const response = await orderApi.getOrderHistory(orderId)
+    orderHistory.value = [...(response.data || [])].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  } catch {
+    orderHistory.value = []
+  }
+}
+const ORDER_STATUSES = ['PENDING_PAYMENT', 'PAID', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'REFUNDED']
+const isOrderStatus = (value: string) => ORDER_STATUSES.includes(value)
+const historyIcon = (actionType: string) => {
+  if (actionType.includes('REFUND')) return 'undo'
+  if (actionType.includes('SHIP')) return 'local_shipping'
+  if (actionType.includes('PAY') || actionType.includes('PAID')) return 'payments'
+  if (actionType.includes('STOCK')) return 'inventory_2'
+  if (actionType.includes('COUPON') || actionType.includes('DISCOUNT')) return 'sell'
+  if (actionType.includes('STATUS')) return 'sync_alt'
+  return 'history'
 }
 
 const loadShipments = async (orderId: number) => {
@@ -2313,7 +2618,10 @@ const getShippingStatusColor = (status: OrderShipment['shippingStatus']) => {
 }
 
 // 獲取訂單項目（兼容後端的 items 和前端的 orderItems）
-const getOrderItems = (order: Order | null): OrderItem[] => {
+// 部分舊資料的訂單項目可能帶有 specificationName（後端 OrderItemDTO 已無此欄位）
+type OrderItemWithLegacySpec = OrderItem & { specificationName?: string }
+
+const getOrderItems = (order: Order | null): OrderItemWithLegacySpec[] => {
   if (!order) return []
   const orderData = order as any
   // 後端返回的是 items，前端接口定義的是 orderItems
@@ -2573,10 +2881,18 @@ const onProductChange = async (item: any, productId: number) => {
     // 如果沒有規格，使用商品價格
     const specs = productSpecifications.value.get(productId) || []
     if (specs.length === 0) {
-      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      item.unitPrice = productSellingPrice(product)
       calculateItemSubtotal(item)
     }
   }
+}
+
+/** 商品售價：特價大於 0 且低於定價時用特價，否則用定價（與後端計價規則一致） */
+const productSellingPrice = (product: Product) => {
+  const sale = Number(product.salePrice)
+  const base = Number(product.basePrice)
+  if (sale > 0 && (!(base > 0) || sale < base)) return sale
+  return base > 0 ? base : 0
 }
 
 const onSpecificationChange = (item: any, specificationId: number | undefined) => {
@@ -2584,9 +2900,12 @@ const onSpecificationChange = (item: any, specificationId: number | undefined) =
     const specs = productSpecifications.value.get(item.productId) || []
     const spec = specs.find(s => s.id === specificationId)
     if (spec) {
-      // 從規格中獲取價格
-      if (spec.price != null) {
-        item.unitPrice = spec.price
+      // 規格價格；空白或 0 表示與商品售價相同（與前台結帳一致）
+      if (Number(spec.price) > 0) {
+        item.unitPrice = Number(spec.price)
+      } else {
+        const product = products.value.find(p => p.id === item.productId)
+        if (product) item.unitPrice = productSellingPrice(product)
       }
       // 設置規格信息
       item.productSku = spec.sku
@@ -2597,7 +2916,7 @@ const onSpecificationChange = (item: any, specificationId: number | undefined) =
     // 如果沒有選擇規格，使用商品價格
     const product = products.value.find(p => p.id === item.productId)
     if (product) {
-      item.unitPrice = product.salePrice ?? product.basePrice ?? 0
+      item.unitPrice = productSellingPrice(product)
       item.productSku = undefined
       item.productSpec = undefined
       calculateItemSubtotal(item)
@@ -2919,6 +3238,7 @@ const handleStartTour = () => {
 
 onMounted(() => {
   loadOrders()
+  loadStatusTransitions()
   loadCustomers()
   loadProducts()
   loadOrderQAStats()

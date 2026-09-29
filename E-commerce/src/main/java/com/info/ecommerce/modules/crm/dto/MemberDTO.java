@@ -46,6 +46,9 @@ public class MemberDTO {
     @Schema(description = "可用積點", example = "800")
     private Integer availablePoints;
 
+    @Schema(description = "是否同意接收行銷 Email")
+    private Boolean marketingOptIn;
+
     @Schema(description = "總消費金額", example = "15000.00")
     private BigDecimal totalSpent;
 

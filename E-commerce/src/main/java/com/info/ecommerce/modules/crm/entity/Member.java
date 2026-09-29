@@ -85,6 +85,10 @@ public class Member {
     @Column(columnDefinition = "NVARCHAR(500)")
     private String notes;
 
+    // 是否同意接收行銷 Email（EDM）；未同意（null / false）不會收到 EDM
+    @Column(name = "marketing_opt_in")
+    private Boolean marketingOptIn;
+
     // 註冊日期
     @Column(nullable = false)
     private LocalDateTime registeredAt;

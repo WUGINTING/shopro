@@ -38,6 +38,7 @@ public class ProductService {
     private final ProductInventoryRepository productInventoryRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
     private final InventoryMovementLogRepository inventoryMovementLogRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * 驗證並標準化 SKU
@@ -111,7 +112,9 @@ public class ProductService {
         if (dto.getImages() != null) {
             List<String> imageUrls = new ArrayList<>();
             for (var imageDTO : dto.getImages()) {
-                if (imageDTO.getImageUrl() != null && !imageDTO.getImageUrl().isEmpty()) {
+                // 同一張圖片只保留一次（保留第一次出現的位置）
+                if (imageDTO.getImageUrl() != null && !imageDTO.getImageUrl().isEmpty()
+                        && !imageUrls.contains(imageDTO.getImageUrl())) {
                     imageUrls.add(imageDTO.getImageUrl());
                 }
             }
@@ -143,32 +146,151 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    /** 前台可見的商品狀態（缺貨商品可瀏覽但無法結帳） */
+    public static final List<ProductStatus> PUBLIC_STATUSES = List.of(ProductStatus.ACTIVE, ProductStatus.OUT_OF_STOCK);
+
+    private static final int MAX_PUBLIC_PAGE_SIZE = 60;
+
+    /**
+     * 前台商品列表：只含上架 / 缺貨且未停用的商品，分頁與排序皆在後端完成
+     *
+     * @param categoryId 分類 ID（含其子分類），null 表示全部
+     * @param keyword    名稱或 SKU 關鍵字，可為 null
+     * @param sort       newest（預設）/ price_asc / price_desc / name
+     */
+    public Page<ProductDTO> listPublicProducts(Long categoryId, String keyword, String sort, int page, int size) {
+        java.util.Set<Long> categoryIds = new java.util.HashSet<>();
+        if (categoryId != null) {
+            collectCategoryTree(categoryId, categoryIds);
+        }
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PUBLIC_PAGE_SIZE);
+        boolean filterCategory = categoryId != null;
+        java.util.Collection<Long> ids = categoryIds.isEmpty() ? List.of(-1L) : categoryIds;
+        String sortKey = sort == null ? "newest" : sort;
+        Page<Product> result = switch (sortKey) {
+            case "price_asc" -> productRepository.findPublicOrderByPriceAsc(PUBLIC_STATUSES, filterCategory, ids,
+                    normalizedKeyword, org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+            case "price_desc" -> productRepository.findPublicOrderByPriceDesc(PUBLIC_STATUSES, filterCategory, ids,
+                    normalizedKeyword, org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+            default -> productRepository.findPublic(PUBLIC_STATUSES, filterCategory, ids, normalizedKeyword,
+                    org.springframework.data.domain.PageRequest.of(safePage, safeSize, publicSort(sortKey)));
+        };
+        return mapList(result, true);
+    }
+
+    /**
+     * 前台依狀態查詢（只允許前台可見狀態，排除停用商品並移除成本價）
+     */
+    public Page<ProductDTO> listPublicProductsByStatus(ProductStatus status, int page, int size) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0),
+                Math.min(Math.max(size, 1), MAX_PUBLIC_PAGE_SIZE), publicSort("newest"));
+        if (!PUBLIC_STATUSES.contains(status)) {
+            return Page.empty(pageable);
+        }
+        return mapList(productRepository.findPublic(List.of(status), false, List.of(-1L), null, pageable), true);
+    }
+
+    /**
+     * 前台商品詳情：未上架或已停用的商品視為不存在
+     */
+    public ProductDTO getPublicProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .filter(p -> PUBLIC_STATUSES.contains(p.getStatus()) && !Boolean.FALSE.equals(p.getEnabled()))
+                .orElseThrow(() -> new BusinessException("商品不存在"));
+        return toPublicDTO(product);
+    }
+
+    /** 前台存取商品附屬資料（規格、圖片、描述區塊）前確認商品已上架 */
+    public void assertPubliclyVisible(Long productId) {
+        getPublicProductEntity(productId);
+    }
+
+    private Product getPublicProductEntity(Long productId) {
+        return productRepository.findById(productId)
+                .filter(p -> PUBLIC_STATUSES.contains(p.getStatus()) && !Boolean.FALSE.equals(p.getEnabled()))
+                .orElseThrow(() -> new BusinessException("商品不存在"));
+    }
+
+    /**
+     * 商品列表：整頁商品的規格與庫存各以一次查詢取得（避免每個商品各查數次），列表不帶描述區塊
+     */
+    private Page<ProductDTO> mapList(Page<Product> products, boolean publicView) {
+        List<Long> ids = products.getContent().stream().map(Product::getId).toList();
+        java.util.Map<Long, List<ProductSpecification>> specsByProduct = ids.isEmpty() ? java.util.Map.of()
+                : productSpecificationRepository.findByProductIdIn(ids).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(ProductSpecification::getProductId));
+        java.util.Map<Long, ProductInventory> inventoryByProduct = ids.isEmpty() ? java.util.Map.of()
+                : productInventoryRepository.findByProductIdInAndSpecificationIdIsNull(ids).stream()
+                        .collect(java.util.stream.Collectors.toMap(ProductInventory::getProductId, inventory -> inventory,
+                                (first, second) -> first));
+        return products.map(product -> {
+            ProductDTO dto = toDTO(product, specsByProduct.getOrDefault(product.getId(), List.of()),
+                    java.util.Optional.ofNullable(inventoryByProduct.get(product.getId())), false);
+            return publicView ? stripForPublic(dto) : dto;
+        });
+    }
+
+    /** 前台用 DTO：移除成本價等內部資料，只保留啟用中的規格 */
+    private ProductDTO toPublicDTO(Product product) {
+        return stripForPublic(toDTO(product));
+    }
+
+    private ProductDTO stripForPublic(ProductDTO dto) {
+        dto.setCostPrice(null);
+        if (dto.getSpecifications() != null) {
+            dto.setSpecifications(dto.getSpecifications().stream()
+                    .filter(spec -> !Boolean.FALSE.equals(spec.getEnabled()))
+                    .peek(spec -> spec.setCost(null))
+                    .collect(java.util.stream.Collectors.toList()));
+        }
+        return dto;
+    }
+
+    private void collectCategoryTree(Long categoryId, java.util.Set<Long> result) {
+        if (categoryId == null || !result.add(categoryId)) {
+            return;
+        }
+        productCategoryRepository.findByParentId(categoryId)
+                .forEach(child -> collectCategoryTree(child.getId(), result));
+    }
+
+    private static org.springframework.data.domain.Sort publicSort(String sort) {
+        org.springframework.data.domain.Sort byId = org.springframework.data.domain.Sort.by("id");
+        if ("name".equals(sort)) {
+            return org.springframework.data.domain.Sort.by("name").and(byId);
+        }
+        return org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+                .and(byId.descending());
+    }
+
     /**
      * 分頁查詢商品
      */
     public Page<ProductDTO> listProducts(Pageable pageable) {
-        return productRepository.findAll(pageable).map(this::toDTO);
+        return mapList(productRepository.findAll(pageable), false);
     }
 
     /**
      * 依分類查詢商品
      */
     public Page<ProductDTO> listProductsByCategory(Long categoryId, Pageable pageable) {
-        return productRepository.findByCategoryId(categoryId, pageable).map(this::toDTO);
+        return mapList(productRepository.findByCategoryId(categoryId, pageable), false);
     }
 
     /**
      * 依狀態查詢商品
      */
     public Page<ProductDTO> listProductsByStatus(ProductStatus status, Pageable pageable) {
-        return productRepository.findByStatus(status, pageable).map(this::toDTO);
+        return mapList(productRepository.findByStatus(status, pageable), false);
     }
 
     /**
      * 搜尋商品
      */
     public Page<ProductDTO> searchProducts(String keyword, Pageable pageable) {
-        return productRepository.findByNameContaining(keyword, pageable).map(this::toDTO);
+        return mapList(productRepository.findByNameContaining(keyword, pageable), false);
     }
 
     /**
@@ -200,7 +322,6 @@ public class ProductService {
      */
     @Transactional
     public ProductDTO addAlbumImagesToProduct(Long productId, List<Long> albumImageIds) {
-        System.out.println("[ProductService] addAlbumImagesToProduct - productId: " + productId + ", albumImageIds: " + albumImageIds);
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException("商品不存在"));
@@ -210,44 +331,45 @@ public class ProductService {
         if (imageUrls == null) {
             imageUrls = new ArrayList<>();
         }
-        System.out.println("[ProductService] 現有圖片數量: " + imageUrls.size());
 
         // 批次獲取所有相冊圖片（避免 N+1 查詢問題）
         List<AlbumImage> albumImages = albumImageRepository.findAllById(albumImageIds);
-        System.out.println("[ProductService] 找到的相冊圖片數量: " + albumImages.size());
 
         // 驗證所有圖片都存在
         if (albumImages.size() != albumImageIds.size()) {
-            System.err.println("[ProductService] 部分相冊圖片不存在! 請求: " + albumImageIds.size() + ", 找到: " + albumImages.size());
             throw new BusinessException("部分相冊圖片不存在");
         }
 
         // 添加相冊圖片的 URL
         for (AlbumImage albumImage : albumImages) {
             String url = albumImage.getImageUrl();
-            System.out.println("[ProductService] 處理圖片: id=" + albumImage.getId() + ", url=" + url);
             // 添加圖片 URL（避免重複）
             if (!imageUrls.contains(url)) {
                 imageUrls.add(url);
-                System.out.println("[ProductService] 添加圖片 URL: " + url);
             } else {
-                System.out.println("[ProductService] 圖片 URL 已存在，跳過: " + url);
             }
         }
 
         product.setImageUrls(imageUrls);
         product = productRepository.save(product);
-        System.out.println("[ProductService] 保存後圖片數量: " + product.getImageUrls().size());
         return toDTO(product);
     }
 
     private ProductDTO toDTO(Product entity) {
+        if (entity.getId() == null) {
+            return toDTO(entity, List.of(), java.util.Optional.empty(), false);
+        }
+        return toDTO(entity, productSpecificationRepository.findByProductId(entity.getId()),
+                productInventoryRepository.findByProductIdAndSpecificationId(entity.getId(), null), true);
+    }
+
+    private ProductDTO toDTO(Product entity, List<ProductSpecification> specs,
+                             java.util.Optional<ProductInventory> productLevelInventory, boolean withDescriptionBlocks) {
         ProductDTO dto = new ProductDTO();
         BeanUtils.copyProperties(entity, dto, "images");
 
         // 將 imageUrls 轉換為 images
         List<String> urls = entity.getImageUrls();
-        System.out.println("[toDTO] 商品 " + entity.getId() + " (" + entity.getName() + ") 的 imageUrls: " + urls);
 
         if (urls != null && !urls.isEmpty()) {
             List<ProductImageDTO> imageDTOs = new ArrayList<>();
@@ -261,13 +383,10 @@ public class ProductService {
                 imageDTOs.add(imageDTO);
             }
             dto.setImages(imageDTOs);
-            System.out.println("[toDTO] 設置了 " + imageDTOs.size() + " 張圖片");
-        } else {
-            System.out.println("[toDTO] 沒有圖片");
         }
 
-        // 添加描述區塊
-        if (entity.getId() != null) {
+        // 添加描述區塊（商品詳情才需要）
+        if (withDescriptionBlocks && entity.getId() != null) {
             try {
                 List<ProductDescriptionBlockDTO> blocks = descriptionBlockService.getProductBlocks(entity.getId());
                 dto.setDescriptionBlocks(blocks);
@@ -278,64 +397,41 @@ public class ProductService {
         }
 
         // 添加商品規格
-        if (entity.getId() != null) {
-            try {
-                List<ProductSpecification> specs = productSpecificationRepository.findByProductId(entity.getId());
-                if (specs != null && !specs.isEmpty()) {
-                    List<ProductSpecificationDTO> specDTOs = specs.stream()
-                            .map(spec -> {
-                                ProductSpecificationDTO specDTO = new ProductSpecificationDTO();
-                                BeanUtils.copyProperties(spec, specDTO);
-                                return specDTO;
-                            })
-                            .collect(java.util.stream.Collectors.toList());
-                    dto.setSpecifications(specDTOs);
-                } else {
-                    dto.setSpecifications(new ArrayList<>());
-                }
-            } catch (Exception e) {
-                dto.setSpecifications(new ArrayList<>());
-            }
-        }
+        dto.setSpecifications(specs.stream()
+                .map(spec -> {
+                    ProductSpecificationDTO specDTO = new ProductSpecificationDTO();
+                    BeanUtils.copyProperties(spec, specDTO);
+                    return specDTO;
+                })
+                .collect(java.util.stream.Collectors.toList()));
 
-        // 設置庫存（預設為 100，表示有貨）
-        // TODO: 後續可以從 ProductSpecification 或 ProductInventory 計算實際庫存
-        dto.setStock(calculateProductStock(entity.getId()));
+        dto.setStock(calculateProductStock(specs, productLevelInventory));
 
         return dto;
     }
 
-    private Integer calculateProductStock(Long productId) {
-        if (productId == null) {
-            return 0;
-        }
-
-        List<ProductInventory> inventories = productInventoryRepository.findByProductId(productId);
-        if (inventories != null && !inventories.isEmpty()) {
-            boolean hasSpecificationRows = inventories.stream()
-                    .anyMatch(inventory -> inventory.getSpecificationId() != null);
-
-            int inventoryStock = inventories.stream()
-                    .filter(inventory -> !hasSpecificationRows || inventory.getSpecificationId() != null)
-                    .map(ProductInventory::getAvailableStock)
-                    .filter(stock -> stock != null && stock > 0)
-                    .reduce(0, Integer::sum);
-
-            return Math.max(inventoryStock, 0);
-        }
-
-        List<ProductSpecification> specifications = productSpecificationRepository.findByProductId(productId);
-        if (specifications == null || specifications.isEmpty()) {
-            return 0;
-        }
-
-        int specificationStock = specifications.stream()
+    /**
+     * 商品可售庫存（與結帳扣庫存的規則一致）：
+     * - 有啟用中的規格：各規格庫存加總；任一規格未設定庫存（null）視為不限量，回傳 null
+     * - 無規格：商品層級庫存；沒有庫存紀錄或未設定時回傳 null（不追蹤庫存、不限量）
+     */
+    private Integer calculateProductStock(List<ProductSpecification> allSpecs, java.util.Optional<ProductInventory> productLevelInventory) {
+        List<ProductSpecification> specifications = allSpecs.stream()
                 .filter(spec -> spec.getEnabled() == null || Boolean.TRUE.equals(spec.getEnabled()))
-                .map(ProductSpecification::getStock)
-                .filter(stock -> stock != null && stock > 0)
-                .reduce(0, Integer::sum);
+                .toList();
+        if (!specifications.isEmpty()) {
+            if (specifications.stream().anyMatch(spec -> spec.getStock() == null)) {
+                return null;
+            }
+            return specifications.stream()
+                    .mapToInt(spec -> Math.max(spec.getStock(), 0))
+                    .sum();
+        }
 
-        return Math.max(specificationStock, 0);
+        return productLevelInventory
+                .map(ProductInventory::getAvailableStock)
+                .map(stock -> Math.max(stock, 0))
+                .orElse(null);
     }
 
     private void syncProductLevelInventory(Long productId, Integer stock) {
@@ -372,6 +468,8 @@ public class ProductService {
         productInventoryRepository.save(productLevelInventory);
 
         if (beforeStock != normalizedStock) {
+            eventPublisher.publishEvent(new com.info.ecommerce.modules.product.event.StockChangedEvent(
+                    List.of(productId), normalizedStock > beforeStock));
             inventoryMovementLogRepository.save(InventoryMovementLog.builder()
                     .productId(productId)
                     .specificationId(null)

@@ -42,4 +42,10 @@ public class CustomPageDTO {
 
     @Schema(description = "排序", example = "1")
     private Integer sortOrder;
+
+    @Schema(description = "建立時間（唯讀）", accessMode = Schema.AccessMode.READ_ONLY)
+    private java.time.LocalDateTime createdAt;
+
+    @Schema(description = "更新時間（唯讀）", accessMode = Schema.AccessMode.READ_ONLY)
+    private java.time.LocalDateTime updatedAt;
 }

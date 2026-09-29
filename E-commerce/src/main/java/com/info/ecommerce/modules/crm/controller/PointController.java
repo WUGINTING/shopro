@@ -25,6 +25,7 @@ public class PointController {
 
     private final PointService pointService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/add")
     @Operation(summary = "增加積點")
     public ApiResponse<PointRecordDTO> addPoints(
@@ -37,6 +38,7 @@ public class PointController {
             pointService.addPoints(memberId, points, pointType, reason, orderId));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/deduct")
     @Operation(summary = "扣除積點")
     public ApiResponse<PointRecordDTO> deductPoints(
@@ -48,6 +50,7 @@ public class PointController {
             pointService.deductPoints(memberId, points, pointType, reason));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/batch-grant")
     @Operation(summary = "批次發放積點")
     public ApiResponse<List<PointRecordDTO>> batchGrantPoints(@Valid @RequestBody PointBatchDTO batchDTO) {

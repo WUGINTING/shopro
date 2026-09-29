@@ -330,7 +330,8 @@ const orderOptions = computed(() => {
   }))
 })
 
-const filteredOrderOptions = ref<Array<{ label: string; value: number; order: Order }>>([])
+// value 可能為 undefined（Order.id 為選填欄位）
+const filteredOrderOptions = ref<Array<{ label: string; value: Order['id']; order: Order }>>([])
 
 const loadOrders = async () => {
   ordersLoading.value = true

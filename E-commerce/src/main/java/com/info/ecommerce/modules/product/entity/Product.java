@@ -45,6 +45,7 @@ public class Product {
     private String description;
     // 商品描述
     @ElementCollection
+    @org.hibernate.annotations.BatchSize(size = 100) // 商品列表一次載入整頁商品的圖片
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url")
     private List<String> imageUrls;

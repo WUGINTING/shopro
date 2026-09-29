@@ -197,6 +197,7 @@
                   <q-input
                     v-model.number="form.levelOrder"
                     label="等級順序 *"
+                    hint="數字越大等級越高；累積消費達門檻時自動升級（不會自動降級）"
                     outlined
                     type="number"
                     inputmode="numeric"

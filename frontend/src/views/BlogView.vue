@@ -308,6 +308,7 @@
 </template>
 
 <script setup lang="ts">
+import { toLocalDateTime } from '@/utils/localDateTime'
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { blogApi, type BlogPost, type BlogStatus, type PageResponse } from '@/api'
@@ -566,8 +567,8 @@ const handleSchedulePublish = async () => {
 
   schedulingPublish.value = true
   try {
-    // 轉換為 ISO 8601 格式
-    const isoDateTime = new Date(schedulePublishDateTime.value).toISOString()
+    // 以當地時間送出（後端 LocalDateTime）
+    const isoDateTime = toLocalDateTime(schedulePublishDateTime.value)
     await blogApi.scheduleBlogPost(currentSchedulePostId.value, isoDateTime)
     $q.notify({
       type: 'positive',
@@ -606,8 +607,8 @@ const handleScheduleUnpublish = async () => {
 
   schedulingUnpublish.value = true
   try {
-    // 轉換為 ISO 8601 格式
-    const isoDateTime = new Date(scheduleUnpublishDateTime.value).toISOString()
+    // 以當地時間送出（後端 LocalDateTime）
+    const isoDateTime = toLocalDateTime(scheduleUnpublishDateTime.value)
     await blogApi.scheduleUnpublishBlogPost(currentSchedulePostId.value, isoDateTime)
     $q.notify({
       type: 'positive',

@@ -24,12 +24,14 @@ public class CartReminderController {
 
     private final CartReminderService cartReminderService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建購物車提醒")
     public ApiResponse<CartReminderDTO> createCartReminder(@Valid @RequestBody CartReminderDTO dto) {
         return ApiResponse.success("購物車提醒已創建", cartReminderService.createCartReminder(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新購物車提醒")
     public ApiResponse<CartReminderDTO> updateCartReminder(
@@ -45,6 +47,7 @@ public class CartReminderController {
         return ApiResponse.success(cartReminderService.getCartReminder(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除購物車提醒")
     public ApiResponse<Void> deleteCartReminder(
@@ -80,6 +83,7 @@ public class CartReminderController {
         return ApiResponse.success(cartReminderService.listPendingReminders(beforeDate));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{id}/send")
     @Operation(summary = "發送購物車提醒")
     public ApiResponse<CartReminderDTO> sendReminder(
@@ -87,6 +91,7 @@ public class CartReminderController {
         return ApiResponse.success("購物車提醒已發送", cartReminderService.sendReminder(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/send-pending")
     @Operation(summary = "批次發送待發送的提醒")
     public ApiResponse<Void> sendPendingReminders(

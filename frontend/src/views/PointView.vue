@@ -303,7 +303,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { pointApi, memberApi, type PointRecord } from '@/api'
 import { startPointTour, isPointTourCompleted } from '@/utils/pointTour'
 
@@ -395,7 +395,7 @@ const filterMembers = (val: string, update: (callback: () => void) => void) => {
 }
 
 // 表格列定義
-const columns = [
+const columns: QTableColumn[] = [
   { name: 'memberId', label: '會員 ID', field: 'memberId', align: 'left' },
   { name: 'points', label: '積點', field: 'points', align: 'right' },
   { name: 'pointType', label: '類型', field: 'pointType', align: 'center' },

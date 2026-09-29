@@ -23,12 +23,14 @@ public class MemberGroupController {
 
     private final MemberGroupService memberGroupService;
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "創建會員群組")
     public ApiResponse<MemberGroupDTO> createMemberGroup(@Valid @RequestBody MemberGroupDTO dto) {
         return ApiResponse.success("會員群組已創建", memberGroupService.createMemberGroup(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新會員群組")
     public ApiResponse<MemberGroupDTO> updateMemberGroup(
@@ -44,6 +46,7 @@ public class MemberGroupController {
         return ApiResponse.success(memberGroupService.getMemberGroup(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除會員群組")
     public ApiResponse<Void> deleteMemberGroup(
@@ -67,6 +70,7 @@ public class MemberGroupController {
         return ApiResponse.success(memberGroupService.listEnabledMemberGroups());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping("/{groupId}/members/{memberId}")
     @Operation(summary = "將會員加入群組")
     public ApiResponse<Void> addMemberToGroup(
@@ -76,6 +80,7 @@ public class MemberGroupController {
         return ApiResponse.success("會員已加入群組", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{groupId}/members/{memberId}")
     @Operation(summary = "將會員從群組移除")
     public ApiResponse<Void> removeMemberFromGroup(

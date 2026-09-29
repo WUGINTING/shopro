@@ -212,7 +212,7 @@
           <q-expansion-item
             icon="receipt"
             :label="adminGlossary.nav.orderManagement"
-            :default-opened="isMenuActive(['orders', 'orderDiscounts', 'orderQA'])"
+            :default-opened="isMenuActive(['orders', 'orderDiscounts', 'orderQA', 'blacklist'])"
             data-tour="orders"
           >
             <q-item
@@ -257,6 +257,21 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>{{ adminGlossary.nav.orderQA }}</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              v-if="authStore.canAccessManager"
+              clickable
+              v-ripple
+              :active="isActive('blacklist')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('blacklist')"
+            >
+              <q-item-section avatar>
+                <q-icon name="block" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>顧客黑名單</q-item-label>
               </q-item-section>
             </q-item>
           </q-expansion-item>
@@ -330,7 +345,7 @@
             v-if="authStore.canAccessStaff"
             icon="campaign"
             label="營銷管理"
-            :default-opened="isMenuActive(['marketing', 'promotions', 'points', 'edm', 'calendar'])"
+            :default-opened="isMenuActive(['marketing', 'promotions', 'popupAds', 'points', 'edm', 'calendar'])"
             data-tour="marketing"
           >
             <q-item
@@ -359,6 +374,20 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>促銷管理</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('popupAds')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('popupAds')"
+            >
+              <q-item-section avatar>
+                <q-icon name="web_asset" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>彈跳廣告</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -409,7 +438,7 @@
             v-if="authStore.canAccessStaff"
             icon="article"
             label="內容管理"
-            :default-opened="isMenuActive(['blog', 'albums'])"
+            :default-opened="isMenuActive(['blog', 'customPages', 'albums'])"
           >
             <q-item
               clickable
@@ -423,6 +452,20 @@
               </q-item-section>
               <q-item-section>
                 <q-item-label>文章管理</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              clickable
+              v-ripple
+              :active="isActive('customPages')"
+              active-class="bg-primary text-white"
+              @click="navigateTo('customPages')"
+            >
+              <q-item-section avatar>
+                <q-icon name="description" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>自訂頁面</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -476,7 +519,7 @@
               </q-item-section>
             </q-item>
             <q-item
-              v-if="authStore.canAccessManager"
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('paymentSettings')"
@@ -491,7 +534,7 @@
               </q-item-section>
             </q-item>
             <q-item
-              v-if="authStore.canAccessManager"
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('ecpayConfig')"
@@ -506,6 +549,7 @@
               </q-item-section>
             </q-item>
             <q-item
+              v-if="authStore.canAccessAdmin"
               clickable
               v-ripple
               :active="isActive('paymentCallbackLogs')"
@@ -541,7 +585,7 @@
           </q-item>
 
           <q-item
-            v-if="authStore.canAccessStaff"
+            v-if="authStore.canAccessAdmin"
             clickable
             v-ripple
             :active="isActive('operationLogs')"
@@ -557,7 +601,7 @@
           </q-item>
 
           <q-item
-            v-if="authStore.canAccessManager"
+            v-if="authStore.canAccessAdmin"
             clickable
             v-ripple
             :active="isActive('users')"
@@ -732,6 +776,22 @@ const handleNotificationClick = async (notification: AdminNotificationDTO) => {
     }
   }
 
+  // 顧客留言：顯示完整內容，可直接寄信回覆
+  if (notification.type === 'CONTACT_MESSAGE') {
+    const [contact = '', ...rest] = (notification.message || '').split('\n')
+    const email = contact.split(' / ')[0]?.trim()
+    $q.dialog({
+      title: notification.title,
+      message: `聯絡方式：${contact}\n\n${rest.join('\n')}`,
+      style: 'white-space: pre-line',
+      ok: email ? { label: '寄信回覆', color: 'primary', unelevated: true } : { label: '關閉', flat: true },
+      cancel: email ? { label: '關閉', flat: true } : false
+    }).onOk(() => {
+      if (email) window.location.href = `mailto:${email}`
+    })
+    return
+  }
+
   // 根據通知類型導航到相應頁面
   if (notification.orderId) {
     router.push({ name: 'orders' })
@@ -766,7 +826,8 @@ const getNotificationIcon = (type: AdminNotificationType): string => {
     PAYMENT_COMPLETED: 'payments',
     ORDER_CANCELLED: 'cancel',
     ORDER_QA: 'question_answer',
-    STOCK_LOW: 'inventory_2'
+    STOCK_LOW: 'inventory_2',
+    CONTACT_MESSAGE: 'mail'
   }
   return iconMap[type] || 'notifications'
 }
@@ -777,7 +838,8 @@ const getNotificationColor = (type: AdminNotificationType): string => {
     PAYMENT_COMPLETED: 'positive',
     ORDER_CANCELLED: 'negative',
     ORDER_QA: 'info',
-    STOCK_LOW: 'warning'
+    STOCK_LOW: 'warning',
+    CONTACT_MESSAGE: 'teal'
   }
   return colorMap[type] || 'grey'
 }

@@ -7,7 +7,7 @@
         <p class="hero-subtitle">可直接搜尋、排序、加入收藏或比較，並在確認後前往商品詳情與購物車。</p>
       </div>
       <div class="hero-panel">
-        <div class="hero-row"><span>目前顯示</span><strong>{{ displayProducts.length }}</strong></div>
+        <div class="hero-row"><span>商品總數</span><strong>{{ totalElements }}</strong></div>
         <div class="hero-row"><span>收藏商品</span><strong>{{ favoriteIds.length }}</strong></div>
         <div class="hero-row"><span>比較清單</span><strong>{{ compareIds.length }}/4</strong></div>
       </div>
@@ -37,10 +37,10 @@
             name="product-search"
             debounce="300"
             autocomplete="off"
-            @keyup.enter="loadProducts"
+            @keyup.enter="loadProducts()"
           >
             <template #append>
-              <q-icon name="search" class="cursor-pointer" @click="loadProducts" />
+              <q-icon name="search" class="cursor-pointer" @click="loadProducts()" />
             </template>
           </q-input>
         </div>
@@ -48,13 +48,35 @@
           <q-select v-model="sortBy" outlined emit-value map-options label="排序方式" :options="sortOptions" />
         </div>
         <div class="col-6 col-md-3 text-right">
-          <q-btn color="primary" no-caps icon="refresh" label="重新整理" @click="loadProducts" />
+          <q-btn color="primary" no-caps icon="refresh" label="重新整理" @click="loadProducts()" />
         </div>
+      </div>
+      <div v-if="categories.length > 0" class="category-chips q-mt-md">
+        <q-chip
+          clickable
+          :outline="selectedCategory !== null"
+          :color="selectedCategory === null ? 'primary' : undefined"
+          :text-color="selectedCategory === null ? 'white' : undefined"
+          @click="selectCategory(null)"
+        >
+          全部
+        </q-chip>
+        <q-chip
+          v-for="category in categories"
+          :key="category.id"
+          clickable
+          :outline="selectedCategory !== category.id"
+          :color="selectedCategory === category.id ? 'primary' : undefined"
+          :text-color="selectedCategory === category.id ? 'white' : undefined"
+          @click="selectCategory(category.id ?? null)"
+        >
+          {{ category.name }}
+        </q-chip>
       </div>
     </section>
 
     <section class="q-mb-sm row items-center justify-between" aria-live="polite">
-      <div class="text-subtitle2 text-grey-8">共 {{ displayProducts.length }} 項商品</div>
+      <div class="text-subtitle2 text-grey-8">共 {{ totalElements }} 項商品</div>
       <div class="text-caption text-grey-7">商品資訊依目前搜尋與排序條件顯示</div>
     </section>
 
@@ -114,8 +136,15 @@
             <h2 class="text-subtitle1 text-weight-bold q-mb-xs">{{ product.name }}</h2>
             <p class="text-grey-7 product-description q-mb-md">{{ product.description || '尚未提供商品描述。' }}</p>
             <div class="row items-center justify-between q-gutter-sm">
-              <div class="text-h6 text-primary">NT$ {{ formatPrice(productPrice(product)) }}</div>
-              <q-chip dense square color="grey-2" text-color="dark">{{ productStock(product) > 0 ? '現貨供應' : '暫時缺貨' }}</q-chip>
+              <div>
+                <span class="text-h6 text-primary">NT$ {{ formatPrice(effectivePrice(product)) }}</span>
+                <span v-if="listPriceIfDiscounted(product)" class="text-caption text-grey-6 q-ml-xs list-price">
+                  NT$ {{ formatPrice(listPriceIfDiscounted(product)!) }}
+                </span>
+              </div>
+              <q-chip dense square :color="isSoldOut(product) ? 'red-1' : 'grey-2'" :text-color="isSoldOut(product) ? 'red-8' : 'dark'">
+                {{ isSoldOut(product) ? '暫時缺貨' : '現貨供應' }}
+              </q-chip>
             </div>
           </q-card-section>
 
@@ -129,14 +158,26 @@
         </q-card>
       </div>
     </div>
+
+    <div v-if="totalPages > 1" class="row justify-center q-mt-lg">
+      <q-pagination
+        :model-value="page + 1"
+        :max="totalPages"
+        :max-pages="7"
+        direction-links
+        boundary-links
+        @update:model-value="goToPage"
+      />
+    </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { productApi, type Product } from '@/api/product'
+import { categoryApi, storefrontProductApi, type Product, type ProductCategory } from '@/api/product'
+import { effectivePrice, isSoldOut, listPriceIfDiscounted } from '@/utils/storeProduct'
 import { trackEvent } from '@/utils/tracking'
 import { clearCompare, getCompareIds, getFavoriteIds, toggleCompare, toggleFavorite } from '@/utils/storePreferences'
 
@@ -146,6 +187,12 @@ const products = ref<Product[]>([])
 const loading = ref(false)
 const keyword = ref('')
 const sortBy = ref<'default' | 'priceAsc' | 'priceDesc'>('default')
+const categories = ref<ProductCategory[]>([])
+const selectedCategory = ref<number | null>(null)
+const page = ref(0)
+const totalPages = ref(0)
+const totalElements = ref(0)
+const PAGE_SIZE = 12
 const favoriteIds = ref<number[]>([])
 const compareIds = ref<number[]>([])
 
@@ -155,37 +202,9 @@ const sortOptions = [
   { label: '價格由高到低', value: 'priceDesc' }
 ]
 
-const normalizeList = (payload: unknown): Product[] => {
-  if (Array.isArray(payload)) return payload as Product[]
-  if (payload && typeof payload === 'object' && 'content' in payload) {
-    return (payload as { content?: Product[] }).content ?? []
-  }
-  return []
-}
-
 const syncPrefs = () => {
   favoriteIds.value = getFavoriteIds()
   compareIds.value = getCompareIds()
-}
-
-const productPrice = (product: Product) => Number(product.price ?? product.salePrice ?? 0)
-
-const productStock = (product: Product) => {
-  // 檢查直接的 stock 欄位
-  const directStock = Number((product as Product & { stock?: number | string }).stock)
-  if (Number.isFinite(directStock) && directStock >= 0) return directStock
-
-  // 檢查規格中的庫存
-  if (Array.isArray(product.specifications) && product.specifications.length > 0) {
-    return product.specifications.reduce((sum, spec) => {
-      const stock = Number(spec.stock ?? 0)
-      return sum + (Number.isFinite(stock) ? stock : 0)
-    }, 0)
-  }
-
-  // 如果沒有庫存信息，預設為有貨（返回 1 表示有貨）
-  // 這樣可以避免所有商品都顯示缺貨
-  return 1
 }
 
 const productImage = (product: Product): string | null => {
@@ -197,12 +216,9 @@ const productImage = (product: Product): string | null => {
   return null
 }
 
-const displayProducts = computed(() => {
-  const list = [...products.value]
-  if (sortBy.value === 'priceAsc') return list.sort((a, b) => productPrice(a) - productPrice(b))
-  if (sortBy.value === 'priceDesc') return list.sort((a, b) => productPrice(b) - productPrice(a))
-  return list
-})
+// 分頁、篩選與排序都在後端完成
+const displayProducts = computed(() => products.value)
+const SORT_PARAM = { default: 'newest', priceAsc: 'price_asc', priceDesc: 'price_desc' } as const
 
 const compareProducts = computed(() => {
   const idSet = new Set(compareIds.value)
@@ -211,14 +227,20 @@ const compareProducts = computed(() => {
 
 const formatPrice = (value: number) => value.toLocaleString('zh-TW', { maximumFractionDigits: 0 })
 
-const loadProducts = async () => {
+const loadProducts = async (targetPage = 0) => {
   loading.value = true
   try {
-    const response = keyword.value.trim()
-      ? await productApi.searchProducts(keyword.value.trim(), 0, 20)
-      : await productApi.getProducts({ page: 0, size: 20 })
-
-    products.value = normalizeList(response.data)
+    const response = await storefrontProductApi.list({
+      categoryId: selectedCategory.value,
+      keyword: keyword.value?.trim() || undefined,
+      sort: SORT_PARAM[sortBy.value],
+      page: targetPage,
+      size: PAGE_SIZE
+    })
+    products.value = response.data?.content ?? []
+    totalPages.value = response.data?.totalPages ?? 0
+    totalElements.value = response.data?.totalElements ?? 0
+    page.value = targetPage
   } catch {
     $q.notify({ type: 'negative', message: '載入商品失敗，請稍後再試。' })
   } finally {
@@ -229,7 +251,29 @@ const loadProducts = async () => {
 const resetSearch = async () => {
   keyword.value = ''
   sortBy.value = 'default'
+  selectedCategory.value = null
   await loadProducts()
+}
+
+const selectCategory = (id: number | null) => {
+  selectedCategory.value = id
+  loadProducts()
+}
+
+const goToPage = (value: number) => {
+  loadProducts(value - 1)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+watch(sortBy, () => loadProducts())
+
+const loadCategories = async () => {
+  try {
+    const response = await categoryApi.getEnabledCategories()
+    categories.value = (response.data || []).filter((category) => !category.parentId)
+  } catch {
+    categories.value = []
+  }
 }
 
 const goDetail = (id?: number) => {
@@ -264,12 +308,15 @@ const clearCompareList = () => {
 onMounted(async () => {
   trackEvent('view_product_list')
   syncPrefs()
+  loadCategories()
   await loadProducts()
 })
 </script>
 
 <style scoped>
 .store-page { max-width: 1180px; margin: 0 auto; }
+.category-chips { display:flex; flex-wrap:wrap; gap:4px; }
+.list-price { text-decoration: line-through; }
 
 .catalog-hero {
   border-radius: 20px;

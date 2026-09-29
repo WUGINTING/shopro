@@ -21,6 +21,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     /**
      * Get all users
@@ -93,6 +94,13 @@ public class UserService {
             throw new BusinessException("Email 已存在：" + dto.getEmail());
         }
 
+        // 編輯自己的帳號時，帳號名稱或密碼變更會讓目前的登入 token 失效，需回傳新 token
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean editingSelf = auth != null && user.getUsername().equals(auth.getName());
+        boolean credentialsChanged = !user.getUsername().equals(dto.getUsername())
+                || (dto.getPassword() != null && !dto.getPassword().isBlank());
+
         // Update fields
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
@@ -111,7 +119,11 @@ public class UserService {
         }
 
         User updatedUser = userRepository.save(user);
-        return toDTO(updatedUser);
+        UserDTO result = toDTO(updatedUser);
+        if (editingSelf && credentialsChanged) {
+            result.setToken(jwtService.generateToken(updatedUser));
+        }
+        return result;
     }
 
     /**

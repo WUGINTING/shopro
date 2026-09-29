@@ -72,7 +72,13 @@
 
             <h1 class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</h1>
             <p class="text-grey-7 q-mb-md detail-desc">{{ product.description || '尚未提供商品詳細描述。' }}</p>
-            <div class="text-h4 text-primary text-weight-bold">NT$ {{ formatPrice(price) }}</div>
+            <div class="row items-end q-gutter-sm">
+              <div class="text-h4 text-primary text-weight-bold">NT$ {{ formatPrice(price) }}</div>
+              <div v-if="!selectedSpec && listPriceIfDiscounted(product)" class="text-subtitle1 text-grey-6 list-price">
+                NT$ {{ formatPrice(listPriceIfDiscounted(product)!) }}
+              </div>
+            </div>
+            <q-chip v-if="soldOut" color="red-1" text-color="red-8" square dense class="q-mt-sm">目前缺貨</q-chip>
 
             <div v-if="specifications.length > 0" class="q-mt-md">
               <p class="text-subtitle2 text-weight-medium q-mb-sm">選擇規格</p>
@@ -82,7 +88,7 @@
                   :key="spec.id"
                   :class="['spec-card', {
                     'spec-card--selected': selectedSpecId === spec.id,
-                    'spec-card--disabled': spec.stock === 0
+                    'spec-card--disabled': spec.stock === 0 || product.status === 'OUT_OF_STOCK'
                   }]"
                   @click="selectSpec(spec)"
                 >
@@ -102,15 +108,16 @@
                   </q-img>
                   <div class="spec-card__body">
                     <div class="spec-card__name">{{ spec.specName }}</div>
-                    <div class="spec-card__price">NT$ {{ formatPrice(Number(spec.price ?? 0)) }}</div>
-                    <div v-if="(spec.stock ?? 0) > 0" class="spec-card__stock">庫存: {{ spec.stock }}</div>
-                    <div v-else class="spec-card__stock spec-card__stock--out">售完</div>
+                    <div class="spec-card__price">NT$ {{ formatPrice(specPrice(product, spec)) }}</div>
+                    <div v-if="spec.stock === 0 || product.status === 'OUT_OF_STOCK'" class="spec-card__stock spec-card__stock--out">售完</div>
+                    <div v-else-if="spec.stock != null" class="spec-card__stock">庫存: {{ spec.stock }}</div>
+                    <div v-else class="spec-card__stock">現貨</div>
                   </div>
                   <q-icon v-if="selectedSpecId === spec.id" name="check_circle" color="primary" size="20px" class="spec-card__check" />
                 </div>
               </div>
               <div v-if="selectedSpec" class="text-caption text-grey-7 q-mt-sm">
-                已選擇：<strong>{{ selectedSpec.specName }}</strong>（庫存 {{ selectedSpec.stock }} 件）
+                已選擇：<strong>{{ selectedSpec.specName }}</strong><span v-if="selectedSpec.stock != null">（庫存 {{ selectedSpec.stock }} 件）</span>
               </div>
               <div v-else class="text-caption text-warning q-mt-sm">
                 <q-icon name="warning" size="14px" /> 請選擇商品規格
@@ -141,16 +148,17 @@
               <q-input
                 v-model.number="quantity"
                 type="number"
-                min="1"
-                max="99"
+                :min="minQty"
+                :max="maxQty"
                 outlined
                 dense
                 aria-label="商品購買數量"
+                :hint="purchaseHint"
                 @update:model-value="normalizeQty"
               />
 
               <div class="row q-gutter-sm q-mt-md">
-                <q-btn unelevated color="primary" no-caps label="加入購物車" @click="handleAddToCart" />
+                <q-btn unelevated color="primary" no-caps :label="soldOut ? '目前缺貨' : '加入購物車'" :disable="soldOut" @click="handleAddToCart" />
                 <q-btn outline color="primary" no-caps label="前往購物車" @click="router.push('/cart')" />
               </div>
 
@@ -184,7 +192,8 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { productApi, type Product } from '@/api/product'
+import { storefrontProductApi, type Product } from '@/api/product'
+import { availableStock, isSoldOut, listPriceIfDiscounted, specPrice } from '@/utils/storeProduct'
 import { addToCart } from '@/utils/storeCart'
 import { trackEvent } from '@/utils/tracking'
 import { getCompareIds, getFavoriteIds, toggleCompare, toggleFavorite } from '@/utils/storePreferences'
@@ -203,7 +212,7 @@ const selectedSpecId = ref<number | null>(null)
 const currentImageIndex = ref(0)
 
 const productId = computed(() => Number(route.params.id))
-const baseProductPrice = computed(() => Number(product.value?.price ?? product.value?.salePrice ?? 0))
+
 const specifications = computed(() => (product.value?.specifications ?? []).filter((spec) => spec.enabled !== false))
 const selectedSpec = computed(() => {
   const available = specifications.value
@@ -214,7 +223,23 @@ const selectedSpec = computed(() => {
   }
   return null
 })
-const price = computed(() => Number(selectedSpec.value?.price ?? baseProductPrice.value))
+const price = computed(() => (product.value ? specPrice(product.value, selectedSpec.value) : 0))
+const soldOut = computed(() => !!product.value && isSoldOut(product.value, selectedSpec.value))
+// 購買數量限制：商品最少/最多購買數量與可用庫存
+const minQty = computed(() => Math.max(1, Number(product.value?.minPurchaseQuantity || 1)))
+const maxQty = computed(() => {
+  const limits = [99]
+  if (product.value?.maxPurchaseQuantity && product.value.maxPurchaseQuantity > 0) limits.push(product.value.maxPurchaseQuantity)
+  const stock = product.value ? availableStock(product.value, selectedSpec.value) : null
+  if (stock != null && stock > 0) limits.push(stock)
+  return Math.max(minQty.value, Math.min(...limits))
+})
+const purchaseHint = computed(() => {
+  const parts: string[] = []
+  if (minQty.value > 1) parts.push(`最少購買 ${minQty.value} 件`)
+  if (product.value?.maxPurchaseQuantity && product.value.maxPurchaseQuantity > 0) parts.push(`每筆最多 ${product.value.maxPurchaseQuantity} 件`)
+  return parts.join('，')
+})
 
 const selectSpec = (spec: any) => {
   if (spec.stock === 0) {
@@ -292,7 +317,7 @@ const syncPrefs = () => {
 }
 
 const normalizeQty = () => {
-  quantity.value = Math.max(1, Math.min(99, Number(quantity.value || 1)))
+  quantity.value = Math.max(minQty.value, Math.min(maxQty.value, Number(quantity.value || minQty.value)))
 }
 
 const formatPrice = (value: number) => value.toLocaleString('zh-TW', { maximumFractionDigits: 0 })
@@ -306,9 +331,10 @@ const handleAddToCart = () => {
     return
   }
 
-  // 檢查庫存
-  if (selectedSpec.value && selectedSpec.value.stock !== undefined && selectedSpec.value.stock < quantity.value) {
-    $q.notify({ type: 'warning', message: '庫存不足' })
+  // 檢查庫存（null 表示未追蹤庫存）
+  const stock = availableStock(product.value, selectedSpec.value)
+  if (stock != null && stock < quantity.value) {
+    $q.notify({ type: 'warning', message: stock === 0 ? '此商品目前缺貨' : `庫存不足，目前剩餘 ${stock} 件` })
     return
   }
 
@@ -366,12 +392,13 @@ const fetchProduct = async () => {
   quantity.value = 1
 
   try {
-    const response = await productApi.getProduct(productId.value)
+    const response = await storefrontProductApi.get(productId.value)
     product.value = response.data || null
     if (!product.value) {
       errorMessage.value = '找不到此商品資訊。'
       return
     }
+    quantity.value = minQty.value
     syncPrefs()
     trackEvent('view_product_detail', { product_id: productId.value })
   } catch (error: any) {
@@ -406,6 +433,7 @@ watch(
 </script>
 
 <style scoped>
+.list-price { text-decoration: line-through; }
 .store-page { max-width: 1180px; margin: 0 auto; }
 .detail-card { border-radius: 20px; border-color: #eadfcd; background: #fff; }
 .detail-media { border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; background: #f8fafc; height: 360px; }

@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     // 商品 SKU 唯一索引名稱
     private static final String PRODUCT_SKU_UNIQUE_INDEX = "ukq1mafxn973ldq80m1irp3mpvq";
 
@@ -77,6 +79,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+        // 未預期的錯誤必須留下紀錄，回應中不暴露細節
+        log.error("Unhandled exception", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("系統發生錯誤，請稍後再試"));

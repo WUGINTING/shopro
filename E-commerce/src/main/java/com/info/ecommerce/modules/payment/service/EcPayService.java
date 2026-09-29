@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -29,6 +28,13 @@ import java.util.stream.Collectors;
 public class EcPayService implements PaymentGatewayService {
 
     private final EcPayConfig ecPayConfig;
+
+    /**
+     * ATM / 超商代碼繳費期限（天）。須短於逾期未付款自動取消的期限（ORDER_UNPAID_TIMEOUT_HOURS），
+     * 避免客人在訂單取消後仍能以舊代碼付款。
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.payment.ecpay-expire-days:2}")
+    private int expireDays = 2;
 
     /**
      * 創建 ECPay 支付請求
@@ -196,7 +202,14 @@ public class EcPayService implements PaymentGatewayService {
         params.put("ItemName", request.getProductName());
         params.put("ReturnURL", ecPayConfig.getNotifyUrl());
         params.put("ChoosePayment", "ALL"); // 顯示所有付款方式
+        // 繳費期限：ATM 以天、超商代碼以分鐘計；超商條碼的期限單位與代碼衝突，因此不開放條碼
+        int days = Math.max(1, Math.min(expireDays, 60));
+        params.put("ExpireDate", String.valueOf(days));
+        params.put("StoreExpireDate", String.valueOf(days * 24 * 60));
+        params.put("IgnorePayment", "BARCODE");
         params.put("EncryptType", "1"); // SHA256
+        // 完整訂單編號放在 CustomField1（會原樣回傳），MerchantTradeNo 可能因 20 字元限制被截斷
+        params.put("CustomField1", originalOrderNumber);
         
         // 客戶資料（選填）
         if (request.getCustomerEmail() != null && !request.getCustomerEmail().isEmpty()) {
@@ -207,7 +220,9 @@ public class EcPayService implements PaymentGatewayService {
         }
         
         // 付款完成後的導向頁面
-        if (ecPayConfig.getReturnUrl() != null && !ecPayConfig.getReturnUrl().isEmpty()) {
+        if (request.getClientBackUrl() != null && !request.getClientBackUrl().isBlank()) {
+            params.put("ClientBackURL", request.getClientBackUrl());
+        } else if (ecPayConfig.getReturnUrl() != null && !ecPayConfig.getReturnUrl().isEmpty()) {
             params.put("ClientBackURL", ecPayConfig.getReturnUrl());
         }
         
@@ -289,21 +304,21 @@ public class EcPayService implements PaymentGatewayService {
     }
 
     /**
-     * 構建支付 URL（用於 HTML 表單提交）
-     * 注意：參數值使用原始值（不編碼），因為前端使用 POST 表單提交時瀏覽器會自動編碼
+     * 構建支付 URL（前端解析查詢參數後以 POST 表單送出）
+     * 參數值以 application/x-www-form-urlencoded 規則編碼（與瀏覽器 URLSearchParams 的解碼規則一致），
+     * 例如 Email 中的「+」會編碼成 %2B，前端取回的值才會與計算 CheckMacValue 時的原始值相同
      */
     private String buildPaymentUrl(Map<String, String> params) {
-        // ECPay 需要透過 HTML 表單 POST 提交
-        // 這裡返回的是帶參數的 URL，前端會解析這些參數並創建 POST 表單
-        // 當使用 POST 表單提交時，瀏覽器會自動對表單字段值進行 URL 編碼
-        // 所以這裡使用原始參數值，不預先編碼
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromUriString(ecPayConfig.getApiUrl() + "/Cashier/AioCheckOut/V5");
-        
-        // 使用原始參數值，UriComponentsBuilder 會自動進行 URL 編碼
-        params.forEach(builder::queryParam);
-        
-        return builder.build().toUriString();
+        StringBuilder url = new StringBuilder(ecPayConfig.getApiUrl()).append("/Cashier/AioCheckOut/V5");
+        char separator = '?';
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            url.append(separator)
+                    .append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
+                    .append('=')
+                    .append(URLEncoder.encode(entry.getValue() == null ? "" : entry.getValue(), StandardCharsets.UTF_8));
+            separator = '&';
+        }
+        return url.toString();
     }
 
     /**
@@ -342,7 +357,11 @@ public class EcPayService implements PaymentGatewayService {
             // 加上4位時間戳後綴，總共23位，但我們限制了20位，所以會截取
             // 實際可能是：ORD + 12位時間戳 + 4位隨機數的前13位 + 4位後綴 = 20位
             String originalOrderNumber = merchantTradeNo;
-            if (merchantTradeNo != null && merchantTradeNo.length() > 4) {
+            String customOrderNumber = params.get("CustomField1");
+            if (customOrderNumber != null && !customOrderNumber.isBlank()) {
+                originalOrderNumber = customOrderNumber.trim();
+                log.info("Using order number from CustomField1: {}", originalOrderNumber);
+            } else if (merchantTradeNo != null && merchantTradeNo.length() > 4) {
                 // 移除最後4位（時間戳後綴）
                 originalOrderNumber = merchantTradeNo.substring(0, merchantTradeNo.length() - 4);
                 log.info("Extracted original order number: {} from MerchantTradeNo: {}", originalOrderNumber, merchantTradeNo);
@@ -359,8 +378,12 @@ public class EcPayService implements PaymentGatewayService {
                 builder.amount(new BigDecimal(tradeAmt));
             }
             
-            // 判斷交易狀態
-            if ("1".equals(rtnCode)) {
+            // 判斷交易狀態：綠界廠商後台的「模擬付款」（SimulatePaid=1）沒有實際收款，正式環境不視為付款成功
+            if ("1".equals(params.get("SimulatePaid")) && !ecPayConfig.isSandbox()) {
+                log.warn("Ignored ECPay simulated payment for {}", originalOrderNumber);
+                builder.status(PaymentGatewayStatus.FAILED)
+                        .errorMessage("綠界模擬付款（非實際收款），不變更訂單狀態");
+            } else if ("1".equals(rtnCode)) {
                 builder.status(PaymentGatewayStatus.SUCCESS);
             } else {
                 builder.status(PaymentGatewayStatus.FAILED)

@@ -1,5 +1,7 @@
 package com.info.ecommerce.modules.order.service;
 
+import com.info.ecommerce.modules.order.event.OrderEmailEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.info.ecommerce.common.exception.BusinessException;
 import com.info.ecommerce.modules.order.dto.OrderDTO;
 import com.info.ecommerce.modules.order.dto.OrderItemDTO;
@@ -7,6 +9,7 @@ import com.info.ecommerce.modules.order.entity.Order;
 import com.info.ecommerce.modules.order.entity.OrderItem;
 import com.info.ecommerce.modules.order.enums.OrderStatus;
 import com.info.ecommerce.modules.order.repository.CustomerBlacklistRepository;
+import com.info.ecommerce.modules.order.repository.OrderDiscountRepository;
 import com.info.ecommerce.modules.order.repository.OrderItemRepository;
 import com.info.ecommerce.modules.order.repository.OrderRepository;
 import com.info.ecommerce.modules.product.entity.Product;
@@ -16,6 +19,7 @@ import com.info.ecommerce.modules.product.repository.ProductSpecificationReposit
 import com.info.ecommerce.modules.product.service.InventoryManagementService;
 import com.info.ecommerce.modules.crm.service.MemberService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,16 +40,23 @@ import com.info.ecommerce.modules.system.service.AdminNotificationService;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final OrderDiscountRepository orderDiscountRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderHistoryRepository orderHistoryRepository;
+    private final com.info.ecommerce.modules.order.repository.OrderPaymentRepository orderPaymentRepository;
     private final CustomerBlacklistRepository customerBlacklistRepository;
     private final OrderHistoryService orderHistoryService;
     private final ProductRepository productRepository;
     private final ProductSpecificationRepository productSpecificationRepository;
     private final MemberService memberService;
     private final AdminNotificationService adminNotificationService;
+    private final OrderStockService orderStockService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final com.info.ecommerce.modules.order.repository.OrderShipmentRepository orderShipmentRepository;
 
     /**
      * 生成訂單編號
@@ -61,12 +72,92 @@ public class OrderService {
     }
 
     /**
+     * 訂單是否曾收款：有成功的付款紀錄（線上付款），或曾被標記為已付款（例如貨到付款收款）
+     */
+    /** 會在 new_status 記錄訂單 / 付款狀態 PAID 的歷程動作 */
+    private static final java.util.List<String> PAID_STATUS_ACTIONS = java.util.List.of(
+        "CREATE", "UPDATE", "UPDATE_STATUS", "BATCH_UPDATE_STATUS", "PAYMENT_SUCCESS", "CREATE_PAYMENT", "UPDATE_PAYMENT_STATUS");
+
+    @Transactional(readOnly = true)
+    public boolean hasBeenPaid(Long orderId) {
+        // new_status 欄位在其他動作中也存放優惠券代碼、退款金額等資料，只看狀態變更類的記錄
+        return orderRepository.findById(orderId).map(order -> order.getStatus() == OrderStatus.PAID).orElse(false)
+            || orderHistoryRepository.existsByOrderIdAndNewStatusAndActionTypeIn(orderId, OrderStatus.PAID.name(), PAID_STATUS_ACTIONS)
+            || orderPaymentRepository.findByOrderId(orderId).stream()
+                .anyMatch(payment -> payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.PAID
+                    || payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.REFUNDING
+                    || payment.getPaymentStatus() == com.info.ecommerce.modules.order.enums.PaymentStatus.REFUNDED);
+    }
+
+    /** 已收款的訂單不可直接取消（處理中的線上付款訂單也一樣），必須走退款 */
+    private void assertCancellable(Long orderId, OrderStatus oldStatus, OrderStatus newStatus) {
+        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED && hasBeenPaid(orderId)) {
+            throw new BusinessException("此訂單已收款，不可直接取消，請使用「登記退款」");
+        }
+    }
+
+    /**
+     * 取消仍未付款的訂單（逾期未付款清理使用）。先鎖定訂單列並重新確認狀態，
+     * 與付款回呼互斥，避免在付款成功的同時把訂單取消。
+     *
+     * @return 是否確實取消
+     */
+    @Transactional
+    public boolean cancelIfStillUnpaid(Long id, String operatorName) {
+        Order locked = orderRepository.findByIdForUpdate(id).orElse(null);
+        if (locked == null || locked.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            return false;
+        }
+        updateOrderStatus(id, OrderStatus.CANCELLED, null, operatorName);
+        return true;
+    }
+
+    /**
+     * 狀態變為已付款或已取消時通知顧客（交易提交後寄送）
+     */
+    private void publishStatusEmail(Long orderId, OrderStatus oldStatus, OrderStatus newStatus) {
+        if (newStatus == null || newStatus == oldStatus) {
+            return;
+        }
+        if (newStatus == OrderStatus.PAID) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.PAID));
+        } else if (newStatus == OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.CANCELLED));
+        } else if (newStatus == OrderStatus.REFUNDED) {
+            eventPublisher.publishEvent(new OrderEmailEvent(orderId, OrderEmailEvent.Type.REFUNDED));
+        }
+    }
+
+    /**
      * 檢查客戶是否在黑名單
      */
     private void checkCustomerBlacklist(Long customerId) {
         if (customerBlacklistRepository.existsByCustomerIdAndIsActive(customerId, true)) {
             throw new BusinessException("此客戶已被加入黑名單，無法建立訂單");
         }
+    }
+
+    private static boolean sameAmount(BigDecimal a, BigDecimal b) {
+        BigDecimal left = a == null ? BigDecimal.ZERO : a;
+        BigDecimal right = b == null ? BigDecimal.ZERO : b;
+        return left.compareTo(right) == 0;
+    }
+
+    /** 品項是否有實質變更（商品、規格、數量、單價） */
+    private static boolean itemsDiffer(List<OrderItem> current, List<OrderItemDTO> requested) {
+        if (current.size() != requested.size()) {
+            return true;
+        }
+        java.util.function.Function<Object[], String> key = parts -> java.util.Arrays.toString(parts);
+        List<String> currentKeys = current.stream()
+            .map(item -> key.apply(new Object[]{item.getProductId(), item.getSpecificationId(), item.getQuantity(),
+                item.getUnitPrice() == null ? null : item.getUnitPrice().stripTrailingZeros().toPlainString()}))
+            .sorted().collect(Collectors.toList());
+        List<String> requestedKeys = requested.stream()
+            .map(item -> key.apply(new Object[]{item.getProductId(), item.getSpecificationId(), item.getQuantity(),
+                item.getUnitPrice() == null ? null : item.getUnitPrice().stripTrailingZeros().toPlainString()}))
+            .sorted().collect(Collectors.toList());
+        return !currentKeys.equals(requestedKeys);
     }
 
     /**
@@ -80,7 +171,10 @@ public class OrderService {
 
         order.setSubtotalAmount(subtotal);
 
-        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        // 折扣不可超過商品小計（例如修改品項後小計變少），避免總額變成負數
+        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount().max(BigDecimal.ZERO) : BigDecimal.ZERO;
+        discount = discount.min(subtotal);
+        order.setDiscountAmount(discount);
         BigDecimal shipping = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
 
         // 總金額 = 小計 - 訂單折扣 + 運費
@@ -162,7 +256,7 @@ public class OrderService {
                 item.setProductSpec(spec.getSpecName());
             }
             // 如果DTO中沒有提供單價，使用規格的價格
-            if (dto.getUnitPrice() == null && spec.getPrice() != null) {
+            if (dto.getUnitPrice() == null && spec.getPrice() != null && spec.getPrice().signum() > 0) {
                 item.setUnitPrice(spec.getPrice());
             }
         }
@@ -266,14 +360,9 @@ public class OrderService {
             "收到新訂單 #" + order.getOrderNumber() + "，金額：NT$" + order.getTotalAmount()
         );
 
-        // 如果訂單創建時狀態就是已付款或已完成，更新客戶總消費
-        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.PAID) {
-            try {
-                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
-            } catch (Exception e) {
-                // 記錄錯誤但不影響訂單創建
-                System.err.println("Failed to update member total spent on order creation: " + e.getMessage());
-            }
+        // 訂單建立時就是已付款/已完成時，更新客戶累計消費
+        if (MemberService.SPENDING_STATUSES.contains(order.getStatus())) {
+            syncMemberSpending(order.getCustomerId());
         }
 
         return convertToDTO(order);
@@ -296,47 +385,68 @@ public class OrderService {
         order.setCustomerName(dto.getCustomerName());
         order.setCustomerPhone(dto.getCustomerPhone());
         order.setCustomerEmail(dto.getCustomerEmail());
-        order.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) {
+            OrderStatusRules.assertCanChange(oldStatus, dto.getStatus());
+            assertCancellable(id, oldStatus, dto.getStatus());
+            order.setStatus(dto.getStatus());
+        }
         order.setPickupType(dto.getPickupType());
         order.setStoreId(dto.getStoreId());
         order.setShippingAddress(dto.getShippingAddress());
         order.setNotes(dto.getNotes());
-        order.setDiscountAmount(dto.getDiscountAmount());
+
+        // 金額相關（品項、折扣、運費）只能在待付款時調整，避免已收款訂單的金額與實收不符
+        List<OrderItem> currentItems = orderItemRepository.findByOrderId(id);
+        boolean itemsChanged = dto.getItems() != null && !dto.getItems().isEmpty() && itemsDiffer(currentItems, dto.getItems());
+        boolean hasDiscountRecords = !orderDiscountRepository.findByOrderId(id).isEmpty();
+        BigDecimal newDiscount = hasDiscountRecords ? order.getDiscountAmount() : dto.getDiscountAmount();
+        boolean amountsChanged = itemsChanged
+            || !sameAmount(newDiscount, order.getDiscountAmount())
+            || !sameAmount(dto.getShippingFee(), order.getShippingFee());
+        if (amountsChanged && oldStatus != OrderStatus.PENDING_PAYMENT) {
+            throw new BusinessException("只有待付款的訂單可以修改品項、折扣或運費；已付款訂單請改用退款或取消後重新建立");
+        }
+        // 有「訂單折扣」紀錄時，折扣金額由折扣紀錄決定
+        order.setDiscountAmount(newDiscount);
         order.setShippingFee(dto.getShippingFee());
 
         if (dto.getStatus() == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
             order.setCompletedAt(LocalDateTime.now());
         }
 
-        // 更新訂單項目（如果有提供）
-        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+        // 更新訂單項目（有變更時）
+        if (itemsChanged) {
+            List<OrderItem> oldItems = currentItems;
             orderItemRepository.deleteByOrderId(id);
             List<OrderItem> items = dto.getItems().stream()
                 .map(itemDto -> convertItemToEntity(itemDto, id))
                 .collect(Collectors.toList());
             orderItemRepository.saveAll(items);
 
+            // 前台訂單已扣庫存：品項變更時同步調整
+            orderStockService.replaceItems(id, order.getOrderNumber(), oldItems, items);
+
             // 重新計算金額
             calculateOrderAmounts(order, items);
+        } else if (amountsChanged) {
+            calculateOrderAmounts(order, currentItems);
         }
 
         order = orderRepository.save(order);
 
+        if (dto.getStatus() == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+            orderStockService.release(id, order.getOrderNumber());
+        } else if (oldStatus == OrderStatus.CANCELLED && dto.getStatus() != null && dto.getStatus() != OrderStatus.CANCELLED) {
+            orderStockService.reserveAgain(id, order.getOrderNumber());
+        }
+        publishStatusEmail(id, oldStatus, dto.getStatus());
+
         // 記錄歷史
-        if (oldStatus != dto.getStatus()) {
+        if (dto.getStatus() != null && oldStatus != dto.getStatus()) {
             orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
                 oldStatus.name(), dto.getStatus().name(), null, null);
 
-            // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
-            if ((dto.getStatus() == OrderStatus.COMPLETED || dto.getStatus() == OrderStatus.PAID)
-                && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
-                try {
-                    memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
-                } catch (Exception e) {
-                    // 記錄錯誤但不影響訂單更新
-                    System.err.println("Failed to update member total spent: " + e.getMessage());
-                }
-            }
+            syncMemberSpending(order.getCustomerId());
         } else {
             orderHistoryService.recordHistory(id, "UPDATE", "訂單已更新",
                 null, null, null, null);
@@ -363,6 +473,17 @@ public class OrderService {
         Order order = orderRepository.findById(id)
             .orElseThrow(() -> new BusinessException("訂單不存在"));
 
+        // 尚未出貨的訂單（待付款 / 已付款 / 處理中，且沒有任何已出貨或已送達的物流）刪除前歸還庫存與優惠券；
+        // 已出貨 / 已完成的商品已實際賣出，已取消 / 已退款的訂單在當時已處理，都不再歸還（release 可重複呼叫）
+        boolean shipped = orderShipmentRepository.findByOrderId(id).stream()
+            .anyMatch(shipment -> shipment.getShippingStatus() == com.info.ecommerce.modules.order.enums.ShippingStatus.SHIPPED
+                || shipment.getShippingStatus() == com.info.ecommerce.modules.order.enums.ShippingStatus.DELIVERED);
+        boolean unfulfilled = !shipped && (order.getStatus() == OrderStatus.PENDING_PAYMENT
+            || order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.PROCESSING);
+        if (unfulfilled) {
+            orderStockService.release(id, order.getOrderNumber());
+        }
+
         // 刪除訂單項目
         orderItemRepository.deleteByOrderId(id);
 
@@ -372,6 +493,8 @@ public class OrderService {
         // 記錄歷史
         orderHistoryService.recordHistory(id, "DELETE", "訂單已刪除",
             order.getStatus().name(), null, null, null);
+        // 會員累積消費不再計入已刪除的訂單
+        memberService.syncTotalSpent(order.getCustomerId());
     }
 
     /**
@@ -423,6 +546,8 @@ public class OrderService {
             .orElseThrow(() -> new BusinessException("訂單不存在"));
 
         OrderStatus oldStatus = order.getStatus();
+        OrderStatusRules.assertCanChange(oldStatus, newStatus);
+        assertCancellable(id, oldStatus, newStatus);
         order.setStatus(newStatus);
 
         if (newStatus == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
@@ -430,6 +555,13 @@ public class OrderService {
         }
 
         order = orderRepository.save(order);
+
+        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
+            orderStockService.release(id, order.getOrderNumber());
+        } else if (oldStatus == OrderStatus.CANCELLED && newStatus != OrderStatus.CANCELLED) {
+            orderStockService.reserveAgain(id, order.getOrderNumber());
+        }
+        publishStatusEmail(id, oldStatus, newStatus);
 
         // 記錄歷史
         orderHistoryService.recordHistory(id, "UPDATE_STATUS", "訂單狀態已更新",
@@ -454,17 +586,19 @@ public class OrderService {
             );
         }
 
-        // 當訂單狀態變更為已完成或已付款時，更新客戶總消費
-        if ((newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.PAID)
-            && (oldStatus != OrderStatus.COMPLETED && oldStatus != OrderStatus.PAID)) {
-            try {
-                memberService.addTotalSpent(order.getCustomerId(), order.getTotalAmount());
-            } catch (Exception e) {
-                // 記錄錯誤但不影響訂單更新
-                System.err.println("Failed to update member total spent: " + e.getMessage());
-            }
+        if (oldStatus != newStatus) {
+            syncMemberSpending(order.getCustomerId());
         }
 
         return convertToDTO(order);
+    }
+
+    /** 依訂單重新計算會員累計消費；失敗只記錄，不影響訂單操作 */
+    private void syncMemberSpending(Long customerId) {
+        try {
+            memberService.syncTotalSpent(customerId);
+        } catch (Exception e) {
+            log.warn("Failed to update member total spent for customer {}", customerId, e);
+        }
     }
 }

@@ -31,18 +31,21 @@ public class StaffController {
         return ApiResponse.success(staffService.getStaffById(id));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping
     @Operation(summary = "新增員工", description = "帳號上限 50 組")
     public ApiResponse<StaffDTO> createStaff(@Valid @RequestBody StaffDTO dto) {
         return ApiResponse.success("員工已新增", staffService.createStaff(dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{id}")
     @Operation(summary = "更新員工")
     public ApiResponse<StaffDTO> updateStaff(@PathVariable Long id, @Valid @RequestBody StaffDTO dto) {
         return ApiResponse.success("員工已更新", staffService.updateStaff(id, dto));
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @DeleteMapping("/{id}")
     @Operation(summary = "刪除員工")
     public ApiResponse<Void> deleteStaff(@PathVariable Long id) {
@@ -50,6 +53,7 @@ public class StaffController {
         return ApiResponse.success("員工已刪除", null);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}/toggle-enabled")
     @Operation(summary = "切換員工啟用狀態")
     public ApiResponse<StaffDTO> toggleEnabled(@PathVariable Long id) {

@@ -16,4 +16,42 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     Page<OrderHistory> findByOrderId(Long orderId, Pageable pageable);
     
     List<OrderHistory> findByOperatorId(Long operatorId);
+
+    boolean existsByOrderIdAndActionType(Long orderId, String actionType);
+
+    long countByOrderIdAndActionType(Long orderId, String actionType);
+
+    List<OrderHistory> findByOrderIdAndActionTypeInOrderByCreatedAtDesc(Long orderId, java.util.Collection<String> actionTypes);
+
+    List<OrderHistory> findByOrderIdAndActionType(Long orderId, String actionType);
+
+    List<com.info.ecommerce.modules.order.entity.OrderHistory> findByOrderIdInAndActionType(java.util.Collection<Long> orderIds, String actionType);
+
+    /** 分批查詢（SQL Server 單一查詢最多 2100 個參數） */
+    default List<OrderHistory> findByOrderIdInAndActionTypeInBatches(java.util.List<Long> orderIds, String actionType) {
+        List<OrderHistory> result = new java.util.ArrayList<>();
+        for (int from = 0; from < orderIds.size(); from += 1000) {
+            result.addAll(findByOrderIdInAndActionType(orderIds.subList(from, Math.min(from + 1000, orderIds.size())), actionType));
+        }
+        return result;
+    }
+
+    boolean existsByOrderIdAndNewStatusAndActionTypeIn(Long orderId, String newStatus, java.util.Collection<String> actionTypes);
+
+    List<OrderHistory> findByActionTypeAndCreatedAtBetween(String actionType, java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /** 期間內每一筆退款登記（REFUND 歷程，new_status 欄位記錄該次退款金額）；部分退款多次時逐筆計入各自的時間 */
+    default List<java.math.BigDecimal> refundAmountsBetween(java.time.LocalDateTime from, java.time.LocalDateTime to) {
+        return findByActionTypeAndCreatedAtBetween("REFUND", from, to).stream()
+                .map(OrderHistory::getNewStatus)
+                .map(value -> {
+                    try {
+                        return value == null ? null : new java.math.BigDecimal(value.trim());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
 }

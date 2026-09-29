@@ -24,4 +24,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Page<Member> findByNameContaining(String name, Pageable pageable);
     
     Long countByCreatedAtBefore(LocalDateTime date);
+
+    long countByCreatedAtBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
 }

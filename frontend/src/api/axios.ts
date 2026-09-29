@@ -86,10 +86,15 @@ axiosInstance.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      if (window.location.pathname !== '/login') {
+      const path = window.location.pathname
+      if (path !== '/login' && path !== '/signin') {
         showErrorNotify('登入已過期，正在跳轉到登入頁...')
+        // 後台頁面回到員工登入；商城頁面回到會員登入，登入後回到原頁面
+        const target = path.startsWith('/admin')
+          ? '/login'
+          : `/signin?redirect=${encodeURIComponent(path + window.location.search)}`
         setTimeout(() => {
-          window.location.href = '/login'
+          window.location.href = target
         }, 1500)
       }
       return Promise.reject(error)

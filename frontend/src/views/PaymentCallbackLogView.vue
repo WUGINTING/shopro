@@ -322,7 +322,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { paymentCallbackLogApi, type PaymentCallbackLog } from '@/api/paymentCallbackLog'
-import type { PageResponse } from '@/api/types'
+import type { LegacyPageResponse } from '@/api/types'
 import { startPaymentCallbackLogTour, isPaymentCallbackLogTourCompleted } from '@/utils/paymentCallbackLogTour'
 
 const $q = useQuasar()
@@ -445,7 +445,7 @@ const loadCallbackLogs = async () => {
         size: pagination.value.rowsPerPage
       })
       if (response.success && response.data) {
-        const data = response.data as PageResponse<PaymentCallbackLog> | PaymentCallbackLog[]
+        const data = response.data as LegacyPageResponse<PaymentCallbackLog> | PaymentCallbackLog[]
         if (Array.isArray(data)) {
           callbackLogs.value = data
           pagination.value.rowsNumber = data.length
@@ -461,7 +461,7 @@ const loadCallbackLogs = async () => {
         size: pagination.value.rowsPerPage
       })
       if (response.success && response.data) {
-        const data = response.data as PageResponse<PaymentCallbackLog> | PaymentCallbackLog[]
+        const data = response.data as LegacyPageResponse<PaymentCallbackLog> | PaymentCallbackLog[]
         if (Array.isArray(data)) {
           callbackLogs.value = data
           pagination.value.rowsNumber = data.length

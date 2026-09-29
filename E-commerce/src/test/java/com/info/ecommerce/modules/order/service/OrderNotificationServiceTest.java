@@ -1,5 +1,10 @@
 package com.info.ecommerce.modules.order.service;
 
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mail.MailSendException;
+import org.springframework.mail.javamail.JavaMailSender;
 import com.info.ecommerce.modules.order.entity.OrderNotification;
 import com.info.ecommerce.modules.order.enums.NotificationType;
 import com.info.ecommerce.modules.order.repository.OrderNotificationRepository;
@@ -27,6 +32,12 @@ class OrderNotificationServiceTest {
     @Mock
     private OrderNotificationRepository orderNotificationRepository;
 
+    @Mock
+    private ObjectProvider<JavaMailSender> mailSenderProvider;
+
+    @Mock
+    private JavaMailSender mailSender;
+
     @InjectMocks
     private OrderNotificationService orderNotificationService;
 
@@ -35,6 +46,10 @@ class OrderNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 預設已設定郵件伺服器
+        lenient().when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        lenient().when(mailSender.createMimeMessage()).thenReturn(new MimeMessage((Session) null));
+
         emailNotification = OrderNotification.builder()
                 .id(1L)
                 .orderId(1L)
@@ -81,6 +96,20 @@ class OrderNotificationServiceTest {
         assertThat(saved.getContent()).isEqualTo("Test Content");
         assertThat(saved.getIsSent()).isTrue();
         assertThat(saved.getSentAt()).isNotNull();
+        verify(mailSender).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void should_RecordUnsent_When_MailServerNotConfigured() {
+        when(mailSenderProvider.getIfAvailable()).thenReturn(null);
+        ArgumentCaptor<OrderNotification> captor = ArgumentCaptor.forClass(OrderNotification.class);
+
+        orderNotificationService.sendNotification(1L, NotificationType.EMAIL, "test@example.com", "S", "C");
+
+        verify(orderNotificationRepository).save(captor.capture());
+        assertThat(captor.getValue().getIsSent()).isFalse();
+        assertThat(captor.getValue().getErrorMessage()).contains("郵件伺服器");
+        assertThat(orderNotificationService.isEmailEnabled()).isFalse();
     }
 
     @Test
@@ -105,13 +134,15 @@ class OrderNotificationServiceTest {
         assertThat(saved.getNotificationType()).isEqualTo(NotificationType.SMS);
         assertThat(saved.getRecipient()).isEqualTo("0912345678");
         assertThat(saved.getContent()).isEqualTo("Test SMS Content");
-        assertThat(saved.getIsSent()).isTrue();
-        assertThat(saved.getSentAt()).isNotNull();
+        // 尚未串接簡訊服務：如實記錄為未寄出
+        assertThat(saved.getIsSent()).isFalse();
+        assertThat(saved.getErrorMessage()).contains("簡訊");
     }
 
     @Test
     void should_HandleException_When_NotificationSendingFails() {
         // given
+        doThrow(new MailSendException("SMTP down")).when(mailSender).send(any(MimeMessage.class));
         ArgumentCaptor<OrderNotification> notificationCaptor = ArgumentCaptor.forClass(OrderNotification.class);
         when(orderNotificationRepository.save(notificationCaptor.capture())).thenReturn(emailNotification);
 
@@ -126,7 +157,8 @@ class OrderNotificationServiceTest {
 
         // then
         OrderNotification saved = notificationCaptor.getValue();
-        assertThat(saved.getIsSent()).isTrue();
+        assertThat(saved.getIsSent()).isFalse();
+        assertThat(saved.getErrorMessage()).contains("SMTP down");
         verify(orderNotificationRepository, times(1)).save(any(OrderNotification.class));
     }
 
@@ -211,10 +243,11 @@ class OrderNotificationServiceTest {
         // when
         orderNotificationService.retryFailedNotifications();
 
-        // then
+        // then：只重送 Email，並更新原記錄（不新增）
         verify(orderNotificationRepository, times(1)).findByIsSent(false);
-        // Each notification calls sendNotification which saves once
-        verify(orderNotificationRepository, times(2)).save(any(OrderNotification.class));
+        verify(orderNotificationRepository, times(1)).save(failedNotification1);
+        verify(orderNotificationRepository, never()).save(failedNotification2);
+        assertThat(failedNotification1.getIsSent()).isTrue();
     }
 
     @Test

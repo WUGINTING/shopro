@@ -56,7 +56,7 @@
             :aria-grabbed="draggingImageId === image.id ? 'true' : 'false'"
             @dragstart="onDragStart(image, $event)"
             @dragover.prevent="onDragOver(image, $event)"
-            @drop.prevent="onDrop(image, $event)"
+            @drop.prevent="onDrop(image)"
             @dragend="onDragEnd"
           >
             <q-img :src="image.imageUrl" :ratio="1" class="cursor-pointer" @click="viewImage(image)">
@@ -302,6 +302,7 @@ const moveImage = async (image: AlbumImage, direction: 'up' | 'down') => {
 
   const nextImages = [...images.value]
   const [moved] = nextImages.splice(currentIndex, 1)
+  if (!moved) return
   nextImages.splice(targetIndex, 0, moved)
 
   await persistImageOrder(nextImages)
@@ -359,6 +360,10 @@ const onDrop = async (targetImage: AlbumImage) => {
 
   const nextImages = [...images.value]
   const [moved] = nextImages.splice(sourceIndex, 1)
+  if (!moved) {
+    onDragEnd()
+    return
+  }
   const baseInsertIndex = dragOverPosition.value === 'before' ? targetIndex : targetIndex + 1
   const insertIndex = sourceIndex < baseInsertIndex ? baseInsertIndex - 1 : baseInsertIndex
   nextImages.splice(insertIndex, 0, moved)
@@ -401,7 +406,8 @@ const viewImage = (image: AlbumImage) => {
 }
 
 const deleteImageConfirm = (image: AlbumImage) => {
-  if (!image.id) {
+  const imageId = image.id
+  if (!imageId) {
     $q.notify({ type: 'warning', message: '無效的圖片 ID' })
     return
   }
@@ -413,7 +419,7 @@ const deleteImageConfirm = (image: AlbumImage) => {
     persistent: true
   }).onOk(async () => {
     try {
-      await albumApi.deleteImage(albumId.value, image.id)
+      await albumApi.deleteImage(albumId.value, imageId)
       $q.notify({ type: 'positive', message: '圖片已刪除' })
       await Promise.all([loadImages(), loadAlbum()])
     } catch (error: any) {

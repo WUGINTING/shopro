@@ -56,4 +56,9 @@ public class PaymentRequestDTO {
      * 付款人手機
      */
     private String customerPhone;
+
+    /**
+     * 付款完成後瀏覽器「返回商店」網址（選填，未提供時使用設定檔的 payment.ecpay.return-url）
+     */
+    private String clientBackUrl;
 }

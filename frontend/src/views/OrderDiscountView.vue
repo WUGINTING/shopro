@@ -148,6 +148,10 @@
                 </template>
               </q-select>
 
+              <q-banner dense rounded class="bg-blue-1 text-blue-10 q-mb-md">
+                折扣會直接從訂單總金額扣除，只能套用在「待付款」的訂單。只填百分比（金額填 0）時，依商品小計計算折扣金額。
+              </q-banner>
+
               <q-select
                 v-model="form.discountType"
                 label="折扣類型 *"
@@ -284,7 +288,8 @@ const orderOptions = computed(() => {
   }))
 })
 
-const filteredOrderOptions = ref<Array<{ label: string; value: number; order: Order }>>([])
+// value 可能為 undefined（Order.id 為選填欄位）
+const filteredOrderOptions = ref<Array<{ label: string; value: Order['id']; order: Order }>>([])
 
 const loadOrders = async () => {
   ordersLoading.value = true

@@ -29,6 +29,7 @@ public class BlogService {
 
         BlogPost blogPost = new BlogPost();
         BeanUtils.copyProperties(dto, blogPost, "id");
+        blogPost.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(blogPost.getContent()));
         blogPost = blogPostRepository.save(blogPost);
         return toDTO(blogPost);
     }
@@ -43,6 +44,7 @@ public class BlogService {
         }
 
         BeanUtils.copyProperties(dto, blogPost, "id", "createdAt", "updatedAt", "viewCount");
+        blogPost.setContent(com.info.ecommerce.common.HtmlSanitizer.sanitize(blogPost.getContent()));
         blogPost = blogPostRepository.save(blogPost);
         return toDTO(blogPost);
     }
@@ -55,7 +57,9 @@ public class BlogService {
 
     @Transactional
     public BlogPostDTO getBlogPostBySlug(String slug) {
+        // 公開網址只提供已發布文章，草稿與已封存文章視為不存在
         BlogPost blogPost = blogPostRepository.findBySlug(slug)
+                .filter(post -> post.getStatus() == BlogStatus.PUBLISHED)
                 .orElseThrow(() -> new BusinessException("部落格文章不存在"));
         
         // 增加瀏覽次數

@@ -1,5 +1,6 @@
 ﻿﻿<template>
   <q-page class="store-page q-pa-md q-pa-lg-lg">
+    <EmailVerifyBanner />
     <section class="q-mb-md">
       <q-card flat bordered class="flow-card">
         <q-card-section class="q-py-sm">
@@ -49,10 +50,11 @@
                 autocomplete="tel"
                 inputmode="numeric"
                 hint="此欄位會自動暫存，方便下次結帳快速帶入。"
-                :rules="[(val: string) => !!val || '請輸入聯絡電話']"
+                :rules="[(val: string) => !!val || '請輸入聯絡電話', (val: string) => /^09\d{8}$/.test(val) || '請輸入正確的手機號碼格式 (09xxxxxxxx)']"
               />
 
               <q-input
+                v-if="form.shippingMethod === 'DELIVERY'"
                 v-model="form.shippingAddress"
                 outlined
                 type="textarea"
@@ -87,6 +89,8 @@
                 </div>
               </div>
 
+              <q-checkbox v-model="marketingOptIn" dense label="我願意收到優惠與新品通知 Email（可隨時取消訂閱）" />
+
               <q-banner rounded class="bg-blue-1 text-primary">
                 <template #avatar><q-icon name="lock" /></template>
                 訂單建立後若選擇 ECPay，系統會導向 ECPay 付款頁完成付款；請勿關閉或重整頁面直到導轉完成。
@@ -109,7 +113,7 @@
                   label="送出訂單並前往付款"
                   type="submit"
                   class="submit-btn"
-                  :disable="items.length === 0 || submitting"
+                  :disable="items.length === 0 || submitting || quoting || !quote || !!quoteError"
                   :loading="submitting"
                 />
               </div>
@@ -148,10 +152,58 @@
               </div>
             </div>
             <q-separator class="q-my-md" />
+            <div class="amount-row">
+              <span>商品小計</span>
+              <span>NT$ {{ formatPrice(subtotal) }}</span>
+            </div>
+            <div class="amount-row">
+              <span>運費</span>
+              <span v-if="!quote">—</span>
+              <span v-else-if="shippingFee > 0">NT$ {{ formatPrice(shippingFee) }}</span>
+              <span v-else class="text-positive">{{ form.shippingMethod === 'STORE_PICKUP' ? '門市自取免運' : '免運費' }}</span>
+            </div>
+            <div v-for="discount in amountDiscounts" :key="discount.type + (discount.name || '')" class="amount-row text-negative">
+              <span>{{ discountLabel(discount) }}</span>
+              <span>-NT$ {{ formatPrice(Number(discount.amount)) }}</span>
+            </div>
+            <div v-if="freeShippingDiscount && form.shippingMethod === 'DELIVERY'" class="amount-row text-positive">
+              <span>{{ discountLabel(freeShippingDiscount) }}</span>
+              <span>免運</span>
+            </div>
+            <div
+              v-if="quote && quote.freeShippingThreshold && shippingFee > 0 && subtotal < Number(quote.freeShippingThreshold)"
+              class="text-caption text-grey-7 q-mb-sm"
+            >
+              再消費 NT$ {{ formatPrice(Number(quote.freeShippingThreshold) - subtotal) }} 即可免運費
+            </div>
+
+            <div class="coupon-row q-mt-sm">
+              <q-input
+                v-model="couponInput"
+                dense
+                outlined
+                placeholder="優惠券代碼"
+                maxlength="50"
+                class="col"
+                :disable="quoting"
+                @keyup.enter="applyCoupon"
+              />
+              <q-btn v-if="!requestedCoupon" color="primary" unelevated no-caps label="套用" :disable="!couponInput.trim() || quoting" @click="applyCoupon" />
+              <q-btn v-else flat no-caps color="grey-8" label="移除" @click="removeCoupon" />
+            </div>
+            <div v-if="requestedCoupon && quote?.couponCode" class="text-caption text-positive q-mt-xs">已套用優惠券 {{ quote.couponCode }}</div>
+            <div v-else-if="requestedCoupon && quote?.couponMessage" class="text-caption text-orange-9 q-mt-xs">{{ quote.couponMessage }}</div>
+            <div class="text-caption text-grey-6 q-mt-xs">活動、優惠券與會員折扣自動取折抵最多的一項；免運可併用。</div>
+
+            <q-separator class="q-my-md" />
             <div class="row justify-between text-weight-bold text-subtitle1">
               <span>總計</span>
-              <span class="text-primary">NT$ {{ formatPrice(total) }}</span>
+              <span class="text-primary">
+                <q-spinner v-if="quoting" size="16px" class="q-mr-xs" />
+                NT$ {{ formatPrice(total) }}
+              </span>
             </div>
+            <div v-if="quoteError" class="text-caption text-negative q-mt-sm">{{ quoteError }}</div>
             <div class="trust-list q-mt-md">
               <div class="trust-item"><q-icon name="verified" color="positive" /> 付款資訊於安全流程處理</div>
               <div class="trust-item"><q-icon name="local_shipping" color="primary" /> 配送方式可於下單前確認</div>
@@ -165,16 +217,18 @@
 </template>
 
 <script setup lang="ts">
+import EmailVerifyBanner from '@/components/store/EmailVerifyBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { QForm, useQuasar } from 'quasar'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api'
-import { orderApi } from '@/api/order'
-import { createEcPayPayment } from '@/api/payment'
+import { orderApi, type StorefrontQuote, type StorefrontQuoteDiscount } from '@/api/order'
 import { clearCart, getCartItems, removeFromCart, type CartItem } from '@/utils/storeCart'
 import { getCheckoutDraft, saveCheckoutDraft } from '@/utils/storePreferences'
 import { trackEvent } from '@/utils/tracking'
+import { redirectToEcPay } from '@/utils/ecpay'
+import { accountApi } from '@/api/account'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -183,18 +237,123 @@ const $q = useQuasar()
 const checkoutFormRef = ref<QForm>()
 const items = ref<CartItem[]>(getCartItems())
 const submitting = ref(false)
-const total = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0))
+// 金額以後端試算為準（含運費、折扣與優惠券）
+const quote = ref<StorefrontQuote | null>(null)
+const quoting = ref(false)
+const quoteError = ref('')
+let quoteSeq = 0
+const couponInput = ref('')
+const marketingOptIn = ref(false)
+const requestedCoupon = ref('')
+const localSubtotal = computed(() => items.value.reduce((sum, item) => sum + item.price * item.quantity, 0))
+const subtotal = computed(() => (quote.value ? Number(quote.value.subtotalAmount) : localSubtotal.value))
+const shippingFee = computed(() => Number(quote.value?.shippingFee ?? 0))
+const total = computed(() => (quote.value ? Number(quote.value.totalAmount) : localSubtotal.value))
+const amountDiscounts = computed(() => (quote.value?.discounts || []).filter((discount) => Number(discount.amount) > 0))
+const freeShippingDiscount = computed(() => (quote.value?.discounts || []).find((discount) => discount.type === 'FREE_SHIPPING') || null)
+const DISCOUNT_TYPE_LABELS: Record<string, string> = {
+  PROMOTION: '活動折扣',
+  COUPON: '優惠券',
+  MEMBER_LEVEL: '會員折扣',
+  FREE_SHIPPING: '免運優惠'
+}
+const discountLabel = (discount: StorefrontQuoteDiscount) => {
+  const base = DISCOUNT_TYPE_LABELS[discount.type] || '折扣'
+  const detail = discount.code ? `${discount.name}（${discount.code}）` : discount.name
+  return detail ? `${base}：${detail}` : base
+}
+
+const toCheckoutItems = () =>
+  items.value.map((item) => ({
+    productId: item.productId,
+    specificationId: item.specificationId ?? null,
+    quantity: item.quantity
+  }))
+
+const refreshQuote = async () => {
+  if (items.value.length === 0) {
+    quote.value = null
+    quoteError.value = ''
+    return
+  }
+  const seq = ++quoteSeq
+  quoting.value = true
+  try {
+    const response = await orderApi.storefrontQuote({
+      items: toCheckoutItems(),
+      shippingMethod: form.value.shippingMethod === 'STORE_PICKUP' ? 'STORE_PICKUP' : 'HOME_DELIVERY',
+      couponCode: requestedCoupon.value || null
+    })
+    if (seq !== quoteSeq) return
+    quote.value = response.data
+    quoteError.value = ''
+  } catch (error: any) {
+    if (seq !== quoteSeq) return
+    quote.value = null
+    quoteError.value = error?.response?.data?.message || '無法確認商品價格與庫存，請稍後再試。'
+  } finally {
+    if (seq === quoteSeq) quoting.value = false
+  }
+}
+
+const applyCoupon = () => {
+  const code = couponInput.value.trim().toUpperCase()
+  if (!code) return
+  couponInput.value = code
+  requestedCoupon.value = code
+  refreshQuote()
+}
+
+const removeCoupon = () => {
+  couponInput.value = ''
+  requestedCoupon.value = ''
+  refreshQuote()
+}
 const defaultGateway = (import.meta.env.VITE_DEFAULT_PAYMENT_GATEWAY || 'ECPAY').toUpperCase()
 
-const paymentOptions = [
-  { label: 'ECPay', value: 'ECPAY' },
+// 線上付款依後台金流設定（停用 / 維護中時不可選）
+const onlinePaymentUnavailable = ref('')
+const paymentOptions = computed(() => [
+  {
+    label: onlinePaymentUnavailable.value ? `ECPay（${onlinePaymentUnavailable.value}）` : 'ECPay',
+    value: 'ECPAY',
+    disable: !!onlinePaymentUnavailable.value
+  },
   { label: '貨到付款', value: 'COD' }
-]
+])
+const loadPaymentOptions = async () => {
+  try {
+    const response = await orderApi.storefrontPaymentOptions()
+    const online = (response.data || []).find((option) => option.method === 'ECPAY')
+    onlinePaymentUnavailable.value = online && !online.available ? online.message || '線上付款暫停服務' : ''
+    if (onlinePaymentUnavailable.value && form.value.paymentMethod === 'ECPAY') {
+      form.value.paymentMethod = 'COD'
+    }
+  } catch {
+    // 取不到時保留選項，由後端下單時檢查
+  }
+}
 
-const shippingOptions = [
-  { label: '宅配到府', value: 'DELIVERY' },
-  { label: '門市自取', value: 'STORE_PICKUP' }
+const allShippingOptions = [
+  { label: '宅配到府', value: 'DELIVERY', method: 'HOME_DELIVERY' },
+  { label: '門市自取', value: 'STORE_PICKUP', method: 'STORE_PICKUP' }
 ]
+const shippingOptions = ref(allShippingOptions)
+
+// 只顯示後台目前開放的配送方式；目前選擇的方式暫停服務時改用第一個可用的方式
+const loadShippingOptions = async () => {
+  try {
+    const response = await orderApi.storefrontShippingOptions()
+    const available = (response.data || []).map((option) => option.method)
+    if (!available.length) return
+    shippingOptions.value = allShippingOptions.filter((option) => available.includes(option.method))
+    if (!shippingOptions.value.some((option) => option.value === form.value.shippingMethod)) {
+      form.value.shippingMethod = shippingOptions.value[0]?.value ?? form.value.shippingMethod
+    }
+  } catch {
+    // 取不到時保留全部選項，由後端試算告知是否暫停服務
+  }
+}
 
 const form = ref({
   customerName: '',
@@ -225,6 +384,7 @@ const removeItem = (item: CartItem) => {
   removeFromCart(item.productId, item.specificationId)
   items.value = getCartItems()
 
+  refreshQuote()
   if (items.value.length === 0) {
     $q.notify({ type: 'warning', message: '購物車已清空，即將返回購物車頁面。' })
     setTimeout(() => router.push('/cart'), 1500)
@@ -243,42 +403,20 @@ watch(
   { deep: true }
 )
 
-const redirectToEcPay = (paymentUrl: string) => {
-  const url = new URL(paymentUrl)
-  const formEl = document.createElement('form')
-  formEl.method = 'POST'
-  formEl.action = `${url.origin}${url.pathname}`
-  formEl.style.display = 'none'
-
-  url.searchParams.forEach((value, key) => {
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = key
-    input.value = value
-    formEl.appendChild(input)
-  })
-
-  document.body.appendChild(formEl)
-  formEl.submit()
-}
-
 const submitCheckout = async () => {
   const valid = await checkoutFormRef.value?.validate()
-  if (!valid || items.value.length === 0 || total.value <= 0) return
+  if (!valid || items.value.length === 0 || !quote.value || quoteError.value) return
 
   submitting.value = true
   try {
-    let customerId = authStore.user?.id
-    if (!customerId) {
+    let customerEmail = authStore.user?.email
+    if (!customerEmail) {
       const profileResponse = await authApi.getProfile()
-      customerId = profileResponse.data?.id
-      if (customerId && authStore.user) {
-        authStore.setAuth(authStore.token || '', { ...authStore.user, id: customerId })
-      }
+      customerEmail = profileResponse.data?.email
     }
 
-    if (!customerId) {
-      throw new Error('無法取得會員資訊，請重新登入後再試。')
+    if (!customerEmail) {
+      throw new Error('無法取得會員 Email，請重新登入後再試。')
     }
 
     trackEvent('checkout_submit', {
@@ -292,24 +430,23 @@ const submitCheckout = async () => {
       order_amount: total.value
     })
 
-    const payload = {
-      customerId,
+    // 價格、運費與付款金額一律由後端依商品資料計算
+    const response = await orderApi.storefrontCheckout({
       customerName: form.value.customerName,
       customerPhone: form.value.customerPhone,
-      customerEmail: authStore.user?.email,
-      pickupType: form.value.shippingMethod,
-      subtotalAmount: total.value,
-      discountAmount: 0,
-      shippingFee: 0,
-      shippingAddress: form.value.shippingAddress,
-      totalAmount: total.value,
-      status: 'PENDING_PAYMENT' as const,
-      items: items.value.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.price }))
-    }
+      customerEmail,
+      shippingAddress: form.value.shippingMethod === 'DELIVERY' ? form.value.shippingAddress : null,
+      shippingMethod: form.value.shippingMethod === 'STORE_PICKUP' ? 'STORE_PICKUP' : 'HOME_DELIVERY',
+      paymentMethod: form.value.paymentMethod === 'COD' ? 'COD' : 'ECPAY',
+      channel: 'ADMIN_STORE',
+      couponCode: quote.value?.couponCode || null,
+      marketingOptIn: marketingOptIn.value,
+      items: toCheckoutItems()
+    })
 
-    const response = await orderApi.createOrder(payload as any)
-    const orderNumber = response.data?.orderNumber ?? `TEMP-${Date.now()}`
-    const amount = Number(response.data?.totalAmount ?? total.value)
+    const result = response.data
+    const orderNumber = result.order.orderNumber
+    const amount = Number(result.order.totalAmount)
 
     sessionStorage.setItem(
       'last_purchase_items',
@@ -318,23 +455,13 @@ const submitCheckout = async () => {
 
     clearCart()
 
-    if (form.value.paymentMethod === 'ECPAY') {
-      const paymentResponse = await createEcPayPayment({
-        orderId: response.data?.id,
-        orderNumber,
-        amount,
-        currency: 'TWD',
-        productName: `Shopro Order ${orderNumber}`,
-        customerName: form.value.customerName || authStore.user?.username,
-        customerEmail: authStore.user?.email,
-        customerPhone: form.value.customerPhone
-      })
-
-      const paymentUrl = paymentResponse.data?.paymentUrl
-      if (!paymentUrl) throw new Error('ECPay payment URL not found')
-
-      redirectToEcPay(paymentUrl)
-      return
+    if (result.paymentMethod === 'ECPAY') {
+      if (!result.paymentUrl) {
+        $q.notify({ type: 'warning', message: result.paymentError || '訂單已建立，但付款頁面暫時無法開啟，請在訂單頁點「前往付款」重試。' })
+      } else {
+        redirectToEcPay(result.paymentUrl)
+        return
+      }
     }
 
     router.push({ path: '/order/success', query: { orderNumber, amount: String(amount) } })
@@ -345,12 +472,32 @@ const submitCheckout = async () => {
   }
 }
 
-onMounted(() => {
+watch(() => form.value.shippingMethod, () => refreshQuote())
+
+onMounted(async () => {
   trackEvent('view_checkout')
+  refreshQuote()
+  loadShippingOptions()
+  loadPaymentOptions()
   const draft = getCheckoutDraft()
   form.value.customerName = draft.customerName || authStore.user?.username || ''
   form.value.customerPhone = draft.customerPhone || ''
   form.value.shippingAddress = draft.shippingAddress || ''
+  // 帶入會員中心儲存的預設收件資料（未填寫的欄位）
+  try {
+    const response = await accountApi.getMember()
+    const member = response.data
+    if (member?.exists) {
+      if (!draft.customerName && member.name) form.value.customerName = member.name
+      if (!form.value.customerPhone && member.phone) form.value.customerPhone = member.phone
+      if (!form.value.shippingAddress && member.address) {
+        form.value.shippingAddress = member.postalCode ? `${member.postalCode} ${member.address}` : member.address
+      }
+      if (member.marketingOptIn) marketingOptIn.value = true
+    }
+  } catch {
+    // 沒有會員資料時維持空白
+  }
 })
 </script>
 
@@ -376,6 +523,8 @@ onMounted(() => {
 .flow-step__dot { width:22px; height:22px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:rgba(148,163,184,.15); }
 .trust-list { display:grid; gap:6px; color:#475569; font-size:.88rem; }
 .trust-item { display:flex; align-items:center; gap:8px; }
+.amount-row { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; font-size:.92rem; }
+.coupon-row { display:flex; gap:8px; align-items:center; }
 .summary-item { display:flex; justify-content:space-between; align-items:center; }
 .summary-item__info { flex:1; min-width:0; }
 .summary-item__actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }

@@ -153,7 +153,14 @@
               label="活動類型 *"
               outlined
               dense
-              :options="['DISCOUNT', 'FULL_SHOP', 'FREE_SHIPPING', 'BUY_GIFT']"
+              :options="[
+                { label: '折扣活動', value: 'DISCOUNT' },
+                { label: '全館活動', value: 'FULL_SHOP' },
+                { label: '免運活動', value: 'FREE_SHIPPING' },
+                { label: '買就送（僅說明）', value: 'BUY_GIFT' }
+              ]"
+              emit-value
+              map-options
               class="q-mb-md"
               :rules="[val => !!val || '請選擇活動類型']"
             />
@@ -188,18 +195,25 @@
                   label="折扣類型"
                   outlined
                   dense
-                  :options="['PERCENTAGE', 'FIXED']"
+                  :options="[{ label: '百分比折扣', value: 'PERCENTAGE' }, { label: '固定金額', value: 'FIXED' }]"
+                  emit-value
+                  map-options
                 />
               </div>
               <div class="col">
                 <q-input
                   v-model.number="editingPromotion.discountValue"
-                  :label="`折扣金額${editingPromotion.discountType === 'PERCENTAGE' ? ' (%)' : ' (NT$)'}`"
+                  :label="editingPromotion.discountType === 'PERCENTAGE' ? '折扣百分比 (% OFF)' : '折抵金額 (NT$)'"
+                  :hint="editingPromotion.discountType === 'PERCENTAGE' ? '例如 10 表示打 9 折' : ''"
                   outlined
                   dense
                   type="number"
                 />
               </div>
+            </div>
+            <div class="text-caption text-grey-7 q-mb-md">
+              進行中且達最低購買金額的「折扣／全館」活動會在結帳自動套用（與優惠券、會員折扣取折抵最多者，不累加）；
+              「免運」活動達門檻即免運費，可與折扣併用；「買就送」僅作為活動說明，不影響結帳金額。
             </div>
 
             <q-input
@@ -282,7 +296,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import { promotionApi, type Promotion } from '@/api/promotion'
 import CouponManagement from '@/components/CouponManagement.vue'
 import { startPromotionTour, isPromotionTourCompleted } from '@/utils/promotionTour'
@@ -320,7 +334,7 @@ const editingPromotion = ref<Partial<Promotion>>({
 })
 
 // 表格列定義
-const promotionColumns = [
+const promotionColumns: QTableColumn[] = [
   { name: 'name', label: '活動名稱', field: 'name', align: 'left' },
   { name: 'type', label: '類型', field: 'type', align: 'center' },
   { name: 'discountValue', label: '折扣', field: 'discountValue', align: 'right' },

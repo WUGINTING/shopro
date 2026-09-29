@@ -144,11 +144,67 @@ class EcPayServiceTest {
     }
 
     @Test
+    void testParseCallback_WithoutCustomField_StripsMerchantTradeNoSuffix() {
+        // 舊交易沒有 CustomField1，MerchantTradeNo = 訂單編號 + 4 碼後綴
+        Map<String, String> params = new HashMap<>();
+        params.put("MerchantID", "2000132");
+        params.put("MerchantTradeNo", "TEST202401010011234");
+        params.put("RtnCode", "1");
+        params.put("RtnMsg", "交易成功");
+        params.put("TradeNo", "2401011234567890");
+        params.put("TradeAmt", "1000");
+        params.put("CheckMacValue", generateValidCheckMacValue(params));
+
+        PaymentResponseDTO response = ecPayService.parseCallback(params);
+
+        assertEquals(PaymentGatewayStatus.SUCCESS, response.getStatus());
+        assertEquals("TEST20240101001", response.getOrderNumber());
+    }
+
+    @Test
+    void testCreatePayment_SendsFullOrderNumberInCustomField1() {
+        PaymentRequestDTO request = PaymentRequestDTO.builder()
+                .orderNumber("ORD2026092404361506")
+                .amount(new BigDecimal("959"))
+                .productName("Shopro Order ORD2026092404361506")
+                .build();
+
+        PaymentResponseDTO response = ecPayService.createPayment(request);
+
+        assertTrue(response.getPaymentUrl().contains("CustomField1=ORD2026092404361506"));
+    }
+
+    @Test
+    void testCreatePayment_UrlParamsDecodeToTheSignedValues() {
+        PaymentRequestDTO request = PaymentRequestDTO.builder()
+                .orderNumber("ORD2026092404361507")
+                .amount(new BigDecimal("500"))
+                .productName("茶葉 x 1 & 茶杯+杯墊")
+                .customerEmail("name+shop@gmail.com")
+                .build();
+
+        String url = ecPayService.createPayment(request).getPaymentUrl();
+
+        // 前端以 URLSearchParams 取回參數（與 URLDecoder 規則相同）後 POST 給綠界
+        Map<String, String> decoded = new java.util.LinkedHashMap<>();
+        for (String pair : url.substring(url.indexOf('?') + 1).split("&")) {
+            String[] kv = pair.split("=", 2);
+            decoded.put(java.net.URLDecoder.decode(kv[0], java.nio.charset.StandardCharsets.UTF_8),
+                    java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8));
+        }
+        assertEquals("name+shop@gmail.com", decoded.get("Email"));
+        assertEquals("茶葉 x 1 & 茶杯+杯墊", decoded.get("ItemName"));
+        // 取回的參數仍能通過簽章驗證
+        assertTrue(ecPayService.verifyCallback(decoded));
+    }
+
+    @Test
     void testParseCallback_Success() {
         // Arrange
         Map<String, String> params = new HashMap<>();
         params.put("MerchantID", "2000132");
-        params.put("MerchantTradeNo", "TEST20240101001");
+        params.put("MerchantTradeNo", "TEST202401010011234");
+        params.put("CustomField1", "TEST20240101001");
         params.put("RtnCode", "1");
         params.put("RtnMsg", "交易成功");
         params.put("TradeNo", "2401011234567890");
@@ -175,7 +231,8 @@ class EcPayServiceTest {
         // Arrange
         Map<String, String> params = new HashMap<>();
         params.put("MerchantID", "2000132");
-        params.put("MerchantTradeNo", "TEST20240101002");
+        params.put("MerchantTradeNo", "TEST202401010021234");
+        params.put("CustomField1", "TEST20240101002");
         params.put("RtnCode", "0");
         params.put("RtnMsg", "交易失敗");
         params.put("TradeNo", "2401011234567891");

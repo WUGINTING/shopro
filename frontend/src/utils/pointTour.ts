@@ -1,8 +1,8 @@
-import Shepherd from 'shepherd.js'
+import { createShepherdTour, type ShepherdTour, type ShepherdStepOptions } from './tour'
 import 'shepherd.js/dist/css/shepherd.css'
 
 // 創建 Shepherd 實例
-let tour: Shepherd.Tour | null = null
+let tour: ShepherdTour | null = null
 
 // 檢查是否已經完成過積點管理導覽
 const TOUR_STORAGE_KEY = 'shopro-point-tour-completed'
@@ -20,34 +20,15 @@ export const resetPointTour = (): void => {
 }
 
 // 初始化導覽
-export const initPointTour = (): Shepherd.Tour => {
+export const initPointTour = (): ShepherdTour => {
   // 每次都創建新實例，避免重用舊的步驟
-  tour = new Shepherd.Tour({
-    useModalOverlay: true,
-    defaultStepOptions: {
-      cancelIcon: {
-        enabled: true
-      },
-      classes: 'shepherd-theme-custom',
-      scrollTo: { behavior: 'smooth', block: 'center' },
-      popperOptions: {
-        modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, 12]
-            }
-          }
-        ]
-      }
-    }
-  })
+  tour = createShepherdTour()
 
   return tour
 }
 
 // 創建積點管理導覽步驟
-export const createPointTourSteps = (): Shepherd.Step.StepOptions[] => {
+export const createPointTourSteps = (): ShepherdStepOptions[] => {
   return [
     {
       id: 'welcome',
